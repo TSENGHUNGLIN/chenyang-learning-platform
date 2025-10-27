@@ -29,66 +29,144 @@ import {
 } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { Building2, UserPlus, Trash2, Plus } from "lucide-react";
+import { Building2, UserPlus, Trash2, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
+
+type Department = { id: number; name: string; description: string | null };
+type Employee = { id: number; name: string; departmentId: number; email: string | null };
 
 export default function Manage() {
   const { user } = useAuth();
-  const [newDeptName, setNewDeptName] = useState("");
-  const [newDeptDesc, setNewDeptDesc] = useState("");
-  const [newEmpName, setNewEmpName] = useState("");
-  const [newEmpDept, setNewEmpDept] = useState("");
-  const [newEmpEmail, setNewEmpEmail] = useState("");
+  const [deptFormData, setDeptFormData] = useState({ id: 0, name: "", description: "" });
+  const [empFormData, setEmpFormData] = useState({ id: 0, name: "", departmentId: "", email: "" });
   const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false);
   const [isEmpDialogOpen, setIsEmpDialogOpen] = useState(false);
+  const [isEditingDept, setIsEditingDept] = useState(false);
+  const [isEditingEmp, setIsEditingEmp] = useState(false);
 
   const { data: departments, isLoading: deptLoading } = trpc.departments.list.useQuery();
   const { data: employees, isLoading: empLoading } = trpc.employees.list.useQuery();
   const createDeptMutation = trpc.departments.create.useMutation();
+  const updateDeptMutation = trpc.departments.update.useMutation();
+  const deleteDeptMutation = trpc.departments.delete.useMutation();
   const createEmpMutation = trpc.employees.create.useMutation();
+  const updateEmpMutation = trpc.employees.update.useMutation();
+  const deleteEmpMutation = trpc.employees.delete.useMutation();
   const utils = trpc.useUtils();
 
   const canManage = user?.role === "admin";
 
-  const handleCreateDepartment = async () => {
-    if (!newDeptName.trim()) {
+  const resetDeptForm = () => {
+    setDeptFormData({ id: 0, name: "", description: "" });
+    setIsEditingDept(false);
+  };
+
+  const resetEmpForm = () => {
+    setEmpFormData({ id: 0, name: "", departmentId: "", email: "" });
+    setIsEditingEmp(false);
+  };
+
+  const handleOpenDeptDialog = (dept?: Department) => {
+    if (dept) {
+      setDeptFormData({ id: dept.id, name: dept.name, description: dept.description || "" });
+      setIsEditingDept(true);
+    } else {
+      resetDeptForm();
+    }
+    setIsDeptDialogOpen(true);
+  };
+
+  const handleOpenEmpDialog = (emp?: Employee) => {
+    if (emp) {
+      setEmpFormData({ id: emp.id, name: emp.name, departmentId: emp.departmentId.toString(), email: emp.email || "" });
+      setIsEditingEmp(true);
+    } else {
+      resetEmpForm();
+    }
+    setIsEmpDialogOpen(true);
+  };
+
+  const handleSaveDepartment = async () => {
+    if (!deptFormData.name.trim()) {
       toast.error("請輸入部門名稱");
       return;
     }
     try {
-      await createDeptMutation.mutateAsync({
-        name: newDeptName,
-        description: newDeptDesc || undefined,
-      });
-      toast.success("部門已新增");
-      setNewDeptName("");
-      setNewDeptDesc("");
+      if (isEditingDept) {
+        await updateDeptMutation.mutateAsync({
+          id: deptFormData.id,
+          name: deptFormData.name,
+          description: deptFormData.description || undefined,
+        });
+        toast.success("部門已更新");
+      } else {
+        await createDeptMutation.mutateAsync({
+          name: deptFormData.name,
+          description: deptFormData.description || undefined,
+        });
+        toast.success("部門已新增");
+      }
       setIsDeptDialogOpen(false);
+      resetDeptForm();
       utils.departments.list.invalidate();
     } catch (error) {
-      toast.error("新增失敗");
+      toast.error(isEditingDept ? "更新失敗" : "新增失敗");
     }
   };
 
-  const handleCreateEmployee = async () => {
-    if (!newEmpName.trim() || !newEmpDept) {
+  const handleDeleteDepartment = async (id: number, name: string) => {
+    if (!confirm(`確定要刪除部門「${name}」嗎？此操作無法復原。`)) {
+      return;
+    }
+    try {
+      await deleteDeptMutation.mutateAsync(id);
+      toast.success("部門已刪除");
+      utils.departments.list.invalidate();
+    } catch (error) {
+      toast.error("刪除失敗");
+    }
+  };
+
+  const handleSaveEmployee = async () => {
+    if (!empFormData.name.trim() || !empFormData.departmentId) {
       toast.error("請填寫完整資料");
       return;
     }
     try {
-      await createEmpMutation.mutateAsync({
-        name: newEmpName,
-        departmentId: parseInt(newEmpDept),
-        email: newEmpEmail || undefined,
-      });
-      toast.success("人員已新增");
-      setNewEmpName("");
-      setNewEmpDept("");
-      setNewEmpEmail("");
+      if (isEditingEmp) {
+        await updateEmpMutation.mutateAsync({
+          id: empFormData.id,
+          name: empFormData.name,
+          departmentId: parseInt(empFormData.departmentId),
+          email: empFormData.email || undefined,
+        });
+        toast.success("人員已更新");
+      } else {
+        await createEmpMutation.mutateAsync({
+          name: empFormData.name,
+          departmentId: parseInt(empFormData.departmentId),
+          email: empFormData.email || undefined,
+        });
+        toast.success("人員已新增");
+      }
       setIsEmpDialogOpen(false);
+      resetEmpForm();
       utils.employees.list.invalidate();
     } catch (error) {
-      toast.error("新增失敗");
+      toast.error(isEditingEmp ? "更新失敗" : "新增失敗");
+    }
+  };
+
+  const handleDeleteEmployee = async (id: number, name: string) => {
+    if (!confirm(`確定要刪除人員「${name}」嗎？此操作無法復原。`)) {
+      return;
+    }
+    try {
+      await deleteEmpMutation.mutateAsync(id);
+      toast.success("人員已刪除");
+      utils.employees.list.invalidate();
+    } catch (error) {
+      toast.error("刪除失敗");
     }
   };
 
@@ -125,17 +203,22 @@ export default function Manage() {
                 </CardTitle>
                 <CardDescription>管理所有部門資料</CardDescription>
               </div>
-              <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
+              <Dialog open={isDeptDialogOpen} onOpenChange={(open) => {
+                setIsDeptDialogOpen(open);
+                if (!open) resetDeptForm();
+              }}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button onClick={() => handleOpenDeptDialog()}>
                     <Plus className="h-4 w-4 mr-2" />
                     新增部門
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>新增部門</DialogTitle>
-                    <DialogDescription>建立新的部門資料</DialogDescription>
+                    <DialogTitle>{isEditingDept ? "編輯部門" : "新增部門"}</DialogTitle>
+                    <DialogDescription>
+                      {isEditingDept ? "修改部門資料" : "建立新的部門資料"}
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -143,8 +226,8 @@ export default function Manage() {
                       <Input
                         id="dept-name"
                         placeholder="例如：業務部"
-                        value={newDeptName}
-                        onChange={(e) => setNewDeptName(e.target.value)}
+                        value={deptFormData.name}
+                        onChange={(e) => setDeptFormData({ ...deptFormData, name: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -152,16 +235,16 @@ export default function Manage() {
                       <Input
                         id="dept-desc"
                         placeholder="選填"
-                        value={newDeptDesc}
-                        onChange={(e) => setNewDeptDesc(e.target.value)}
+                        value={deptFormData.description}
+                        onChange={(e) => setDeptFormData({ ...deptFormData, description: e.target.value })}
                       />
                     </div>
                     <Button
-                      onClick={handleCreateDepartment}
+                      onClick={handleSaveDepartment}
                       className="w-full"
-                      disabled={createDeptMutation.isPending}
+                      disabled={createDeptMutation.isPending || updateDeptMutation.isPending}
                     >
-                      確認新增
+                      {isEditingDept ? "確認更新" : "確認新增"}
                     </Button>
                   </div>
                 </DialogContent>
@@ -178,6 +261,7 @@ export default function Manage() {
                     <TableHead>部門名稱</TableHead>
                     <TableHead>描述</TableHead>
                     <TableHead>人員數量</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -187,6 +271,23 @@ export default function Manage() {
                       <TableCell>{dept.description || "-"}</TableCell>
                       <TableCell>
                         {employees?.filter((e) => e.departmentId === dept.id).length || 0} 人
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenDeptDialog(dept)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteDepartment(dept.id, dept.name)}
+                          disabled={deleteDeptMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -207,17 +308,22 @@ export default function Manage() {
                 </CardTitle>
                 <CardDescription>管理所有人員資料</CardDescription>
               </div>
-              <Dialog open={isEmpDialogOpen} onOpenChange={setIsEmpDialogOpen}>
+              <Dialog open={isEmpDialogOpen} onOpenChange={(open) => {
+                setIsEmpDialogOpen(open);
+                if (!open) resetEmpForm();
+              }}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button onClick={() => handleOpenEmpDialog()}>
                     <Plus className="h-4 w-4 mr-2" />
                     新增人員
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>新增人員</DialogTitle>
-                    <DialogDescription>建立新的人員資料</DialogDescription>
+                    <DialogTitle>{isEditingEmp ? "編輯人員" : "新增人員"}</DialogTitle>
+                    <DialogDescription>
+                      {isEditingEmp ? "修改人員資料" : "建立新的人員資料"}
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -225,13 +331,16 @@ export default function Manage() {
                       <Input
                         id="emp-name"
                         placeholder="例如：王小明"
-                        value={newEmpName}
-                        onChange={(e) => setNewEmpName(e.target.value)}
+                        value={empFormData.name}
+                        onChange={(e) => setEmpFormData({ ...empFormData, name: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="emp-dept">部門 *</Label>
-                      <Select value={newEmpDept} onValueChange={setNewEmpDept}>
+                      <Select
+                        value={empFormData.departmentId}
+                        onValueChange={(value) => setEmpFormData({ ...empFormData, departmentId: value })}
+                      >
                         <SelectTrigger id="emp-dept">
                           <SelectValue placeholder="選擇部門" />
                         </SelectTrigger>
@@ -250,16 +359,16 @@ export default function Manage() {
                         id="emp-email"
                         type="email"
                         placeholder="選填"
-                        value={newEmpEmail}
-                        onChange={(e) => setNewEmpEmail(e.target.value)}
+                        value={empFormData.email}
+                        onChange={(e) => setEmpFormData({ ...empFormData, email: e.target.value })}
                       />
                     </div>
                     <Button
-                      onClick={handleCreateEmployee}
+                      onClick={handleSaveEmployee}
                       className="w-full"
-                      disabled={createEmpMutation.isPending}
+                      disabled={createEmpMutation.isPending || updateEmpMutation.isPending}
                     >
-                      確認新增
+                      {isEditingEmp ? "確認更新" : "確認新增"}
                     </Button>
                   </div>
                 </DialogContent>
@@ -276,6 +385,7 @@ export default function Manage() {
                     <TableHead>姓名</TableHead>
                     <TableHead>部門</TableHead>
                     <TableHead>電子郵件</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -284,6 +394,23 @@ export default function Manage() {
                       <TableCell className="font-medium">{emp.name}</TableCell>
                       <TableCell>{getDepartmentName(emp.departmentId)}</TableCell>
                       <TableCell>{emp.email || "-"}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEmpDialog(emp)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteEmployee(emp.id, emp.name)}
+                          disabled={deleteEmpMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

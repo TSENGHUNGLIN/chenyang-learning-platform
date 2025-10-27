@@ -115,6 +115,20 @@ export async function createDepartment(data: InsertDepartment) {
   return result;
 }
 
+export async function updateDepartment(data: { id: number; name: string; description?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(departments).set({ name: data.name, description: data.description }).where(eq(departments.id, data.id));
+  return { success: true };
+}
+
+export async function deleteDepartment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(departments).where(eq(departments.id, id));
+  return { success: true };
+}
+
 // Employee queries
 export async function getAllEmployees() {
   const db = await getDb();
@@ -140,6 +154,26 @@ export async function createEmployee(data: InsertEmployee) {
   if (!db) throw new Error("Database not available");
   const result = await db.insert(employees).values(data);
   return result;
+}
+
+export async function updateEmployee(data: { id: number; name: string; departmentId: number; email?: string; phone?: string; position?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(employees).set({
+    name: data.name,
+    departmentId: data.departmentId,
+    email: data.email,
+    phone: data.phone,
+    position: data.position
+  }).where(eq(employees.id, data.id));
+  return { success: true };
+}
+
+export async function deleteEmployee(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(employees).where(eq(employees.id, id));
+  return { success: true };
 }
 
 // File queries

@@ -35,6 +35,26 @@ export const appRouter = router({
         const { createDepartment } = await import("./db");
         return await createDepartment(input);
       }),
+    update: protectedProcedure
+      .input(z.object({ id: z.number(), name: z.string(), description: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateDepartment } = await import("./db");
+        return await updateDepartment(input);
+      }),
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input: id, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { deleteDepartment } = await import("./db");
+        return await deleteDepartment(id);
+      }),
   }),
 
   // Employee router
@@ -64,6 +84,33 @@ export const appRouter = router({
         }
         const { createEmployee } = await import("./db");
         return await createEmployee(input);
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string(),
+        departmentId: z.number(),
+        email: z.string().optional(),
+        phone: z.string().optional(),
+        position: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateEmployee } = await import("./db");
+        return await updateEmployee(input);
+      }),
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input: id, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { deleteEmployee } = await import("./db");
+        return await deleteEmployee(id);
       }),
   }),
 
