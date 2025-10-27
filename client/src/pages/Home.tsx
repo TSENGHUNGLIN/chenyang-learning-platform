@@ -1,11 +1,23 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, FileText, Users, TrendingUp } from "lucide-react";
-import { Link } from "wouter";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Calendar, FileText, Users, TrendingUp, Search } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { useState } from "react";
 
 export default function Home() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      setLocation(`/files?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const features = [
     {
@@ -49,6 +61,28 @@ export default function Home() {
           <h1 className="text-3xl font-bold tracking-tight">歡迎回來，{user?.name || "使用者"}</h1>
           <p className="text-muted-foreground mt-2">晨陽新人成長學習題庫分析系統</p>
         </div>
+
+        {/* 快速搜尋 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>快速搜尋</CardTitle>
+            <CardDescription>搜尋檔案內容、人員或部門</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="輸入關鍵字搜尋..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button type="submit">搜尋</Button>
+            </form>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature) => {

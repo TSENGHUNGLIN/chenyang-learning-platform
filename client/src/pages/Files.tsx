@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearch } from "wouter";
 import { Search, FileText, Sparkles, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import { toast } from "sonner";
@@ -37,8 +38,19 @@ import { debounce } from "lodash";
 
 export default function Files() {
   const { user } = useAuth();
-  const [searchKeyword, setSearchKeyword] = useState("");
-  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+  const searchParams = new URLSearchParams(useSearch());
+  const urlSearch = searchParams.get("search") || "";
+  
+  const [searchKeyword, setSearchKeyword] = useState(urlSearch);
+  const [debouncedKeyword, setDebouncedKeyword] = useState(urlSearch);
+  
+  // 初始化URL參數搜尋
+  useEffect(() => {
+    if (urlSearch) {
+      setSearchKeyword(urlSearch);
+      setDebouncedKeyword(urlSearch);
+    }
+  }, [urlSearch]);
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
