@@ -52,18 +52,24 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.lastSignedIn = user.lastSignedIn;
       updateSet.lastSignedIn = user.lastSignedIn;
     }
+    // 查詢使用者是否已存在
+    const existingUser = await db.select().from(users).where(eq(users.openId, user.openId)).limit(1);
+    const userExists = existingUser.length > 0;
+
     if (user.role !== undefined) {
       values.role = user.role;
       updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      // 專案擁有者自動批准為管理員
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    } else {
-      // 新使用者預設為待審核狀態
-      values.role = 'pending';
-      updateSet.role = 'pending';
+    } else if (!userExists) {
+      // 僅在新使用者時設定 role
+      if (user.openId === ENV.ownerOpenId) {
+        // 專案擁有者自動批准為管理員
+        values.role = 'admin';
+      } else {
+        // 新使用者預設為待審核狀態
+        values.role = 'pending';
+      }
     }
+    // 如果使用者已存在且 user.role 未定義，則不更新 role
 
     if (!values.lastSignedIn) {
       values.lastSignedIn = new Date();

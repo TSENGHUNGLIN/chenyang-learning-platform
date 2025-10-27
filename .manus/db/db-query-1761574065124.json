@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, openId, name, email, role, loginMethod FROM users;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute SELECT id, openId, name, email, role, loginMethod FROM users;",
+  "rows": [
+    {
+      "id": "1",
+      "openId": "d3M2uLLfGX2eVKnL86tLMW",
+      "name": "富銓 曾",
+      "email": "tsenghunglin384438443844@gmail.com",
+      "role": "admin",
+      "loginMethod": "google"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\topenId\tname\temail\trole\tloginMethod\n1\td3M2uLLfGX2eVKnL86tLMW\t富銓 曾\ttsenghunglin384438443844@gmail.com\tadmin\tgoogle\n",
+  "stderr": "",
+  "execution_time_ms": 1719
+}
