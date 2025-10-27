@@ -55,19 +55,17 @@ export default function Home() {
             const Icon = feature.icon;
             return (
               <Link key={feature.title} href={feature.link}>
-                <a>
-                  <Card className="hover:shadow-lg transition-all cursor-pointer h-full group">
-                    <CardHeader>
-                      <div
-                        className={`h-12 w-12 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
-                      >
-                        <Icon className="h-6 w-6 text-white" />
-                      </div>
-                      <CardTitle>{feature.title}</CardTitle>
-                      <CardDescription>{feature.description}</CardDescription>
-                    </CardHeader>
-                  </Card>
-                </a>
+                <Card className="hover:shadow-lg transition-all cursor-pointer h-full group">
+                  <CardHeader>
+                    <div
+                      className={`h-12 w-12 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
+                    >
+                      <Icon className="h-6 w-6 text-white" />
+                    </div>
+                    <CardTitle>{feature.title}</CardTitle>
+                    <CardDescription>{feature.description}</CardDescription>
+                  </CardHeader>
+                </Card>
               </Link>
             );
           })}
