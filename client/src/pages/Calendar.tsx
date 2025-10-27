@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 
 export default function CalendarView() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const { data: files } = trpc.files.list.useQuery();
+  const { data: filesData } = trpc.files.list.useQuery({});
+  const files = filesData?.files || [];
   const { data: employees } = trpc.employees.list.useQuery();
   const { data: departments } = trpc.departments.list.useQuery();
 
@@ -31,7 +32,7 @@ export default function CalendarView() {
 
   const getFilesForDate = (day: number) => {
     const dateStr = new Date(year, month, day).toISOString().split("T")[0];
-    return files?.filter((file) => {
+    return files?.filter((file: any) => {
       const fileDate = new Date(file.uploadDate).toISOString().split("T")[0];
       return fileDate === dateStr;
     });
@@ -130,7 +131,7 @@ export default function CalendarView() {
                         <div className="text-sm font-medium mb-2">{day}</div>
                         {hasFiles && (
                           <div className="space-y-1">
-                            {filesForDay.map((file) => (
+                            {filesForDay.map((file: any) => (
                               <div
                                 key={file.id}
                                 className={`text-xs px-2 py-1 rounded ${getDepartmentColor(

@@ -116,10 +116,20 @@ export const appRouter = router({
 
   // File router
   files: router({
-    list: protectedProcedure.query(async () => {
-      const { getAllFiles } = await import("./db");
-      return await getAllFiles();
-    }),
+    list: protectedProcedure
+      .input(z.object({
+        page: z.number().optional().default(1),
+        pageSize: z.number().optional().default(20),
+        departmentId: z.number().optional(),
+        employeeId: z.number().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        keyword: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const { getFilesWithFilters } = await import("./db");
+        return await getFilesWithFilters(input || {});
+      }),
     byEmployee: protectedProcedure
       .input(z.number())
       .query(async ({ input }) => {

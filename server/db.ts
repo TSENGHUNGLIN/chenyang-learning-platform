@@ -189,6 +189,78 @@ export async function getAllFiles() {
   return await db.select().from(files);
 }
 
+export async function getFilesWithFilters(filters: {
+  page?: number;
+  pageSize?: number;
+  departmentId?: number;
+  employeeId?: number;
+  startDate?: string;
+  endDate?: string;
+  keyword?: string;
+}) {
+  const db = await getDb();
+  if (!db) return { files: [], total: 0, page: 1, pageSize: 20 };
+  
+  const { and, like, gte, lte, inArray } = await import("drizzle-orm");
+  
+  const conditions = [];
+  
+  // 篩選部門（透過人員）
+  if (filters.departmentId) {
+    const employeesInDept = await db.select().from(employees).where(eq(employees.departmentId, filters.departmentId));
+    const employeeIds = employeesInDept.map(e => e.id);
+    if (employeeIds.length > 0) {
+      conditions.push(inArray(files.employeeId, employeeIds));
+    } else {
+      // 如果部門沒有人員，返回空結果
+      return { files: [], total: 0, page: filters.page || 1, pageSize: filters.pageSize || 20 };
+    }
+  }
+  
+  // 篩選人員
+  if (filters.employeeId) {
+    conditions.push(eq(files.employeeId, filters.employeeId));
+  }
+  
+  // 篩選日期範圍
+  if (filters.startDate) {
+    conditions.push(gte(files.uploadDate, new Date(filters.startDate)));
+  }
+  if (filters.endDate) {
+    conditions.push(lte(files.uploadDate, new Date(filters.endDate)));
+  }
+  
+  // 關鍵字搜尋
+  if (filters.keyword) {
+    conditions.push(like(files.extractedText, `%${filters.keyword}%`));
+  }
+  
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  
+  // 查詢總數
+  const totalResult = whereClause 
+    ? await db.select().from(files).where(whereClause)
+    : await db.select().from(files);
+  const total = totalResult.length;
+  
+  // 分頁查詢
+  const page = filters.page || 1;
+  const pageSize = filters.pageSize || 20;
+  const offset = (page - 1) * pageSize;
+  
+  const result = whereClause
+    ? await db.select().from(files).where(whereClause).limit(pageSize).offset(offset)
+    : await db.select().from(files).limit(pageSize).offset(offset);
+  
+  return {
+    files: result,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.ceil(total / pageSize),
+  };
+}
+
 export async function getFileById(id: number) {
   const db = await getDb();
   if (!db) return undefined;

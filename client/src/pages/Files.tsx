@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
-import { Search, FileText, Sparkles, Trash2 } from "lucide-react";
+import { useState, useMemo, useCallback } from "react";
+import { Search, FileText, Sparkles, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import { toast } from "sonner";
 import {
@@ -33,35 +33,60 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { debounce } from "lodash";
 
 export default function Files() {
   const { user } = useAuth();
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<number | null>(null);
   const [analysisPrompt, setAnalysisPrompt] = useState("");
 
-  const { data: files, isLoading } = trpc.files.list.useQuery();
+  // Debounced search
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        setDebouncedKeyword(value);
+        setCurrentPage(1); // Reset to first page on search
+      }, 500),
+    []
+  );
+
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchKeyword(value);
+    debouncedSearch(value);
+  }, [debouncedSearch]);
+
+  const { data: filesData, isLoading } = trpc.files.list.useQuery({
+    page: currentPage,
+    pageSize: 20,
+    departmentId: selectedDepartment !== "all" ? parseInt(selectedDepartment) : undefined,
+    employeeId: selectedEmployee !== "all" ? parseInt(selectedEmployee) : undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    keyword: debouncedKeyword || undefined,
+  });
+
   const { data: departments } = trpc.departments.list.useQuery();
   const { data: employees } = trpc.employees.list.useQuery();
-  const { data: searchResults } = trpc.files.search.useQuery(searchKeyword, {
-    enabled: searchKeyword.length > 0,
-  });
   const analysisMutation = trpc.analysis.create.useMutation();
   const deleteFileMutation = trpc.files.delete.useMutation();
   const utils = trpc.useUtils();
 
-  const filteredFiles = (searchKeyword ? searchResults : files)?.filter((file) => {
-    if (selectedDepartment !== "all") {
-      const employee = employees?.find((e) => e.id === file.employeeId);
-      if (employee?.departmentId !== parseInt(selectedDepartment)) return false;
-    }
-    if (selectedEmployee !== "all" && file.employeeId !== parseInt(selectedEmployee)) {
-      return false;
-    }
-    return true;
-  });
+  const files = filesData?.files || [];
+  const totalPages = filesData?.totalPages || 1;
+  const total = filesData?.total || 0;
+
+  // Filter employees by selected department
+  const filteredEmployees = useMemo(() => {
+    if (selectedDepartment === "all") return employees;
+    return employees?.filter((emp) => emp.departmentId === parseInt(selectedDepartment));
+  }, [employees, selectedDepartment]);
 
   const highlightText = (text: string, keyword: string) => {
     if (!keyword) return text;
@@ -82,38 +107,26 @@ export default function Files() {
       toast.error("請選擇檔案並輸入分析提示");
       return;
     }
+
     try {
-      const result = await analysisMutation.mutateAsync({
+      await analysisMutation.mutateAsync({
         fileId: selectedFile,
         analysisType: "general",
         prompt: analysisPrompt,
       });
-      toast.success("分析完成");
-      // Show analysis result in a dialog or new page
-      alert(`分析結果：\n${result.result}`);
+      toast.success("AI 分析完成");
+      setAnalysisPrompt("");
+      setSelectedFile(null);
     } catch (error) {
-      toast.error("分析失敗");
+      toast.error("AI 分析失敗");
     }
   };
-
-  const getEmployeeName = (employeeId: number) => {
-    return employees?.find((e) => e.id === employeeId)?.name || "-";
-  };
-
-  const getDepartmentName = (employeeId: number) => {
-    const employee = employees?.find((e) => e.id === employeeId);
-    if (!employee) return "-";
-    return departments?.find((d) => d.id === employee.departmentId)?.name || "-";
-  };
-
-  const canUpload = user?.role === "admin" || user?.role === "editor";
-  const canAnalyze = user?.role === "admin" || user?.role === "editor";
-  const canDelete = user?.role === "admin" || user?.role === "editor";
 
   const handleDelete = async (fileId: number, filename: string) => {
     if (!confirm(`確定要刪除檔案「${filename}」嗎？`)) {
       return;
     }
+
     try {
       await deleteFileMutation.mutateAsync(fileId);
       toast.success("檔案已刪除");
@@ -123,157 +136,301 @@ export default function Files() {
     }
   };
 
+  const handleDepartmentChange = (value: string) => {
+    setSelectedDepartment(value);
+    setSelectedEmployee("all"); // Reset employee filter
+    setCurrentPage(1);
+  };
+
+  const handleEmployeeChange = (value: string) => {
+    setSelectedEmployee(value);
+    setCurrentPage(1);
+  };
+
+  const handleDateChange = () => {
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setSearchKeyword("");
+    setDebouncedKeyword("");
+    setSelectedDepartment("all");
+    setSelectedEmployee("all");
+    setStartDate("");
+    setEndDate("");
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = 
+    debouncedKeyword || 
+    selectedDepartment !== "all" || 
+    selectedEmployee !== "all" || 
+    startDate || 
+    endDate;
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">檔案管理</h1>
-            <p className="text-muted-foreground mt-2">管理所有上傳的考核問答檔案</p>
+            <p className="text-muted-foreground">
+              管理所有考核檔案，支援搜尋、篩選與 AI 分析
+            </p>
           </div>
-          {canUpload && <FileUpload />}
+          {(user?.role === "admin" || user?.role === "editor") && <FileUpload />}
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>搜尋與篩選</CardTitle>
+            <CardTitle>進階篩選</CardTitle>
+            <CardDescription>
+              使用多條件組合篩選檔案
+              {hasActiveFilters && (
+                <Button
+                  variant="link"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="ml-2"
+                >
+                  清除所有篩選
+                </Button>
+              )}
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="搜尋檔案內容..."
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  className="pl-10"
-                />
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* 關鍵字搜尋 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">關鍵字搜尋</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="搜尋檔案內容..."
+                    value={searchKeyword}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
               </div>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="選擇部門" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">所有部門</SelectItem>
-                  {departments?.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id.toString()}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="選擇人員" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">所有人員</SelectItem>
-                  {employees
-                    ?.filter(
-                      (emp) =>
-                        selectedDepartment === "all" ||
-                        emp.departmentId === parseInt(selectedDepartment)
-                    )
-                    .map((emp) => (
+
+              {/* 部門篩選 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">部門</label>
+                <Select value={selectedDepartment} onValueChange={handleDepartmentChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="選擇部門" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">所有部門</SelectItem>
+                    {departments?.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 人員篩選 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">人員</label>
+                <Select value={selectedEmployee} onValueChange={handleEmployeeChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="選擇人員" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">所有人員</SelectItem>
+                    {filteredEmployees?.map((emp) => (
                       <SelectItem key={emp.id} value={emp.id.toString()}>
                         {emp.name}
                       </SelectItem>
                     ))}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 開始日期 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">開始日期</label>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    handleDateChange();
+                  }}
+                />
+              </div>
+
+              {/* 結束日期 */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">結束日期</label>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    handleDateChange();
+                  }}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>檔案列表</CardTitle>
-            <CardDescription>共 {filteredFiles?.length || 0} 個檔案</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>檔案列表</CardTitle>
+                <CardDescription>
+                  共 {total} 個檔案
+                  {hasActiveFilters && " (已篩選)"}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8">載入中...</div>
+              <div className="text-center py-8 text-muted-foreground">載入中...</div>
+            ) : files.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {hasActiveFilters ? "沒有符合條件的檔案" : "尚無檔案"}
+              </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>檔案名稱</TableHead>
-                    <TableHead>部門</TableHead>
-                    <TableHead>人員</TableHead>
-                    <TableHead>上傳日期</TableHead>
-                    <TableHead>檔案大小</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredFiles?.map((file) => (
-                    <TableRow key={file.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          {highlightText(file.filename, searchKeyword)}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getDepartmentName(file.employeeId)}</TableCell>
-                      <TableCell>{getEmployeeName(file.employeeId)}</TableCell>
-                      <TableCell>
-                        {new Date(file.uploadDate).toLocaleDateString("zh-TW")}
-                      </TableCell>
-                      <TableCell>{(file.fileSize / 1024).toFixed(2)} KB</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="ghost" size="sm" asChild>
-                          <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
-                            查看
-                          </a>
-                        </Button>
-                        {canAnalyze && (
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setSelectedFile(file.id)}
-                              >
-                                <Sparkles className="h-4 w-4 mr-1" />
-                                AI 分析
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>AI 分析</DialogTitle>
-                                <DialogDescription>
-                                  輸入您想要分析的問題或提示
-                                </DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <Textarea
-                                  placeholder="例如：請分析此考核問答的優缺點..."
-                                  value={analysisPrompt}
-                                  onChange={(e) => setAnalysisPrompt(e.target.value)}
-                                  rows={5}
-                                />
-                                <Button onClick={handleAnalysis} className="w-full">
-                                  開始分析
-                                </Button>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        )}
-                        {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(file.id, file.filename)}
-                            disabled={deleteFileMutation.isPending}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        )}
-                      </TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>檔案名稱</TableHead>
+                      <TableHead>人員</TableHead>
+                      <TableHead>上傳日期</TableHead>
+                      <TableHead>檔案大小</TableHead>
+                      <TableHead>操作</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {files.map((file: any) => {
+                      const employee = employees?.find((e) => e.id === file.employeeId);
+                      const department = departments?.find((d) => d.id === employee?.departmentId);
+                      return (
+                        <TableRow key={file.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium">
+                                {highlightText(file.filename, debouncedKeyword)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{employee?.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {department?.name}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(file.uploadDate).toLocaleDateString("zh-TW")}
+                          </TableCell>
+                          <TableCell>
+                            {(file.fileSize / 1024).toFixed(2)} KB
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(file.fileUrl, "_blank")}
+                              >
+                                下載
+                              </Button>
+                              {(user?.role === "admin" || user?.role === "editor") && (
+                                <>
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setSelectedFile(file.id)}
+                                      >
+                                        <Sparkles className="h-4 w-4 mr-1" />
+                                        AI 分析
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>AI 分析</DialogTitle>
+                                        <DialogDescription>
+                                          輸入您想要分析的問題或提示
+                                        </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="space-y-4">
+                                        <Textarea
+                                          placeholder="例如：請分析這份考核問答的優缺點..."
+                                          value={analysisPrompt}
+                                          onChange={(e) => setAnalysisPrompt(e.target.value)}
+                                          rows={4}
+                                        />
+                                        <Button
+                                          onClick={handleAnalysis}
+                                          disabled={analysisMutation.isPending}
+                                          className="w-full"
+                                        >
+                                          {analysisMutation.isPending ? "分析中..." : "開始分析"}
+                                        </Button>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDelete(file.id, file.filename)}
+                                    disabled={deleteFileMutation.isPending}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-muted-foreground">
+                      第 {currentPage} 頁，共 {totalPages} 頁
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        上一頁
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        下一頁
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
