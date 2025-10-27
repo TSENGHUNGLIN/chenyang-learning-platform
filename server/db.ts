@@ -230,9 +230,35 @@ export async function getFilesWithFilters(filters: {
     conditions.push(lte(files.uploadDate, new Date(filters.endDate)));
   }
   
-  // 關鍵字搜尋
+  // 關鍵字搜尋（檔案內容、人員姓名、部門名稱）
   if (filters.keyword) {
-    conditions.push(like(files.extractedText, `%${filters.keyword}%`));
+    const { or } = await import("drizzle-orm");
+    
+    // 搜尋人員姓名
+    const matchingEmployees = await db.select().from(employees).where(like(employees.name, `%${filters.keyword}%`));
+    const employeeIdsByName = matchingEmployees.map(e => e.id);
+    
+    // 搜尋部門名稱
+    const matchingDepartments = await db.select().from(departments).where(like(departments.name, `%${filters.keyword}%`));
+    const departmentIds = matchingDepartments.map(d => d.id);
+    const employeesInMatchingDepts = departmentIds.length > 0 
+      ? await db.select().from(employees).where(inArray(employees.departmentId, departmentIds))
+      : [];
+    const employeeIdsByDept = employeesInMatchingDepts.map(e => e.id);
+    
+    // 組合所有符合條件的人員ID
+    const allMatchingEmployeeIds = Array.from(new Set([...employeeIdsByName, ...employeeIdsByDept]));
+    
+    // 建立搜尋條件：檔案內容 OR 人員姓名 OR 部門名稱
+    const searchConditions = [
+      like(files.extractedText, `%${filters.keyword}%`),
+    ];
+    
+    if (allMatchingEmployeeIds.length > 0) {
+      searchConditions.push(inArray(files.employeeId, allMatchingEmployeeIds));
+    }
+    
+    conditions.push(or(...searchConditions));
   }
   
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
