@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { Search, FileText, Sparkles } from "lucide-react";
+import { Search, FileText, Sparkles, Trash2 } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import { toast } from "sonner";
 import {
@@ -49,6 +49,8 @@ export default function Files() {
     enabled: searchKeyword.length > 0,
   });
   const analysisMutation = trpc.analysis.create.useMutation();
+  const deleteFileMutation = trpc.files.delete.useMutation();
+  const utils = trpc.useUtils();
 
   const filteredFiles = (searchKeyword ? searchResults : files)?.filter((file) => {
     if (selectedDepartment !== "all") {
@@ -106,6 +108,20 @@ export default function Files() {
 
   const canUpload = user?.role === "admin" || user?.role === "editor";
   const canAnalyze = user?.role === "admin" || user?.role === "editor";
+  const canDelete = user?.role === "admin" || user?.role === "editor";
+
+  const handleDelete = async (fileId: number, filename: string) => {
+    if (!confirm(`確定要刪除檔案「${filename}」嗎？`)) {
+      return;
+    }
+    try {
+      await deleteFileMutation.mutateAsync(fileId);
+      toast.success("檔案已刪除");
+      utils.files.list.invalidate();
+    } catch (error) {
+      toast.error("刪除失敗");
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -242,6 +258,16 @@ export default function Files() {
                               </div>
                             </DialogContent>
                           </Dialog>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(file.id, file.filename)}
+                            disabled={deleteFileMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>

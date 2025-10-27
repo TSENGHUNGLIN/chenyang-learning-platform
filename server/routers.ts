@@ -104,6 +104,16 @@ export const appRouter = router({
         const { createFile } = await import("./db");
         return await createFile({ ...input, uploadedBy: ctx.user.id });
       }),
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input: fileId, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canUploadFiles")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "無權限刪除檔案" });
+        }
+        const { deleteFile } = await import("./db");
+        return await deleteFile(fileId);
+      }),
   }),
 
   // Analysis router

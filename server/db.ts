@@ -176,6 +176,13 @@ export async function searchFiles(keyword: string) {
   return await db.select().from(files).where(like(files.extractedText, `%${keyword}%`));
 }
 
+export async function deleteFile(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(files).where(eq(files.id, id));
+  return { success: true };
+}
+
 // Analysis queries
 export async function getAnalysisByFileId(fileId: number) {
   const db = await getDb();
