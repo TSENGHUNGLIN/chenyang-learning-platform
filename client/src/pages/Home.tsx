@@ -59,7 +59,7 @@ export default function Home() {
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">歡迎回來，{user?.name || "使用者"}</h1>
-          <p className="text-muted-foreground mt-2">晨陽新人成長學習題庫分析系統</p>
+          <p className="text-muted-foreground mt-2">晨陽同仁成長分析</p>
         </div>
 
         {/* 快速搜尋 */}
