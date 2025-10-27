@@ -25,6 +25,7 @@ const MAX_FILES = 5;
 
 export default function FileUpload() {
   const [open, setOpen] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -130,6 +131,7 @@ export default function FileUpload() {
       // Reset form
       setOpen(false);
       setFiles([]);
+      setSelectedDepartment("");
       setSelectedEmployee("");
       setUploadProgress(0);
     } catch (error) {
@@ -161,18 +163,47 @@ export default function FileUpload() {
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label>選擇人員</Label>
-            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+            <Label>選擇部門</Label>
+            <Select 
+              value={selectedDepartment} 
+              onValueChange={(value) => {
+                setSelectedDepartment(value);
+                setSelectedEmployee(""); // 重置人員選擇
+              }}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="選擇人員" />
+                <SelectValue placeholder="請先選擇部門" />
               </SelectTrigger>
               <SelectContent>
-                {employees?.map((emp) => (
-                  <SelectItem key={emp.id} value={emp.id.toString()}>
-                    {emp.name} -{" "}
-                    {departments?.find((d) => d.id === emp.departmentId)?.name}
+                {departments?.map((dept) => (
+                  <SelectItem key={dept.id} value={dept.id.toString()}>
+                    {dept.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>選擇人員</Label>
+            <Select 
+              value={selectedEmployee} 
+              onValueChange={setSelectedEmployee}
+              disabled={!selectedDepartment}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={selectedDepartment ? "選擇人員" : "請先選擇部門"} />
+              </SelectTrigger>
+              <SelectContent>
+                {employees
+                  ?.filter((emp) => 
+                    selectedDepartment ? emp.departmentId === parseInt(selectedDepartment) : true
+                  )
+                  .map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id.toString()}>
+                      {emp.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
