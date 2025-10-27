@@ -171,6 +171,31 @@ export const appRouter = router({
         const { deleteFile } = await import("./db");
         return await deleteFile(fileId);
       }),
+    createFromText: protectedProcedure
+      .input(z.object({
+        employeeId: z.number(),
+        fileName: z.string(),
+        content: z.string(),
+        fileUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canUploadFiles")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createFile } = await import("./db");
+        return await createFile({
+          employeeId: input.employeeId,
+          filename: input.fileName,
+          fileKey: `text-${Date.now()}`,
+          fileUrl: input.fileUrl || "",
+          mimeType: "text/plain",
+          fileSize: new Blob([input.content]).size,
+          uploadDate: new Date(),
+          extractedText: input.content,
+          uploadedBy: ctx.user.id,
+        });
+      }),
   }),
 
   // Analysis router
