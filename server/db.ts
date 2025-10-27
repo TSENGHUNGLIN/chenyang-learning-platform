@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, departments, InsertDepartment, employees, InsertEmployee, files, InsertFile, analysisResults, InsertAnalysisResult } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -56,8 +56,13 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       values.role = user.role;
       updateSet.role = user.role;
     } else if (user.openId === ENV.ownerOpenId) {
+      // 專案擁有者自動批准為管理員
       values.role = 'admin';
       updateSet.role = 'admin';
+    } else {
+      // 新使用者預設為待審核狀態
+      values.role = 'pending';
+      updateSet.role = 'pending';
     }
 
     if (!values.lastSignedIn) {
@@ -89,4 +94,117 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Department queries
+export async function getAllDepartments() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(departments);
+}
+
+export async function getDepartmentById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(departments).where(eq(departments.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createDepartment(data: InsertDepartment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(departments).values(data);
+  return result;
+}
+
+// Employee queries
+export async function getAllEmployees() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(employees);
+}
+
+export async function getEmployeeById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(employees).where(eq(employees.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getEmployeesByDepartment(departmentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(employees).where(eq(employees.departmentId, departmentId));
+}
+
+export async function createEmployee(data: InsertEmployee) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(employees).values(data);
+  return result;
+}
+
+// File queries
+export async function getAllFiles() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(files);
+}
+
+export async function getFileById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(files).where(eq(files.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getFilesByEmployee(employeeId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(files).where(eq(files.employeeId, employeeId));
+}
+
+export async function createFile(data: InsertFile) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(files).values(data);
+  return result;
+}
+
+export async function searchFiles(keyword: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const { like } = await import("drizzle-orm");
+  return await db.select().from(files).where(like(files.extractedText, `%${keyword}%`));
+}
+
+// Analysis queries
+export async function getAnalysisByFileId(fileId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(analysisResults).where(eq(analysisResults.fileId, fileId));
+}
+
+export async function createAnalysis(data: InsertAnalysisResult) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(analysisResults).values(data);
+  return result;
+}
+
+// User management queries
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(users);
+}
+
+export async function updateUserRole(openId: string, role: "admin" | "editor" | "viewer" | "pending") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ role }).where(eq(users.openId, openId));
+}
+
+export async function deleteUser(openId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(users).where(eq(users.openId, openId));
+}
