@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
+import Manage from "./pages/Manage";
 import Users from "./pages/Users";
 import Files from "./pages/Files";
 import CalendarView from "./pages/Calendar";
@@ -12,9 +13,9 @@ import CalendarView from "./pages/Calendar";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/users"} component={Users} />
+    <Switch>      <Route path={"/"} component={Home} />
+      <Route path={"/manage"} component={Manage} />
+      <Route path={"/404"} component={NotFound} />
       <Route path={"/files"} component={Files} />
       <Route path={"/calendar"} component={CalendarView} />
       <Route path={"/404"} component={NotFound} />
