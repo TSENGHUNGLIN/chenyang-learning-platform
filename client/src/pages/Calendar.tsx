@@ -38,6 +38,27 @@ export default function CalendarView() {
     });
   };
 
+  // 統計每個人員的檔案數量
+  const getEmployeeFilesCount = (filesForDay: any[]) => {
+    const employeeCount: Record<number, { name: string; count: number; employeeId: number }> = {};
+    
+    filesForDay.forEach((file: any) => {
+      const employee = employees?.find((e) => e.id === file.employeeId);
+      if (employee) {
+        if (!employeeCount[file.employeeId]) {
+          employeeCount[file.employeeId] = {
+            name: employee.name,
+            count: 0,
+            employeeId: file.employeeId,
+          };
+        }
+        employeeCount[file.employeeId].count++;
+      }
+    });
+    
+    return Object.values(employeeCount);
+  };
+
   const getDepartmentColor = (employeeId: number) => {
     const employee = employees?.find((e) => e.id === employeeId);
     if (!employee) return "bg-gray-200";
@@ -131,15 +152,15 @@ export default function CalendarView() {
                         <div className="text-sm font-medium mb-2">{day}</div>
                         {hasFiles && (
                           <div className="space-y-1">
-                            {filesForDay.map((file: any) => (
+                            {getEmployeeFilesCount(filesForDay).map((employee) => (
                               <div
-                                key={file.id}
+                                key={employee.employeeId}
                                 className={`text-xs px-2 py-1 rounded ${getDepartmentColor(
-                                  file.employeeId
+                                  employee.employeeId
                                 )} truncate`}
-                                title={file.filename}
+                                title={`${employee.name} (${employee.count}篇文章)`}
                               >
-                                {employees?.find((e) => e.id === file.employeeId)?.name}
+                                {employee.name} {employee.count > 1 && `(${employee.count}篇)`}
                               </div>
                             ))}
                           </div>
