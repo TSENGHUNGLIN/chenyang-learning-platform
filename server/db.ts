@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, departments, InsertDepartment, employees, InsertEmployee, files, InsertFile, analysisResults, InsertAnalysisResult } from "../drizzle/schema";
+import { InsertUser, users, departments, InsertDepartment, employees, InsertEmployee, files, InsertFile, analysisResults, InsertAnalysisResult, fileReadLogs, InsertFileReadLog } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -353,3 +353,36 @@ export async function deleteUser(openId: string) {
   if (!db) throw new Error("Database not available");
   await db.delete(users).where(eq(users.openId, openId));
 }
+
+
+// File read log queries
+export async function logFileRead(fileId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(fileReadLogs).values({ fileId, userId });
+}
+
+export async function getLastReadTime(fileId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const logs = await db.select().from(fileReadLogs)
+    .where(eq(fileReadLogs.fileId, fileId))
+    .orderBy(fileReadLogs.readAt);
+  return logs.length > 0 ? logs[logs.length - 1].readAt : null;
+}
+
+export async function getFileWithReadInfo(fileId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const file = await getFileById(fileId);
+  if (!file) return null;
+  
+  const lastRead = await getLastReadTime(fileId, userId);
+  
+  return {
+    ...file,
+    lastReadAt: lastRead,
+  };
+}
+

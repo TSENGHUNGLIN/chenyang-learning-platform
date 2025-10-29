@@ -196,6 +196,19 @@ export const appRouter = router({
           uploadedBy: ctx.user.id,
         });
       }),
+    logRead: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input: fileId, ctx }) => {
+        const { logFileRead } = await import("./db");
+        await logFileRead(fileId, ctx.user.id);
+        return { success: true };
+      }),
+    getWithReadInfo: protectedProcedure
+      .input(z.number())
+      .query(async ({ input: fileId, ctx }) => {
+        const { getFileWithReadInfo } = await import("./db");
+        return await getFileWithReadInfo(fileId, ctx.user.id);
+      }),
   }),
 
   // Analysis router

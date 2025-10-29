@@ -91,3 +91,16 @@ export const analysisResults = mysqlTable("analysisResults", {
 
 export type AnalysisResult = typeof analysisResults.$inferSelect;
 export type InsertAnalysisResult = typeof analysisResults.$inferInsert;
+
+/**
+ * 檔案閱讀記錄表格
+ */
+export const fileReadLogs = mysqlTable("fileReadLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  fileId: int("fileId").notNull(),
+  userId: int("userId").notNull(),
+  readAt: timestamp("readAt").defaultNow().notNull(),
+});
+
+export type FileReadLog = typeof fileReadLogs.$inferSelect;
+export type InsertFileReadLog = typeof fileReadLogs.$inferInsert;

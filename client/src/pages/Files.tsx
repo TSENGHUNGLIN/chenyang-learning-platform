@@ -38,6 +38,7 @@ import { debounce } from "lodash";
 
 export default function Files() {
   const { user } = useAuth();
+  const logReadMutation = trpc.files.logRead.useMutation();
   const searchParams = new URLSearchParams(useSearch());
   const urlSearch = searchParams.get("search") || "";
   
@@ -318,6 +319,7 @@ export default function Files() {
                       <TableHead>檔案名稱</TableHead>
                       <TableHead>人員</TableHead>
                       <TableHead>上傳日期</TableHead>
+                      <TableHead>更新日期</TableHead>
                       <TableHead>檔案大小</TableHead>
                       <TableHead>操作</TableHead>
                     </TableRow>
@@ -348,6 +350,12 @@ export default function Files() {
                             {new Date(file.uploadDate).toLocaleDateString("zh-TW")}
                           </TableCell>
                           <TableCell>
+                            {new Date(file.updatedAt).toLocaleDateString("zh-TW")}
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(file.updatedAt).toLocaleTimeString("zh-TW", { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </TableCell>
+                          <TableCell>
                             {(file.fileSize / 1024).toFixed(2)} KB
                           </TableCell>
                           <TableCell>
@@ -355,7 +363,10 @@ export default function Files() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open(file.fileUrl, "_blank")}
+                                onClick={() => {
+                                  logReadMutation.mutate(file.id);
+                                  window.open(file.fileUrl, "_blank");
+                                }}
                               >
                                 下載
                               </Button>
