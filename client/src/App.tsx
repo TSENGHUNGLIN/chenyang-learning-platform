@@ -13,9 +13,10 @@ import CalendarView from "./pages/Calendar";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <Switch>      <Route path={"/"} component={Home} />
+    <Switch>
+      <Route path={"/"} component={Home} />
       <Route path={"/manage"} component={Manage} />
-      <Route path={"/404"} component={NotFound} />
+      <Route path={"/users"} component={Users} />
       <Route path={"/files"} component={Files} />
       <Route path={"/calendar"} component={CalendarView} />
       <Route path={"/404"} component={NotFound} />
