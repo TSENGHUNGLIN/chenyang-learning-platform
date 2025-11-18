@@ -1051,3 +1051,10 @@
 - [ ] 測試人工評分流程
 - [ ] 測試成績匯出功能
 - [ ] 建立 checkpoint
+
+
+## 修復指派考生功能
+- [x] 檢查ExamManagement頁面的指派對話框代碼
+- [x] 修復勾選框無法選擇的問題（加入stopPropagation阻止事件冒泡）
+- [x] 測試指派考生流程
+- [ ] 建立 checkpoint

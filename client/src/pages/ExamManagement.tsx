@@ -493,8 +493,12 @@ export default function ExamManagement() {
                     <input
                       type="checkbox"
                       checked={selectedUserIds.includes(user.id)}
-                      onChange={() => toggleUserSelection(user.id)}
-                      className="h-4 w-4"
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        toggleUserSelection(user.id);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-4 w-4 cursor-pointer"
                     />
                     <div className="flex-1">
                       <p className="font-medium">{user.name || "未設定姓名"}</p>
