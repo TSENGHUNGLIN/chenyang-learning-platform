@@ -167,3 +167,20 @@ export const questions = mysqlTable("questions", {
 
 export type Question = typeof questions.$inferSelect;
 export type InsertQuestion = typeof questions.$inferInsert;
+
+/**
+ * 考核記錄表格（記錄每次AI分析的結果）
+ */
+export const assessmentRecords = mysqlTable("assessmentRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  employeeId: int("employeeId").notNull(), // 受考人員ID
+  analysisType: varchar("analysisType", { length: 50 }).notNull(), // 分析類型（generate_questions, analyze_questions, other）
+  score: int("score"), // 分數（如果有）
+  result: text("result").notNull(), // 分析結果（JSON格式）
+  fileIds: text("fileIds"), // 相關檔案ID（JSON陣列）
+  createdBy: int("createdBy").notNull(), // 執行分析的使用者ID
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AssessmentRecord = typeof assessmentRecords.$inferSelect;
+export type InsertAssessmentRecord = typeof assessmentRecords.$inferInsert;

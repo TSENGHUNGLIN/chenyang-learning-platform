@@ -595,3 +595,61 @@ export async function setQuestionTags(questionId: number, tagIds: number[]) {
   return { success: true };
 }
 
+
+
+// ==================== 考核記錄相關函數 ====================
+
+export async function createAssessmentRecord(data: {
+  employeeId: number;
+  analysisType: string;
+  score?: number;
+  result: string;
+  fileIds?: number[];
+  createdBy: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { assessmentRecords } = await import("../drizzle/schema");
+  
+  const [record] = await db.insert(assessmentRecords).values({
+    employeeId: data.employeeId,
+    analysisType: data.analysisType,
+    score: data.score,
+    result: data.result,
+    fileIds: data.fileIds ? JSON.stringify(data.fileIds) : null,
+    createdBy: data.createdBy,
+  });
+  
+  return record;
+}
+
+export async function getAssessmentRecordsByEmployee(employeeId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { assessmentRecords } = await import("../drizzle/schema");
+  const { desc } = await import("drizzle-orm");
+  
+  const records = await db
+    .select()
+    .from(assessmentRecords)
+    .where(eq(assessmentRecords.employeeId, employeeId))
+    .orderBy(desc(assessmentRecords.createdAt));
+  
+  return records;
+}
+
+export async function getEmployeeIdByFileId(fileId: number): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const { files } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select({ employeeId: files.employeeId })
+    .from(files)
+    .where(eq(files.id, fileId))
+    .limit(1);
+  
+  return result[0]?.employeeId ?? null;
+}
+
+

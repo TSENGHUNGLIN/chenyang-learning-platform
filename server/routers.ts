@@ -112,6 +112,12 @@ export const appRouter = router({
         const { deleteEmployee } = await import("./db");
         return await deleteEmployee(id);
       }),
+    getAssessmentRecords: protectedProcedure
+      .input(z.number())
+      .query(async ({ input: employeeId }) => {
+        const { getAssessmentRecordsByEmployee } = await import("./db");
+        return await getAssessmentRecordsByEmployee(employeeId);
+      }),
   }),
 
   // File router
@@ -495,6 +501,23 @@ ${file.extractedText || "無法提取文字內容"}`
           const content = response.choices[0].message.content;
           const resultText = typeof content === 'string' ? content : JSON.stringify(content);
           const result = JSON.parse(resultText || "{}");
+          
+          // 儲存考核記錄（如果有employeeId）
+          if (input.fileIds && input.fileIds.length > 0) {
+            const { getEmployeeIdByFileId, createAssessmentRecord } = await import("./db");
+            const employeeId = await getEmployeeIdByFileId(input.fileIds[0]);
+            if (employeeId) {
+              await createAssessmentRecord({
+                employeeId,
+                analysisType: input.analysisType,
+                score: result.difficulty?.score,
+                result: JSON.stringify(result),
+                fileIds: input.fileIds,
+                createdBy: ctx.user.id,
+              });
+            }
+          }
+          
           return { result };
         } else {
           // 其他類型返回純文字
@@ -506,6 +529,22 @@ ${file.extractedText || "無法提取文字內容"}`
           });
           
           const result = response.choices[0].message.content || "無法生成分析結果";
+          
+          // 儲存考核記錄（如果有employeeId）
+          if (input.fileIds && input.fileIds.length > 0) {
+            const { getEmployeeIdByFileId, createAssessmentRecord } = await import("./db");
+            const employeeId = await getEmployeeIdByFileId(input.fileIds[0]);
+            if (employeeId) {
+              await createAssessmentRecord({
+                employeeId,
+                analysisType: input.analysisType,
+                result: typeof result === 'string' ? result : JSON.stringify(result),
+                fileIds: input.fileIds,
+                createdBy: ctx.user.id,
+              });
+            }
+          }
+          
           return { result };
         }
       }),

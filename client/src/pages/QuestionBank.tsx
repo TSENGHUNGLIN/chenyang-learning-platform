@@ -29,7 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Pencil, Trash2, Search, Filter } from "lucide-react";
+import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home } from "lucide-react";
 import { toast } from "sonner";
 
 type QuestionType = "true_false" | "multiple_choice" | "short_answer";
@@ -210,14 +210,20 @@ export default function QuestionBank() {
 
   return (
     <div className="container mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <BookOpen className="h-8 w-8 text-primary" />
-          題庫管理
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          管理考核題庫，支援是非題、選擇題、問答題
-        </p>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <BookOpen className="h-8 w-8 text-primary" />
+            題庫管理
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            管理考核題庫，支援是非題、選擇題、問答題
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => window.location.href = '/'}>
+          <Home className="h-4 w-4 mr-2" />
+          返回首頁
+        </Button>
       </div>
 
       {/* 篩選與搜尋區域 */}

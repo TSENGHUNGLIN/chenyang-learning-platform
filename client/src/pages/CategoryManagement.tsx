@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FolderTree, Plus, Pencil, Trash2 } from "lucide-react";
+import { FolderTree, Plus, Pencil, Trash2, Home } from "lucide-react";
 import { toast } from "sonner";
 
 export default function CategoryManagement() {
@@ -136,6 +136,10 @@ export default function CategoryManagement() {
             </h1>
             <p className="text-muted-foreground mt-2">管理題目分類，支援多層級樹狀結構</p>
           </div>
+          <Button variant="outline" onClick={() => window.location.href = '/'}>
+            <Home className="h-4 w-4 mr-2" />
+            返回首頁
+          </Button>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             新增分類

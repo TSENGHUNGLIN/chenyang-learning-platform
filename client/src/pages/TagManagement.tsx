@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Tag, Plus, Pencil, Trash2 } from "lucide-react";
+import { Tag, Plus, Pencil, Trash2, Home } from "lucide-react";
 import { toast } from "sonner";
 
 export default function TagManagement() {
@@ -129,6 +129,10 @@ export default function TagManagement() {
             </h1>
             <p className="text-muted-foreground mt-2">管理題目標籤，用於分類和篩選題目</p>
           </div>
+          <Button variant="outline" onClick={() => window.location.href = '/'}>
+            <Home className="h-4 w-4 mr-2" />
+            返回首頁
+          </Button>
           <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             新增標籤

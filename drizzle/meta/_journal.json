@@ -43,6 +43,13 @@
       "when": 1763453307106,
       "tag": "0005_cold_lethal_legion",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1763454140252,
+      "tag": "0006_swift_jazinda",
+      "breakpoints": true
     }
   ]
 }
