@@ -1255,6 +1255,76 @@ ${file.extractedText || "無法提取文字內容"}`
       const { getAllExamsStatistics } = await import("./examStatistics");
       return await getAllExamsStatistics();
     }),
+    // 人工評分API
+    updateManualScore: protectedProcedure
+      .input(
+        z.object({
+          submissionId: z.number(),
+          score: z.number(),
+          teacherComment: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateManualScore, recalculateExamScore } = await import("./manualGrading");
+        
+        // 更新分數
+        await updateManualScore(input);
+        
+        // 取得assignmentId並重新計算總分
+        const { getDb } = await import("./db");
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const { examSubmissions } = await import("../drizzle/schema");
+        const submission = await db
+          .select()
+          .from(examSubmissions)
+          .where(eq(examSubmissions.id, input.submissionId))
+          .limit(1);
+        
+        if (submission.length > 0) {
+          await recalculateExamScore(submission[0].assignmentId);
+        }
+        
+        return { success: true };
+      }),
+    // 成績匯出API
+    exportScores: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { exportExamScoresToExcel } = await import("./examExport");
+        const result = await exportExamScoresToExcel(input);
+        
+        // 返回base64編碼的檔案內容
+        return {
+          data: result.buffer.toString("base64"),
+          filename: result.filename,
+        };
+      }),
+    exportStatistics: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { exportExamStatisticsToExcel } = await import("./examExport");
+        const result = await exportExamStatisticsToExcel(input);
+        
+        // 返回base64編碼的檔案內容
+        return {
+          data: result.buffer.toString("base64"),
+          filename: result.filename,
+        };
+      }),
   }),
 });
 

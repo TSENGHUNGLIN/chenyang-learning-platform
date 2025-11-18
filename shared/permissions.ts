@@ -2,7 +2,7 @@
  * 權限定義
  */
 
-export type UserRole = "admin" | "editor" | "viewer" | "pending";
+export type UserRole = "admin" | "editor" | "viewer" | "examinee";
 
 export interface Permissions {
   canView: boolean;
@@ -46,9 +46,9 @@ export function getPermissions(role: UserRole): Permissions {
         canAnalyze: false,
         canExport: false,
       };
-    case "pending":
+    case "examinee":
       return {
-        canView: false,
+        canView: true,
         canEdit: false,
         canDelete: false,
         canManageUsers: false,

@@ -270,6 +270,7 @@ export const examSubmissions = mysqlTable("examSubmissions", {
   isCorrect: int("isCorrect"), // 是否正確（1=正確，0=錯誤，null=待評分）
   score: int("score"), // 該題得分（null表示未評分）
   aiEvaluation: text("aiEvaluation"), // AI評分結果（JSON格式，包含評分理由）
+  teacherComment: text("teacherComment"), // 教師評語（人工評分時使用）
   submittedAt: timestamp("submittedAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

@@ -1018,3 +1018,36 @@
 - [x] 在ExamManagement頁面新增統計按鈕
 - [x] 在App.tsx中新增路由
 
+
+
+## 權限系統調整
+- [x] 分析現有權限定義（permissions.ts）
+- [x] 更新角色權限對應表（統一使用examinee取代pending）
+- [ ] 檢查所有API的權限控制邏輯
+- [ ] 調整前端頁面的權限顯示（隱藏無權限的功能按鈕）
+- [ ] 測試viewer角色的權限限制
+- [ ] 測試admin角色可以參加考試
+
+## 人工評分介面
+- [x] 建立評分頁面（/exam/:assignmentId/grade）
+- [x] 顯示考生答案和AI評分結果
+- [x] 實作分數調整功能（特別是問答題）
+- [x] 實作評語功能（教師可以留評語）
+- [x] 更新examSubmissions表，儲存人工調整後的分數
+- [x] 重新計算總分並更新examScores表
+- [x] 在ExamStatistics頁面新增評分按鈕
+- [x] 在App.tsx中新增路由
+- [x] 建立後端API（updateManualScore、recalculateExamScore）
+
+## 成績匯出功能
+- [x] 實作Excel匯出功能（使用xlsx套件）
+- [x] 匯出成績報表（包含成績總覽和答題詳情兩個工作表）
+- [x] 匯出統計分析（平均分、及格率、分數分布、錯題排行）
+- [x] 在ExamStatistics頁面新增匯出按鈕
+- [x] 建立後端API（exportScores、exportStatistics）
+- [ ] 實作PDF匯出功能（可選，目前Excel已滿足需求）
+
+## 測試與交付
+- [ ] 測試人工評分流程
+- [ ] 測試成績匯出功能
+- [ ] 建立 checkpoint

@@ -8,16 +8,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft,
+  BarChart3,
   TrendingUp,
-  TrendingDown,
   Users,
   CheckCircle2,
   XCircle,
-  BarChart3,
   AlertTriangle,
+  Award,
+  Download,
+  FileSpreadsheet,
+  Edit,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 export default function ExamStatistics() {
   const { user, loading: authLoading } = useAuth();
@@ -28,7 +32,54 @@ export default function ExamStatistics() {
   // 取得考試統計資料
   const { data: statistics, isLoading: statsLoading } = trpc.exams.getStatistics.useQuery(examId);
   const { data: wrongAnswers, isLoading: wrongLoading } = trpc.exams.getWrongAnswerRanking.useQuery(examId);
-  const { data: performance, isLoading: perfLoading } = trpc.exams.getStudentPerformance.useQuery(examId);
+  const { data: performance, isLoading: performanceLoading } =
+    trpc.exams.getStudentPerformance.useQuery(examId);
+
+  // 匯出Mutation
+  const exportScoresMutation = trpc.exams.exportScores.useMutation();
+  const exportStatisticsMutation = trpc.exams.exportStatistics.useMutation();
+
+  // 處理匯出成績
+  const handleExportScores = async () => {
+    try {
+      const result = await exportScoresMutation.mutateAsync(examId);
+      // 將base64轉換為Blob並下載
+      const blob = new Blob(
+        [Uint8Array.from(atob(result.data), (c) => c.charCodeAt(0))],
+        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("成績報表已匯出！");
+    } catch (error) {
+      toast.error("匯出失敗，請稍後再試");
+    }
+  };
+
+  // 處理匯出統計
+  const handleExportStatistics = async () => {
+    try {
+      const result = await exportStatisticsMutation.mutateAsync(examId);
+      // 將base64轉換為Blob並下載
+      const blob = new Blob(
+        [Uint8Array.from(atob(result.data), (c) => c.charCodeAt(0))],
+        { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = result.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("統計分析已匯出！");
+    } catch (error) {
+      toast.error("匯出失敗，請稍後再試");
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -81,11 +132,28 @@ export default function ExamStatistics() {
             <h1 className="text-3xl font-bold">{exam.title}</h1>
             <p className="text-muted-foreground mt-2">考試統計分析</p>
           </div>
-          <Button variant="outline" onClick={() => navigate("/exams")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            返回考試管理
-          </Button>
-        </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setLocation("/exams")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              返回考試管理
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportScores}
+              disabled={exportScoresMutation.isPending}
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              {exportScoresMutation.isPending ? "匯出中..." : "匯出成績"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportStatistics}
+              disabled={exportStatisticsMutation.isPending}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {exportStatisticsMutation.isPending ? "匯出中..." : "匯出統計"}
+            </Button>
+          </div>      </div>
 
         {/* 總覽卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -265,6 +333,7 @@ export default function ExamStatistics() {
                       <TableHead>百分比</TableHead>
                       <TableHead>結果</TableHead>
                       <TableHead>評分時間</TableHead>
+                      <TableHead className="text-right">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -321,6 +390,18 @@ export default function ExamStatistics() {
                           {item.gradedAt
                             ? new Date(item.gradedAt).toLocaleString("zh-TW")
                             : "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {(item.status === "submitted" || item.status === "graded") && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setLocation(`/exam/${item.assignmentId}/grade`)}
+                            >
+                              <Edit className="mr-1 h-3 w-3" />
+                              評分
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
