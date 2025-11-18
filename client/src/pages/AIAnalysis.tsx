@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Sparkles, FileText, Download, Eye } from "lucide-react";
+import { Loader2, Sparkles, FileText, Download, Eye, Home } from "lucide-react";
 import { toast } from "sonner";
 import AnalysisResultView from "@/components/AnalysisResultView";
 
@@ -164,10 +164,20 @@ export default function AIAnalysis() {
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Sparkles className="h-8 w-8 text-primary" />
-          AI 分析中心
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Sparkles className="h-8 w-8 text-primary" />
+            AI 分析中心
+          </h1>
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = '/'}
+            className="flex items-center gap-2"
+          >
+            <Home className="h-4 w-4" />
+            返回首頁
+          </Button>
+        </div>
         <p className="text-muted-foreground mt-2">
           選擇檔案並輸入自訂提示詞，使用 AI 進行深度分析
         </p>
