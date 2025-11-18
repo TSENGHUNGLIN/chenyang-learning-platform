@@ -38,7 +38,7 @@ export default function Home() {
       icon: TrendingUp,
       title: "AI 分析",
       description: "使用 AI 分析考核問答內容，提供深入見解",
-      link: "/files",
+      link: "/ai-analysis",
       color: "from-orange-500 to-red-500",
     },
     ...(user?.role === "admin"
