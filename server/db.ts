@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, departments, InsertDepartment, employees, InsertEmployee, files, InsertFile, analysisResults, InsertAnalysisResult, fileReadLogs, InsertFileReadLog } from "../drizzle/schema";
+import { InsertUser, users, departments, InsertDepartment, employees, InsertEmployee, files, InsertFile, analysisResults, InsertAnalysisResult, fileReadLogs, InsertFileReadLog, analysisHistory, InsertAnalysisHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -652,4 +652,309 @@ export async function getEmployeeIdByFileId(fileId: number): Promise<number | nu
   return result[0]?.employeeId ?? null;
 }
 
+
+
+
+/**
+ * 儲存AI分析歷史記錄
+ */
+export async function createAnalysisHistory(data: {
+  analysisType: string;
+  analysisMode: string;
+  prompt?: string;
+  fileIds: number[];
+  fileNames: string[];
+  result: string;
+  createdBy: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const [record] = await db.insert(analysisHistory).values({
+    analysisType: data.analysisType,
+    analysisMode: data.analysisMode,
+    prompt: data.prompt || null,
+    fileIds: JSON.stringify(data.fileIds),
+    fileNames: JSON.stringify(data.fileNames),
+    result: data.result,
+    createdBy: data.createdBy,
+  });
+  
+  return record;
+}
+
+/**
+ * 查詢所有AI分析歷史記錄（依建立時間倒序）
+ */
+export async function getAllAnalysisHistory() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const records = await db
+    .select()
+    .from(analysisHistory)
+    .orderBy(desc(analysisHistory.createdAt));
+  
+  return records;
+}
+
+/**
+ * 根據ID查詢單一AI分析歷史記錄
+ */
+export async function getAnalysisHistoryById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db
+    .select()
+    .from(analysisHistory)
+    .where(eq(analysisHistory.id, id))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+/**
+ * 根據使用者ID查詢AI分析歷史記錄
+ */
+export async function getAnalysisHistoryByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const records = await db
+    .select()
+    .from(analysisHistory)
+    .where(eq(analysisHistory.createdBy, userId))
+    .orderBy(desc(analysisHistory.createdAt));
+  
+  return records;
+}
+
+/**
+ * 刪除AI分析歷史記錄
+ */
+export async function deleteAnalysisHistory(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(analysisHistory).where(eq(analysisHistory.id, id));
+}
+
+
+
+/**
+ * 建立考試
+ */
+export async function createExam(data: {
+  title: string;
+  description?: string;
+  timeLimit?: number;
+  passingScore: number;
+  totalScore: number;
+  gradingMethod: 'auto' | 'manual' | 'mixed';
+  status: 'draft' | 'published' | 'archived';
+  createdBy: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { exams } = await import("../drizzle/schema");
+  
+  const [result] = await db.insert(exams).values({
+    title: data.title,
+    description: data.description || null,
+    timeLimit: data.timeLimit || null,
+    passingScore: data.passingScore,
+    totalScore: data.totalScore,
+    gradingMethod: data.gradingMethod,
+    status: data.status,
+    createdBy: data.createdBy,
+  });
+  
+  return result;
+}
+
+/**
+ * 查詢所有考試
+ */
+export async function getAllExams() {
+  const db = await getDb();
+  if (!db) return [];
+  const { exams } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select()
+    .from(exams)
+    .orderBy(desc(exams.createdAt));
+  
+  return result;
+}
+
+/**
+ * 根據ID查詢考試
+ */
+export async function getExamById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { exams } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select()
+    .from(exams)
+    .where(eq(exams.id, id))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+/**
+ * 更新考試
+ */
+export async function updateExam(id: number, data: {
+  title?: string;
+  description?: string;
+  timeLimit?: number;
+  passingScore?: number;
+  totalScore?: number;
+  gradingMethod?: 'auto' | 'manual' | 'mixed';
+  status?: 'draft' | 'published' | 'archived';
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { exams } = await import("../drizzle/schema");
+  
+  await db.update(exams).set(data).where(eq(exams.id, id));
+}
+
+/**
+ * 刪除考試
+ */
+export async function deleteExam(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { exams } = await import("../drizzle/schema");
+  
+  await db.delete(exams).where(eq(exams.id, id));
+}
+
+/**
+ * 新增考試題目
+ */
+export async function addExamQuestion(data: {
+  examId: number;
+  questionId: number;
+  questionOrder: number;
+  points: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examQuestions } = await import("../drizzle/schema");
+  
+  await db.insert(examQuestions).values(data);
+}
+
+/**
+ * 查詢考試的所有題目
+ */
+export async function getExamQuestions(examId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examQuestions, questions } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select({
+      id: examQuestions.id,
+      examId: examQuestions.examId,
+      questionId: examQuestions.questionId,
+      questionOrder: examQuestions.questionOrder,
+      points: examQuestions.points,
+      question: questions,
+    })
+    .from(examQuestions)
+    .leftJoin(questions, eq(examQuestions.questionId, questions.id))
+    .where(eq(examQuestions.examId, examId))
+    .orderBy(examQuestions.questionOrder);
+  
+  return result;
+}
+
+/**
+ * 刪除考試題目
+ */
+export async function deleteExamQuestion(examId: number, questionId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examQuestions } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+  
+  await db.delete(examQuestions).where(
+    and(
+      eq(examQuestions.examId, examId),
+      eq(examQuestions.questionId, questionId)
+    )
+  );
+}
+
+/**
+ * 指派考試給使用者
+ */
+export async function assignExam(data: {
+  examId: number;
+  userId: number;
+  employeeId?: number;
+  deadline?: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examAssignments } = await import("../drizzle/schema");
+  
+  await db.insert(examAssignments).values({
+    examId: data.examId,
+    userId: data.userId,
+    employeeId: data.employeeId || null,
+    deadline: data.deadline || null,
+    status: 'pending',
+  });
+}
+
+/**
+ * 查詢使用者的考試指派
+ */
+export async function getUserExamAssignments(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examAssignments, exams } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select({
+      assignment: examAssignments,
+      exam: exams,
+    })
+    .from(examAssignments)
+    .leftJoin(exams, eq(examAssignments.examId, exams.id))
+    .where(eq(examAssignments.userId, userId))
+    .orderBy(desc(examAssignments.assignedAt));
+  
+  return result;
+}
+
+/**
+ * 查詢考試的所有指派
+ */
+export async function getExamAssignments(examId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examAssignments, users } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select({
+      assignment: examAssignments,
+      user: users,
+    })
+    .from(examAssignments)
+    .leftJoin(users, eq(examAssignments.userId, users.id))
+    .where(eq(examAssignments.examId, examId))
+    .orderBy(desc(examAssignments.assignedAt));
+  
+  return result;
+}
 

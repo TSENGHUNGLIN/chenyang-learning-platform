@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -139,8 +139,8 @@ export default function AIAnalysis() {
   const batchImportMutation = trpc.questions.batchImport.useMutation();
 
   // 匯入題庫功能
-  const handleImportToQuestionBank = () => {
-    console.log('點擊匯入題庫按鈕');
+  const handleImportToQuestionBank = useCallback(() => {
+    console.log('===== handleImportToQuestionBank 被呼叫 =====');
     console.log('analysisResult:', analysisResult);
     console.log('analysisType:', analysisType);
     
@@ -180,7 +180,7 @@ export default function AIAnalysis() {
       console.error('載入解析模組失敗:', error);
       toast.error("系統錯誤，無法載入題目解析模組");
     });
-  };
+  }, [analysisResult, analysisType]);
   
   // 匯出功能
   const handleExport = async (format: 'pdf' | 'word') => {
@@ -518,11 +518,14 @@ export default function AIAnalysis() {
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={handleImportToQuestionBank}
-                  disabled={analysisType !== 'generate_questions'}
+                  onClick={() => {
+                    console.log('===== 按鈕被點擊 =====');
+                    console.log('analysisType:', analysisType);
+                    handleImportToQuestionBank();
+                  }}
                 >
                   <Database className="h-4 w-4 mr-2" />
-                  匯入題庫
+                  匯入題庫 ({analysisType})
                 </Button>
                 <Button
                   variant="outline"

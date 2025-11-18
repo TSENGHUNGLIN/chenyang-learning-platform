@@ -487,7 +487,7 @@
 - [x] 設計資料結構（解析後的題目物件）
 
 ### 後端API開發
-- [x] 建立批次匯入題目API（接收解析後的題目陣列）
+- [x] 建立批次匯入題目 API（接收解析後的題目陣列）
 - [x] 實作題目驗證邏輯（檢查必填欄位）
 - [x] 實作批次新增題目到資料庫
 - [x] 實作匯入結果回傳（成功/失敗數量、錯誤訊息）
@@ -498,14 +498,91 @@
 - [x] 建立匯入預視對話框（顯示解析後的題目列表）
 - [x] 實作批量編輯功能（分類、標籤、難度）
 - [x] 實作確認匯入功能
+
+### 測試與優化
+- [x] 程式碼已實作，但UI事件繫定有問題，待解決
 - [x] 實作匯入進度顯示
 - [x] 實作匯入結果報告
 
 ### 測試與優化
-- [ ] 測試是非題解析和匯入
-- [ ] 測試選擇題解析和匯入
-- [ ] 測試問答題解析和匯入
-- [ ] 測試批量編輯功能
-- [ ] 測試錯誤處理
+- [ ] 測試是非題解析和匯入 - 進行中
+- [ ] 測試選擇題解析和匯入 - 進行中
+- [ ] 測試問答題解析和匯入 - 進行中
+- [ ] 測試批量編輯功能 - 進行中
+- [ ] 測試錯誤處理 - 進行中
 - [ ] 建立checkpoint
+
+
+
+
+## AI分析結果儲存功能
+### 資料庫設計
+- [x] 設計analysisHistory表格（分析類型、分析模式、提示詞、檔案ID、檔案名稱、結果、建立者、建立時間）
+- [x] 執行資料庫遷移
+
+### 後端API開發
+- [x] 實作createAnalysisHistory函數（儲存分析歷史）
+- [x] 實作getAllAnalysisHistory函數（查詢所有歷史記錄）
+- [x] 實作getAnalysisHistoryById函數（根據ID查詢單一記錄）
+- [x] 實作getAnalysisHistoryByUser函數（根據使用者ID查詢）
+- [x] 實作deleteAnalysisHistory函數（刪除歷史記錄）
+- [x] 在customAnalysis方法中新增儲存邏輯
+- [x] 新增historyList API（查詢所有歷史記錄）
+- [x] 新增historyById API（根據ID查詢）
+- [x] 新增deleteHistory API（刪除歷史記錄）
+
+### 前端UI開發（待實作）
+- [ ] 建立分析歷史頁面（/analysis-history）
+- [ ] 顯示歷史記錄列表（分析類型、檔案名稱、建立時間）
+- [ ] 實作查看歷史記錄詳情功能
+- [ ] 實作刪除歷史記錄功能
+- [ ] 實作從歷史記錄重新分析功能
+- [ ] 在導航列中新增分析歷史選項
+
+
+
+
+## 考試建立功能
+### 資料庫設計
+- [x] exams表格已存在（考試基本資訊）
+- [x] examQuestions表格已存在（考試題目關聯）
+- [x] examAssignments表格已存在（考試指派）
+- [x] examSubmissions表格已存在（考試作答記錄）
+- [x] examScores表格已存在（考試成績）
+
+### 後端API開發
+- [x] 實作createExam函數（建立考試）
+- [x] 實作getAllExams函數（查詢所有考試）
+- [x] 實作getExamById函數（根據ID查詢考試）
+- [x] 實作updateExam函數（更新考試）
+- [x] 實作deleteExam函數（刪除考試）
+- [x] 實作addExamQuestion函數（新增考試題目）
+- [x] 實作getExamQuestions函數（查詢考試題目）
+- [x] 實作deleteExamQuestion函數（刪除考試題目）
+- [x] 實作assignExam函數（指派考試）
+- [x] 實作getUserExamAssignments函數（查詢使用者的考試指派）
+- [x] 實作getExamAssignments函數（查詢考試的所有指派）
+- [x] 新增exams.list API（查詢所有考試）
+- [x] 新增exams.getById API（根據ID查詢考試）
+- [x] 新增exams.create API（建立考試）
+- [x] 新增exams.update API（更新考試）
+- [x] 新增exams.delete API（刪除考試）
+- [x] 新增exams.addQuestion API（新增考試題目）
+- [x] 新增exams.getQuestions API（查詢考試題目）
+- [x] 新增exams.deleteQuestion API（刪除考試題目）
+- [x] 新增exams.assign API（指派考試）
+- [x] 新增exams.getAssignments API（查詢考試指派）
+- [x] 新增exams.myAssignments API（查詢我的考試指派）
+
+### 前端UI開發（待實作）
+- [ ] 建立考試管理頁面（/exams）
+- [ ] 顯示考試列表（標題、狀態、建立時間）
+- [ ] 實作建立考試功能（表單：標題、描述、時間限制、及格分數、總分、評分方式）
+- [ ] 實作編輯考試功能
+- [ ] 實作刪除考試功能
+- [ ] 實作新增考試題目功能（從題庫選擇題目）
+- [ ] 實作調整題目順序和分數功能
+- [ ] 實作指派考試功能（選擇考生、設定截止時間）
+- [ ] 實作發布考試功能（將狀態從draft改為published）
+- [ ] 在導航列中新增考試管理選項
 

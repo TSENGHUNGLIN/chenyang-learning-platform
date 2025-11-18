@@ -169,7 +169,25 @@ export type Question = typeof questions.$inferSelect;
 export type InsertQuestion = typeof questions.$inferInsert;
 
 /**
- * 考核記錄表格（記錄每次AI分析的結果）
+ * AI分析歷史記錄表格（記錄每次AI分析的結果）
+ */
+export const analysisHistory = mysqlTable("analysisHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  analysisType: varchar("analysisType", { length: 50 }).notNull(), // 分析類型（generate_questions, analyze_questions, other）
+  analysisMode: varchar("analysisMode", { length: 50 }).notNull(), // 分析模式（file_only, external_info, comprehensive）
+  prompt: text("prompt"), // 使用者提示詞
+  fileIds: text("fileIds").notNull(), // 相關檔案ID（JSON陣列）
+  fileNames: text("fileNames"), // 檔案名稱列表（JSON陣列，方便顯示）
+  result: text("result").notNull(), // 分析結果（JSON格式）
+  createdBy: int("createdBy").notNull(), // 執行分析的使用者ID
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AnalysisHistory = typeof analysisHistory.$inferSelect;
+export type InsertAnalysisHistory = typeof analysisHistory.$inferInsert;
+
+/**
+ * 考核記錄表格（保留給考試系統使用）
  */
 export const assessmentRecords = mysqlTable("assessmentRecords", {
   id: int("id").autoincrement().primaryKey(),
