@@ -351,6 +351,58 @@ ${file.extractedText || "無法提取文字內容"}`
         await fs.unlink(pdfPath);
         return { base64, filename: `analysis-report-${Date.now()}.pdf` };
       }),
+    customAnalysis: protectedProcedure
+      .input(z.object({
+        fileIds: z.array(z.number()),
+        analysisType: z.enum(["generate_questions", "analyze_questions", "other"]),
+        customPrompt: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canAnalyze")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getFileById } = await import("./db");
+        const { invokeLLM } = await import("./_core/llm");
+        
+        // 獲取所有選擇的檔案
+        const files = await Promise.all(
+          input.fileIds.map(id => getFileById(id))
+        );
+        const validFiles = files.filter(f => f !== null);
+        
+        if (validFiles.length === 0) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "檔案不存在" });
+        }
+        
+        // 根據分析類型生成不同的系統提示
+        let systemPrompt = "";
+        let userPrompt = "";
+        
+        const fileContents = validFiles.map(f => `檔案：${f!.filename}\n${f!.extractedText || "無法提取文字內容"}`).join("\n\n");
+        
+        if (input.analysisType === "generate_questions") {
+          systemPrompt = "你是一個專業的考題出題助手。你的任務是根據檔案內容和使用者的要求，生成適合的考題。";
+          userPrompt = `請根據以下檔案內容，${input.customPrompt}\n\n檔案內容：\n${fileContents}`;
+        } else if (input.analysisType === "analyze_questions") {
+          systemPrompt = "你是一個專業的學習題庫分析助手。你的任務是分析考核檔案，提供全面的分析和建議。";
+          userPrompt = `請${input.customPrompt}\n\n檔案內容：\n${fileContents}`;
+        } else {
+          systemPrompt = "你是一個專業的AI助手，擅長分析和處理各種文檔內容。";
+          userPrompt = `${input.customPrompt}\n\n檔案內容：\n${fileContents}`;
+        }
+        
+        const response = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+        });
+        
+        const result = response.choices[0].message.content || "無法生成分析結果";
+        
+        return { result };
+      }),
     exportWord: protectedProcedure
       .input(z.object({
         result: z.any(),

@@ -23,9 +23,24 @@ export default function AIAnalysis() {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
+  const [analysisType, setAnalysisType] = useState<string>("generate_questions");
   const [customPrompt, setCustomPrompt] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // 根據分析類型返回提示詞前綴
+  const getPromptPrefix = () => {
+    switch (analysisType) {
+      case "generate_questions":
+        return "題目方式：";
+      case "analyze_questions":
+        return "分析：";
+      case "other":
+        return "其他：";
+      default:
+        return "";
+    }
+  };
 
   const { data: departments } = trpc.departments.list.useQuery();
   const { data: employees } = trpc.employees.list.useQuery();
@@ -67,32 +82,31 @@ export default function AIAnalysis() {
     }
   };
 
+  const customAnalysisMutation = trpc.analysis.customAnalysis.useMutation();
+
   const handleAnalyze = async () => {
     if (selectedFiles.length === 0) {
       toast.error("請至少選擇一個檔案");
       return;
     }
 
+    if (!customPrompt.trim()) {
+      toast.error("請輸入提示詞");
+      return;
+    }
+
     setIsAnalyzing(true);
     try {
-      // 這裡需要調用AI分析API
-      // 暫時使用模擬資料
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setAnalysisResult({
-        summary: "分析完成",
-        difficulty: { level: "中等", score: 70, reasoning: "基於選定的檔案內容分析" },
-        performance: {
-          strengths: ["表現良好的部分"],
-          weaknesses: ["需要改進的部分"],
-          suggestions: ["具體建議"]
-        },
-        knowledgeGaps: [],
-        recommendedQuestions: []
+      const response = await customAnalysisMutation.mutateAsync({
+        fileIds: selectedFiles,
+        analysisType: analysisType as "generate_questions" | "analyze_questions" | "other",
+        customPrompt: customPrompt,
       });
       
+      setAnalysisResult(response.result);
       toast.success("AI分析完成");
     } catch (error) {
+      console.error("AI分析錯誤：", error);
       toast.error("分析失敗，請稍後再試");
     } finally {
       setIsAnalyzing(false);
@@ -272,15 +286,39 @@ export default function AIAnalysis() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="analysisType">分析類型</Label>
+            <Select value={analysisType} onValueChange={setAnalysisType}>
+              <SelectTrigger>
+                <SelectValue placeholder="選擇分析類型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="generate_questions">出考題</SelectItem>
+                <SelectItem value="analyze_questions">題目分析</SelectItem>
+                <SelectItem value="other">其他</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="prompt">提示詞</Label>
-            <Textarea
-              id="prompt"
-              placeholder="請輸入分析需求，例如：&#10;- 分析這些考核檔案的整體表現&#10;- 從題庫選擇10個是非題、10個選擇題、4個問答題&#10;- 針對弱點提供改進建議&#10;- 推薦適合的進階學習資源"
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              rows={6}
-              className="resize-none"
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-3 text-sm text-muted-foreground z-10">
+                {getPromptPrefix()}
+              </span>
+              <Textarea
+                id="prompt"
+                placeholder={
+                  analysisType === "generate_questions"
+                    ? "從題庫選擇10個是非、10個選擇、4個問答"
+                    : analysisType === "analyze_questions"
+                    ? "分析這些考核檔案的整體表現和弱點"
+                    : "請輸入您的分析需求"
+                }
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                rows={6}
+                className="resize-none pl-24"
+              />
+            </div>
           </div>
           <Button
             onClick={handleAnalyze}
