@@ -116,25 +116,7 @@ export default function Home() {
           })}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>系統資訊</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">使用者角色：</span>
-              <span className="font-medium capitalize">{user?.role}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">登入方式：</span>
-              <span className="font-medium">{user?.loginMethod || "Google"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">電子郵件：</span>
-              <span className="font-medium">{user?.email || "-"}</span>
-            </div>
-          </CardContent>
-        </Card>
+
       </div>
     </DashboardLayout>
   );
