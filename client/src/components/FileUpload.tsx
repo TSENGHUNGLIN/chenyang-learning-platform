@@ -132,7 +132,6 @@ export default function FileUpload() {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
       const allowedTypes = [
-        "application/pdf",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "text/csv",
         "application/csv",
@@ -140,7 +139,7 @@ export default function FileUpload() {
 
       const validFiles = selectedFiles.filter((file) => {
         if (!allowedTypes.includes(file.type)) {
-          toast.error(`${file.name} 不是支援的檔案格式`);
+          toast.error(`${file.name} 不是支援的檔案格式，請使用 DOCX 或 CSV 格式`);
           return false;
         }
         return true;

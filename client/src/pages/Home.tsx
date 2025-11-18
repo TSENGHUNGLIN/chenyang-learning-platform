@@ -102,6 +102,25 @@ export default function Home() {
           </CardContent>
         </Card>
 
+        {/* 系統說明 */}
+        <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+          <CardHeader>
+            <CardTitle className="text-blue-900 dark:text-blue-100">📝 支援的檔案格式</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              系統目前支援以下檔案格式的上傳和分析：
+            </p>
+            <ul className="mt-2 space-y-1 text-sm text-blue-700 dark:text-blue-300">
+              <li>• <strong>DOCX</strong> - Microsoft Word 文件</li>
+              <li>• <strong>CSV</strong> - 逗號分隔值檔案</li>
+            </ul>
+            <p className="mt-3 text-xs text-blue-600 dark:text-blue-400">
+              注意：系統已不再支援 PDF 檔案上傳，請將 PDF 轉換為 DOCX 格式後再上傳。
+            </p>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature) => {
             const Icon = feature.icon;

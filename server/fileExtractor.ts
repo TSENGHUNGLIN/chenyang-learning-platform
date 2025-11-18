@@ -113,7 +113,7 @@ export async function extractTextFromFile(
   mimeType: string
 ): Promise<string> {
   if (mimeType === "application/pdf") {
-    return await extractTextFromPDF(buffer);
+    throw new Error("系統不再支援PDF檔案上傳，請使用DOCX或CSV格式");
   } else if (
     mimeType ===
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
