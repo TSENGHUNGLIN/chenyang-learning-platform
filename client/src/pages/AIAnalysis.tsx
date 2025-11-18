@@ -24,6 +24,7 @@ export default function AIAnalysis() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
   const [analysisType, setAnalysisType] = useState<string>("generate_questions");
+  const [analysisMode, setAnalysisMode] = useState<string>("file_only"); // AI分析模式
   const [customPrompt, setCustomPrompt] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -103,6 +104,7 @@ export default function AIAnalysis() {
       const response = await customAnalysisMutation.mutateAsync({
         fileIds: selectedFiles,
         analysisType: analysisType as "generate_questions" | "analyze_questions" | "other",
+        analysisMode: analysisMode as "file_only" | "external" | "mixed",
         customPrompt: customPrompt,
       });
       
@@ -310,18 +312,48 @@ export default function AIAnalysis() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="analysisType">分析類型</Label>
-            <Select value={analysisType} onValueChange={setAnalysisType}>
-              <SelectTrigger>
-                <SelectValue placeholder="選擇分析類型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="generate_questions">出考題</SelectItem>
-                <SelectItem value="analyze_questions">題目分析</SelectItem>
-                <SelectItem value="other">其他</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="analysisType">分析類型</Label>
+              <Select value={analysisType} onValueChange={setAnalysisType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="選擇分析類型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="generate_questions">出考題</SelectItem>
+                  <SelectItem value="analyze_questions">題目分析</SelectItem>
+                  <SelectItem value="other">其他</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="analysisMode">AI 分析模式</Label>
+              <Select value={analysisMode} onValueChange={setAnalysisMode}>
+                <SelectTrigger>
+                  <SelectValue placeholder="選擇分析模式" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="file_only">
+                    <div className="flex flex-col">
+                      <span className="font-medium">檔案內資料分析</span>
+                      <span className="text-xs text-muted-foreground">只使用上傳檔案內容（推薦）</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="external">
+                    <div className="flex flex-col">
+                      <span className="font-medium">外部資訊分析</span>
+                      <span className="text-xs text-muted-foreground">可引用外部知識</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="mixed">
+                    <div className="flex flex-col">
+                      <span className="font-medium">綜合運用</span>
+                      <span className="text-xs text-muted-foreground">結合檔案與外部資訊</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="prompt">提示詞</Label>

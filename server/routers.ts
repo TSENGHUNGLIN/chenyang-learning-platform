@@ -361,6 +361,7 @@ ${file.extractedText || "無法提取文字內容"}`
       .input(z.object({
         fileIds: z.array(z.number()),
         analysisType: z.enum(["generate_questions", "analyze_questions", "other"]),
+        analysisMode: z.enum(["file_only", "external", "mixed"]).default("file_only"),
         customPrompt: z.string(),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -379,6 +380,16 @@ ${file.extractedText || "無法提取文字內容"}`
         
         if (validFiles.length === 0) {
           throw new TRPCError({ code: "NOT_FOUND", message: "檔案不存在" });
+        }
+        
+        // 根據分析模式生成不同的指示
+        let modeInstruction = "";
+        if (input.analysisMode === "file_only") {
+          modeInstruction = "\n\n**重要：你必須只使用提供的檔案內容進行分析，不得引用任何外部知識或資訊。所有的分析結果、題目和答案都必須基於檔案內容。**";
+        } else if (input.analysisMode === "external") {
+          modeInstruction = "\n\n你可以引用外部知識和資訊來補充分析，但請明確標註哪些內容來自外部資源。";
+        } else {
+          modeInstruction = "\n\n你可以結合檔案內容和外部知識進行綜合分析，但請以檔案內容為主。";
         }
         
         // 根據分析類型生成不同的系統提示
@@ -415,13 +426,13 @@ ${file.extractedText || "無法提取文字內容"}`
               }).join('\n')}`
             : "";
           
-          systemPrompt = "你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目（根據分類和標籤篩選），如果題庫中沒有適合的題目，再根據檔案內容生成新題目。請先提供「題目整理」（僅列出題目，不含答案），再提供「題目與答案」（每個題目搭配完整答案）。";
+          systemPrompt = `你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目（根據分類和標籤篩選），如果題庫中沒有適合的題目，再根據檔案內容生成新題目。請先提供「題目整理」（僅列出題目，不含答案），再提供「題目與答案」（每個題目搭配完整答案）。${modeInstruction}`;
           userPrompt = `請根據以下檔案內容和題庫，${input.customPrompt}${questionBankInfo}\n\n檔案內容：\n${fileContents}`;
         } else if (input.analysisType === "analyze_questions") {
-          systemPrompt = "你是一個專業的學習題庫分析助手。你的任務是分析考核檔案，提供全面的分析和建議。";
+          systemPrompt = `你是一個專業的學習題庫分析助手。你的任務是分析考核檔案，提供全面的分析和建議。${modeInstruction}`;
           userPrompt = `請${input.customPrompt}\n\n檔案內容：\n${fileContents}`;
         } else {
-          systemPrompt = "你是一個專業的AI助手，擅長分析和處理各種文檔內容。";
+          systemPrompt = `你是一個專業的AI助手，擅長分析和處理各種文檔內容。${modeInstruction}`;
           userPrompt = `${input.customPrompt}\n\n檔案內容：\n${fileContents}`;
         }
         
