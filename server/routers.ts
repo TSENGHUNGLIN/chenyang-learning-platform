@@ -382,18 +382,34 @@ ${file.extractedText || "無法提取文字內容"}`
         const fileContents = validFiles.map(f => `檔案：${f!.filename}\n${f!.extractedText || "無法提取文字內容"}`).join("\n\n");
         
         if (input.analysisType === "generate_questions") {
-          // 從題庫獲取所有題目
-          const { getAllQuestions } = await import("./db");
+          // 從題庫獲取所有題目，並載入分類和標籤資訊
+          const { getAllQuestions, getAllCategories, getAllTags, getQuestionTags } = await import("./db");
           const allQuestions = await getAllQuestions();
+          const categories = await getAllCategories();
+          const tags = await getAllTags();
           
-          // 將題庫資訊轉換為文字格式
-          const questionBankInfo = allQuestions.length > 0 
-            ? `\n\n可用題庫（共 ${allQuestions.length} 題）：\n${allQuestions.map((q: any, idx: number) => 
-                `${idx + 1}. [類型: ${q.type === 'true_false' ? '是非題' : q.type === 'multiple_choice' ? '選擇題' : '問答題'}, 難度: ${q.difficulty === 'easy' ? '簡單' : q.difficulty === 'medium' ? '中等' : '困難'}] ${q.question}`
-              ).join('\n')}`
+          // 為每個題目載入標籤
+          const questionsWithTags = await Promise.all(
+            allQuestions.map(async (q: any) => {
+              const questionTags = await getQuestionTags(q.id);
+              return { ...q, tags: questionTags };
+            })
+          );
+          
+          // 建立分類和標籤的對照表
+          const categoryMap = new Map(categories.map((c: any) => [c.id, c.name]));
+          const tagMap = new Map(tags.map((t: any) => [t.id, t.name]));
+          
+          // 將題庫資訊轉換為文字格式，包含分類和標籤
+          const questionBankInfo = questionsWithTags.length > 0 
+            ? `\n\n可用題庫（共 ${questionsWithTags.length} 題）：\n${questionsWithTags.map((q: any, idx: number) => {
+                const categoryName = q.categoryId ? categoryMap.get(q.categoryId) : '無分類';
+                const tagNames = q.tags.map((t: any) => t.name).join(', ') || '無標籤';
+                return `${idx + 1}. [類型: ${q.type === 'true_false' ? '是非題' : q.type === 'multiple_choice' ? '選擇題' : '問答題'}, 難度: ${q.difficulty === 'easy' ? '簡單' : q.difficulty === 'medium' ? '中等' : '困難'}, 分類: ${categoryName}, 標籤: ${tagNames}] ${q.question}`;
+              }).join('\n')}`
             : "";
           
-          systemPrompt = "你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目，如果題庫中沒有適合的題目，再根據檔案內容生成新題目。";
+          systemPrompt = "你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目（根據分類和標籤篩選），如果題庫中沒有適合的題目，再根據檔案內容生成新題目。";
           userPrompt = `請根據以下檔案內容和題庫，${input.customPrompt}${questionBankInfo}\n\n檔案內容：\n${fileContents}`;
         } else if (input.analysisType === "analyze_questions") {
           systemPrompt = "你是一個專業的學習題庫分析助手。你的任務是分析考核檔案，提供全面的分析和建議。";
@@ -632,9 +648,18 @@ ${file.extractedText || "無法提取文字內容"}`
       const { getAllCategories } = await import("./db");
       return await getAllCategories();
     }),
+    tree: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getCategoryTree } = await import("./db");
+      return await getCategoryTree();
+    }),
     create: protectedProcedure
       .input(z.object({
         name: z.string(),
+        parentId: z.number().optional(),
         description: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -646,6 +671,23 @@ ${file.extractedText || "無法提取文字內容"}`
         await createCategory(input);
         return { success: true };
       }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        parentId: z.number().optional(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateCategory } = await import("./db");
+        const { id, ...data } = input;
+        await updateCategory(id, data);
+        return { success: true };
+      }),
     delete: protectedProcedure
       .input(z.number())
       .mutation(async ({ input, ctx }) => {
@@ -655,6 +697,87 @@ ${file.extractedText || "無法提取文字內容"}`
         }
         const { deleteCategory } = await import("./db");
         await deleteCategory(input);
+        return { success: true };
+      }),
+  }),
+
+  // Tags router
+  tags: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getAllTags } = await import("./db");
+      return await getAllTags();
+    }),
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        color: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createTag } = await import("./db");
+        await createTag(input);
+        return { success: true };
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        color: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateTag } = await import("./db");
+        const { id, ...data } = input;
+        await updateTag(id, data);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { deleteTag } = await import("./db");
+        await deleteTag(input);
+        return { success: true };
+      }),
+  }),
+
+  // Question tags association router
+  questionTags: router({
+    getByQuestion: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getQuestionTags } = await import("./db");
+        return await getQuestionTags(input);
+      }),
+    setTags: protectedProcedure
+      .input(z.object({
+        questionId: z.number(),
+        tagIds: z.array(z.number()),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { setQuestionTags } = await import("./db");
+        await setQuestionTags(input.questionId, input.tagIds);
         return { success: true };
       }),
   }),

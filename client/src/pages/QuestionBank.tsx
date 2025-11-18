@@ -53,13 +53,16 @@ export default function QuestionBank() {
     explanation: "",
     categoryId: undefined as number | undefined,
   });
+  const [selectedTags, setSelectedTags] = useState<number[]>([]);
 
   const { data: questions, refetch: refetchQuestions } = trpc.questions.list.useQuery();
   const { data: categories } = trpc.questionCategories.list.useQuery();
+  const { data: tags } = trpc.tags.list.useQuery();
   
   const createMutation = trpc.questions.create.useMutation();
   const updateMutation = trpc.questions.update.useMutation();
   const deleteMutation = trpc.questions.delete.useMutation();
+  const setTagsMutation = trpc.questionTags.setTags.useMutation();
 
   const filteredQuestions = questions?.filter((q: any) => {
     if (searchKeyword && !q.question.toLowerCase().includes(searchKeyword.toLowerCase())) {
@@ -84,6 +87,7 @@ export default function QuestionBank() {
       explanation: "",
       categoryId: undefined,
     });
+    setSelectedTags([]);
   };
 
   const handleCreate = async () => {
@@ -97,7 +101,15 @@ export default function QuestionBank() {
     }
 
     try {
-      await createMutation.mutateAsync(formData);
+      const result = await createMutation.mutateAsync(formData);
+      // Set tags for the new question
+      if (selectedTags.length > 0 && result) {
+        const insertResult = result as any;
+        const questionId = insertResult.insertId || insertResult[0]?.insertId;
+        if (questionId) {
+          await setTagsMutation.mutateAsync({ questionId, tagIds: selectedTags });
+        }
+      }
       toast.success("題目新增成功");
       setShowCreateDialog(false);
       resetForm();
@@ -114,6 +126,11 @@ export default function QuestionBank() {
       await updateMutation.mutateAsync({
         id: editingQuestion.id,
         ...formData,
+      });
+      // Update tags
+      await setTagsMutation.mutateAsync({ 
+        questionId: editingQuestion.id, 
+        tagIds: selectedTags 
       });
       toast.success("題目更新成功");
       setShowEditDialog(false);
@@ -148,6 +165,7 @@ export default function QuestionBank() {
       explanation: question.explanation || "",
       categoryId: question.categoryId,
     });
+    // Tags will be loaded in the dialog via useEffect
     setShowEditDialog(true);
   };
 
@@ -398,6 +416,34 @@ export default function QuestionBank() {
                 rows={3}
               />
             </div>
+            <div className="space-y-2">
+              <Label>標籤（選填）</Label>
+              <div className="flex flex-wrap gap-2 p-3 border rounded-md">
+                {tags && tags.length > 0 ? (
+                  tags.map((tag: any) => (
+                    <Badge
+                      key={tag.id}
+                      style={{ 
+                        backgroundColor: selectedTags.includes(tag.id) ? (tag.color || "#3b82f6") : "#e5e7eb",
+                        color: selectedTags.includes(tag.id) ? "white" : "#6b7280",
+                        cursor: "pointer"
+                      }}
+                      onClick={() => {
+                        if (selectedTags.includes(tag.id)) {
+                          setSelectedTags(selectedTags.filter(id => id !== tag.id));
+                        } else {
+                          setSelectedTags([...selectedTags, tag.id]);
+                        }
+                      }}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground">尚無標籤，請先到標籤管理新增標籤</span>
+                )}
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
@@ -486,6 +532,34 @@ export default function QuestionBank() {
                 onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
                 rows={3}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>標籤（選填）</Label>
+              <div className="flex flex-wrap gap-2 p-3 border rounded-md">
+                {tags && tags.length > 0 ? (
+                  tags.map((tag: any) => (
+                    <Badge
+                      key={tag.id}
+                      style={{ 
+                        backgroundColor: selectedTags.includes(tag.id) ? (tag.color || "#3b82f6") : "#e5e7eb",
+                        color: selectedTags.includes(tag.id) ? "white" : "#6b7280",
+                        cursor: "pointer"
+                      }}
+                      onClick={() => {
+                        if (selectedTags.includes(tag.id)) {
+                          setSelectedTags(selectedTags.filter(id => id !== tag.id));
+                        } else {
+                          setSelectedTags([...selectedTags, tag.id]);
+                        }
+                      }}
+                    >
+                      {tag.name}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground">尚無標籤，請先到標籤管理新增標籤</span>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter>

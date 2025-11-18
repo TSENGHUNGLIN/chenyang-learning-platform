@@ -106,11 +106,12 @@ export type FileReadLog = typeof fileReadLogs.$inferSelect;
 export type InsertFileReadLog = typeof fileReadLogs.$inferInsert;
 
 /**
- * 題目分類表格
+ * 題目分類表格（支援多層級樹狀結構）
  */
 export const questionCategories = mysqlTable("questionCategories", {
   id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  parentId: int("parentId"), // 父分類 ID，null 表示根分類
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -118,6 +119,33 @@ export const questionCategories = mysqlTable("questionCategories", {
 
 export type QuestionCategory = typeof questionCategories.$inferSelect;
 export type InsertQuestionCategory = typeof questionCategories.$inferInsert;
+
+/**
+ * 標籤表格
+ */
+export const tags = mysqlTable("tags", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 50 }).notNull().unique(),
+  color: varchar("color", { length: 20 }), // 標籤顏色（例如：#3b82f6）
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Tag = typeof tags.$inferSelect;
+export type InsertTag = typeof tags.$inferInsert;
+
+/**
+ * 題目-標籤關聯表（多對多）
+ */
+export const questionTags = mysqlTable("questionTags", {
+  id: int("id").autoincrement().primaryKey(),
+  questionId: int("questionId").notNull(),
+  tagId: int("tagId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type QuestionTag = typeof questionTags.$inferSelect;
+export type InsertQuestionTag = typeof questionTags.$inferInsert;
 
 /**
  * 題庫表格
@@ -131,7 +159,7 @@ export const questions = mysqlTable("questions", {
   options: text("options"), // JSON格式儲存選項（僅選擇題使用）
   correctAnswer: text("correctAnswer").notNull(),
   explanation: text("explanation"),
-  tags: text("tags"), // JSON格式儲存標籤
+  // tags 欄位已移除，改用 questionTags 關聯表
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

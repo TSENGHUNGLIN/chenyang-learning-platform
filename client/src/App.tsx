@@ -11,6 +11,8 @@ import Files from "./pages/Files";
 import CalendarView from "./pages/Calendar";
 import AIAnalysis from "./pages/AIAnalysis";
 import QuestionBank from "./pages/QuestionBank";
+import CategoryManagement from "./pages/CategoryManagement";
+import TagManagement from "./pages/TagManagement";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -23,6 +25,8 @@ function Router() {
       <Route path={"/calendar"} component={CalendarView} />
       <Route path={"/ai-analysis"} component={AIAnalysis} />
       <Route path={"/question-bank"} component={QuestionBank} />
+      <Route path={"/categories"} component={CategoryManagement} />
+      <Route path={"/tags"} component={TagManagement} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

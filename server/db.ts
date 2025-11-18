@@ -468,3 +468,130 @@ export async function deleteCategory(id: number) {
   return { success: true };
 }
 
+
+
+// Category management with hierarchy support
+export async function getCategoryTree() {
+  const db = await getDb();
+  if (!db) return [];
+  const { questionCategories } = await import("../drizzle/schema");
+  const categories = await db.select().from(questionCategories).orderBy(questionCategories.name);
+  
+  // Build tree structure
+  const buildTree = (parentId: number | null): any[] => {
+    return categories
+      .filter(cat => cat.parentId === parentId)
+      .map(cat => ({
+        ...cat,
+        children: buildTree(cat.id),
+      }));
+  };
+  
+  return buildTree(null);
+}
+
+export async function updateCategory(id: number, data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questionCategories } = await import("../drizzle/schema");
+  await db.update(questionCategories).set(data).where(eq(questionCategories.id, id));
+  return { success: true };
+}
+
+// Tag management
+export async function getAllTags() {
+  const db = await getDb();
+  if (!db) return [];
+  const { tags } = await import("../drizzle/schema");
+  return await db.select().from(tags).orderBy(tags.name);
+}
+
+export async function createTag(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { tags } = await import("../drizzle/schema");
+  const result = await db.insert(tags).values(data);
+  return result;
+}
+
+export async function updateTag(id: number, data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { tags } = await import("../drizzle/schema");
+  await db.update(tags).set(data).where(eq(tags.id, id));
+  return { success: true };
+}
+
+export async function deleteTag(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { tags, questionTags } = await import("../drizzle/schema");
+  
+  // Delete all question-tag associations first
+  await db.delete(questionTags).where(eq(questionTags.tagId, id));
+  
+  // Then delete the tag
+  await db.delete(tags).where(eq(tags.id, id));
+  return { success: true };
+}
+
+// Question-Tag association management
+export async function getQuestionTags(questionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { questionTags, tags } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select({
+      id: tags.id,
+      name: tags.name,
+      color: tags.color,
+    })
+    .from(questionTags)
+    .innerJoin(tags, eq(questionTags.tagId, tags.id))
+    .where(eq(questionTags.questionId, questionId));
+  
+  return result;
+}
+
+export async function addQuestionTag(questionId: number, tagId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questionTags } = await import("../drizzle/schema");
+  await db.insert(questionTags).values({ questionId, tagId });
+  return { success: true };
+}
+
+export async function removeQuestionTag(questionId: number, tagId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questionTags } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+  await db.delete(questionTags)
+    .where(
+      and(
+        eq(questionTags.questionId, questionId),
+        eq(questionTags.tagId, tagId)
+      )
+    );
+  return { success: true };
+}
+
+export async function setQuestionTags(questionId: number, tagIds: number[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questionTags } = await import("../drizzle/schema");
+  
+  // Delete all existing tags for this question
+  await db.delete(questionTags).where(eq(questionTags.questionId, questionId));
+  
+  // Add new tags
+  if (tagIds.length > 0) {
+    await db.insert(questionTags).values(
+      tagIds.map(tagId => ({ questionId, tagId }))
+    );
+  }
+  
+  return { success: true };
+}
+
