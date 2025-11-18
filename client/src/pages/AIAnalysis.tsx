@@ -14,9 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Sparkles, FileText, Download, Eye, Home } from "lucide-react";
+import { Loader2, Sparkles, FileText, Download, Eye, Home, Clock, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import AnalysisResultView from "@/components/AnalysisResultView";
+import { usePromptHistory } from "@/hooks/usePromptHistory";
 
 export default function AIAnalysis() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
@@ -30,6 +31,9 @@ export default function AIAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
+  
+  // 歷史提示詞功能
+  const { history, addPrompt, removePrompt, clearAll, getRelativeTime } = usePromptHistory();
 
   // 根據分析類型返回提示詞前綴
   const getPromptPrefix = () => {
@@ -109,6 +113,12 @@ export default function AIAnalysis() {
       });
       
       setAnalysisResult(response.result);
+      
+      // 儲存提示詞到歷史記錄
+      if (customPrompt.trim()) {
+        addPrompt(customPrompt, analysisType);
+      }
+      
       toast.success("AI分析完成");
     } catch (error) {
       console.error("AI分析錯誤：", error);
@@ -376,6 +386,49 @@ export default function AIAnalysis() {
                 className="resize-none pl-24"
               />
             </div>
+            {/* 歷史提示詞 */}
+            {history.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    <span>歷史提示詞</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAll}
+                    className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    清除全部
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {history.map((item) => (
+                    <div
+                      key={item.id}
+                      className="group relative inline-flex items-center gap-2 px-3 py-1.5 bg-secondary hover:bg-secondary/80 rounded-md text-sm transition-colors cursor-pointer"
+                      onClick={() => setCustomPrompt(item.prompt)}
+                    >
+                      <span className="max-w-xs truncate">{item.prompt}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {getRelativeTime(item.timestamp)}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removePrompt(item.id);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3 text-muted-foreground hover:text-destructive" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <Button
             onClick={handleAnalyze}
