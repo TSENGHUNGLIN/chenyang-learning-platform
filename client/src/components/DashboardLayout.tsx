@@ -43,6 +43,8 @@ const staffMenuItems: Array<{
   { icon: BookOpen, label: "題庫管理", path: "/question-bank", editorOnly: true },
   { icon: FolderTree, label: "分類管理", path: "/categories", editorOnly: true },
   { icon: Tag, label: "標籤管理", path: "/tags", editorOnly: true },
+  { icon: ClipboardList, label: "考試園地", path: "/my-exams" },
+  { icon: Award, label: "考試管理", path: "/exams", editorOnly: true },
   { icon: Settings, label: "部門人員", path: "/manage", adminOnly: true },
   { icon: Users, label: "使用者管理", path: "/users", adminOnly: true },
 ];
@@ -53,7 +55,7 @@ const examineeMenuItems: Array<{
   label: string;
   path: string;
 }> = [
-  { icon: ClipboardList, label: "我的考試", path: "/my-exams" },
+  { icon: ClipboardList, label: "考試園地", path: "/my-exams" },
   { icon: Award, label: "我的成績", path: "/my-scores" },
 ];
 

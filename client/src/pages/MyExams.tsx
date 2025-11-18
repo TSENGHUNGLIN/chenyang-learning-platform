@@ -80,7 +80,7 @@ export default function MyExams() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">我的考試</h1>
+          <h1 className="text-3xl font-bold">考試園地</h1>
           <p className="text-muted-foreground mt-2">
             查看所有指派給您的考試，開始作答或查看成績
           </p>
