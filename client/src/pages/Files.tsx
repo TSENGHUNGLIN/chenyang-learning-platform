@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearch } from "wouter";
-import { Search, FileText, Sparkles, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, FileText, Sparkles, Trash2, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import { toast } from "sonner";
 import {
@@ -60,9 +60,10 @@ export default function Files() {
   const [endDate, setEndDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<number | null>(null);
-  const [analysisPrompt, setAnalysisPrompt] = useState("");
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewFile, setPreviewFile] = useState<any>(null);
 
   // Debounced search
   const debouncedSearch = useMemo(
@@ -366,6 +367,18 @@ export default function Files() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
+                                  setPreviewFile(file);
+                                  setShowPreviewDialog(true);
+                                  logReadMutation.mutate(file.id);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                預視
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
                                   logReadMutation.mutate(file.id);
                                   window.open(file.fileUrl, "_blank");
                                 }}
@@ -453,6 +466,86 @@ export default function Files() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* 檔案預視對話框 */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {previewFile?.filename}
+            </DialogTitle>
+            <DialogDescription>
+              檔案大小：{previewFile && (previewFile.fileSize / 1024).toFixed(2)} KB
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            {previewFile && (
+              <div className="space-y-4">
+                {/* PDF預視 */}
+                {previewFile.filename.toLowerCase().endsWith('.pdf') && (
+                  <iframe
+                    src={previewFile.fileUrl}
+                    className="w-full h-[600px] border rounded-lg"
+                    title="PDF Preview"
+                  />
+                )}
+                
+                {/* 圖片預視 */}
+                {(previewFile.filename.toLowerCase().endsWith('.jpg') ||
+                  previewFile.filename.toLowerCase().endsWith('.jpeg') ||
+                  previewFile.filename.toLowerCase().endsWith('.png') ||
+                  previewFile.filename.toLowerCase().endsWith('.gif')) && (
+                  <img
+                    src={previewFile.fileUrl}
+                    alt={previewFile.filename}
+                    className="w-full h-auto rounded-lg"
+                  />
+                )}
+                
+                {/* Word/文字檔案預視（顯示提取的文字） */}
+                {(previewFile.filename.toLowerCase().endsWith('.docx') ||
+                  previewFile.filename.toLowerCase().endsWith('.doc') ||
+                  previewFile.filename.toLowerCase().endsWith('.txt')) && (
+                  <div className="p-6 bg-muted rounded-lg">
+                    {previewFile.extractedText ? (
+                      <div className="whitespace-pre-wrap text-sm">
+                        {previewFile.extractedText}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>無法預視此檔案，請下載後查看</p>
+                        <Button
+                          variant="outline"
+                          className="mt-4"
+                          onClick={() => window.open(previewFile.fileUrl, '_blank')}
+                        >
+                          下載檔案
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* 其他檔案類型 */}
+                {!previewFile.filename.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|docx|doc|txt)$/) && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">此檔案類型不支援預視</p>
+                    <p className="text-sm mb-4">請下載檔案後使用專用軟體開啟</p>
+                    <Button
+                      onClick={() => window.open(previewFile.fileUrl, '_blank')}
+                    >
+                      下載檔案
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </DashboardLayout>
