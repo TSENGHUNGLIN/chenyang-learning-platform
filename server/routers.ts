@@ -363,6 +363,7 @@ ${file.extractedText || "無法提取文字內容"}`
         analysisType: z.enum(["generate_questions", "analyze_questions", "other"]),
         analysisMode: z.enum(["file_only", "external", "mixed"]).default("file_only"),
         customPrompt: z.string(),
+        questionSource: z.string().optional(), // 新增考題出處
       }))
       .mutation(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
@@ -786,6 +787,7 @@ ${file.extractedText || "無法提取文字內容"}`
         correctAnswer: z.string(),
         explanation: z.string().optional(),
         tagIds: z.array(z.number()).optional(),
+        source: z.string().optional(), // 新增考題出處
       })))
       .mutation(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");

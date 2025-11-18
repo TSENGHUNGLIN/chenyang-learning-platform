@@ -124,11 +124,22 @@ export default function AIAnalysis() {
 
     setIsAnalyzing(true);
     try {
+      // 準備考題出處
+      let questionSource = "";
+      if (sourceMode === "manual") {
+        questionSource = manualSource.trim();
+      } else if (sourceMode === "ai" && aiSourceFile) {
+        // 從檔案列表中找到對應的檔案名稱
+        const sourceFile = files?.find(f => f.id === aiSourceFile);
+        questionSource = sourceFile?.filename || aiSourceFile;
+      }
+
       const response = await customAnalysisMutation.mutateAsync({
         fileIds: selectedFiles,
         analysisType: analysisType as "generate_questions" | "analyze_questions" | "other",
         analysisMode: analysisMode as "file_only" | "external" | "mixed",
         customPrompt: customPrompt,
+        questionSource: questionSource, // 新增考題出處
       });
       
       setAnalysisResult(response.result);
@@ -204,11 +215,15 @@ export default function AIAnalysis() {
         // 推斷難度
         const difficulty = type === "true_false" ? "easy" : type === "short_answer" ? "hard" : "medium";
         
-        // 提取檔案名稱作為考題出處
-        const sourceFiles = files
-          ?.filter((f: any) => selectedFiles.includes(f.id))
-          .map((f: any) => f.filename)
-          .join(', ');
+        // 使用使用者填寫或選擇的考題出處
+        let questionSource = "";
+        if (sourceMode === "manual") {
+          questionSource = manualSource.trim();
+        } else if (sourceMode === "ai" && aiSourceFile) {
+          // 從檔案列表中找到對應的檔案名稱
+          const sourceFile = files?.find((f: any) => f.id === aiSourceFile);
+          questionSource = sourceFile?.filename || aiSourceFile;
+        }
         
         return {
           type,
@@ -217,7 +232,7 @@ export default function AIAnalysis() {
           options,
           correctAnswer: q.answer,
           explanation: q.explanation,
-          source: sourceFiles || '未知',
+          source: questionSource || '未知',
         };
       });
       
