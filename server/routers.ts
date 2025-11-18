@@ -999,9 +999,9 @@ ${file.extractedText || "無法提取文字內容"}`
         description: z.string().optional(),
         timeLimit: z.number().optional(),
         passingScore: z.number(),
-        totalScore: z.number(),
-        gradingMethod: z.enum(["auto", "manual", "mixed"]),
-        status: z.enum(["draft", "published", "archived"]).default("draft"),
+        totalScore: z.number().optional().default(100),
+        gradingMethod: z.enum(["auto", "manual", "mixed"]).optional().default("auto"),
+        status: z.enum(["draft", "published", "archived"]).optional().default("draft"),
       }))
       .mutation(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
@@ -1011,6 +1011,9 @@ ${file.extractedText || "無法提取文字內容"}`
         const { createExam } = await import("./db");
         return await createExam({
           ...input,
+          totalScore: input.totalScore || 100,
+          gradingMethod: input.gradingMethod || "auto",
+          status: input.status || "draft",
           createdBy: ctx.user.id,
         });
       }),
@@ -1079,6 +1082,27 @@ ${file.extractedText || "無法提取文字內容"}`
         const { batchAddExamQuestions } = await import("./db");
         await batchAddExamQuestions(input.examId, input.questions);
         return { success: true, count: input.questions.length };
+      }),
+    // 簡化版的批次新增題目 API，自動設定順序和分數
+    batchAddExamQuestions: protectedProcedure
+      .input(z.object({
+        examId: z.number(),
+        questionIds: z.array(z.number()),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchAddExamQuestions } = await import("./db");
+        // 自動設定題目順序和分數（每題1分）
+        const questions = input.questionIds.map((questionId, index) => ({
+          questionId,
+          questionOrder: index + 1,
+          points: 1,
+        }));
+        await batchAddExamQuestions(input.examId, questions);
+        return { success: true, count: questions.length };
       }),
     getQuestions: protectedProcedure
       .input(z.number())

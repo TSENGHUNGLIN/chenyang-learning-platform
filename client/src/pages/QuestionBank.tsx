@@ -29,7 +29,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home, Download, Upload, Loader2 } from "lucide-react";
+import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home, Download, Upload, Loader2, ClipboardList } from "lucide-react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 
 type QuestionType = "true_false" | "multiple_choice" | "short_answer";
@@ -47,6 +48,14 @@ export default function QuestionBank() {
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
   const [filterSource, setFilterSource] = useState<string>("all");
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
+  const [showExportConfirmDialog, setShowExportConfirmDialog] = useState(false);
+  const [exportAction, setExportAction] = useState<'download' | 'create_exam'>('download');
+  const [showCreateExamDialog, setShowCreateExamDialog] = useState(false);
+  const [examFormData, setExamFormData] = useState({
+    title: '',
+    timeLimit: 60,
+    passingScore: 60,
+  });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -432,12 +441,17 @@ export default function QuestionBank() {
     }
   };
 
-  // 匯出考試卷功能
-  const exportExamPaper = () => {
+  // 打開匯出確認對話框
+  const openExportConfirmDialog = () => {
     if (selectedQuestions.length === 0) {
       toast.error("請至少選擇一個題目");
       return;
     }
+    setShowExportConfirmDialog(true);
+  };
+
+  // 匯出考試卷功能
+  const exportExamPaper = () => {
 
     const selectedQuestionsData = questions?.filter((q: any) => 
       selectedQuestions.includes(q.id)
@@ -507,17 +521,67 @@ export default function QuestionBank() {
     }
 
     // 下載檔案
-    const blob = new Blob([examContent], { type: 'text/markdown;charset=utf-8' });
+    const blob = new Blob([examContent], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `考試卷_${new Date().toISOString().slice(0, 10)}.md`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `考試卷_${new Date().toISOString().split("T")[0]}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.success("考試卷匯出成功！");
+    toast.success("考試卷已匯出");
+    setShowExportConfirmDialog(false);
+  };
+
+  // 建立線上考試
+  const handleCreateExam = () => {
+    setShowExportConfirmDialog(false);
+    setShowCreateExamDialog(true);
+  };
+
+  const [, setLocation] = useLocation();
+  const createExamMutation = trpc.exams.create.useMutation();
+  const batchAddQuestionsMutation = trpc.exams.batchAddExamQuestions.useMutation();
+
+  const confirmCreateExam = async () => {
+    if (!examFormData.title.trim()) {
+      toast.error("請輸入考試名稱");
+      return;
+    }
+
+    try {
+      // 建立考試
+      const exam = await createExamMutation.mutateAsync({
+        title: examFormData.title,
+        timeLimit: examFormData.timeLimit,
+        passingScore: examFormData.passingScore,
+      });
+
+      // 批次新增題目
+      await batchAddQuestionsMutation.mutateAsync({
+        examId: exam.id,
+        questionIds: selectedQuestions,
+      });
+
+      toast.success("考試建立成功！");
+      setShowCreateExamDialog(false);
+      
+      // 重置表單
+      setExamFormData({
+        title: '',
+        timeLimit: 60,
+        passingScore: 60,
+      });
+      setSelectedQuestions([]);
+
+      // 跳轉到考試管理頁面
+      setLocation('/exams');
+    } catch (error: any) {
+      console.error('建立考試失敗:', error);
+      toast.error(error.message || "建立考試失敗，請稍後再試");
+    }
   };
 
   return (
@@ -564,7 +628,7 @@ export default function QuestionBank() {
             </div>
             <div className="flex gap-2">
               {selectedQuestions.length > 0 && (
-                <Button onClick={exportExamPaper} variant="outline">
+                <Button onClick={openExportConfirmDialog} variant="outline">
                   <Download className="h-4 w-4 mr-2" />
                   匯出考試卷 ({selectedQuestions.length})
                 </Button>
@@ -577,7 +641,7 @@ export default function QuestionBank() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="space-y-2">
               <Label>搜尋題目</Label>
               <div className="relative">
@@ -639,14 +703,7 @@ export default function QuestionBank() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]">
-                    <input 
-                      type="checkbox" 
-                      checked={selectedQuestions.length === filteredQuestions?.length && filteredQuestions?.length > 0}
-                      onChange={toggleSelectAll}
-                      className="h-4 w-4"
-                    />
-                  </TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                   <TableHead className="w-[50px]">#</TableHead>
                   <TableHead className="w-[40%]">題目</TableHead>
                   <TableHead>類型</TableHead>
@@ -1037,6 +1094,184 @@ export default function QuestionBank() {
               ) : (
                 "開始匯入"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 匯出考試卷確認對話框 */}
+      <Dialog open={showExportConfirmDialog} onOpenChange={setShowExportConfirmDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>選擇操作</DialogTitle>
+            <DialogDescription>
+              請確認以下選擇的題目統計，並選擇要執行的操作
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {(() => {
+              const selectedQuestionsData = questions?.filter((q: any) => 
+                selectedQuestions.includes(q.id)
+              );
+              const questionsByType: Record<string, number> = {
+                true_false: 0,
+                multiple_choice: 0,
+                short_answer: 0
+              };
+              selectedQuestionsData?.forEach((q: any) => {
+                if (questionsByType[q.type] !== undefined) {
+                  questionsByType[q.type]++;
+                }
+              });
+              return (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <span className="font-medium">總題數</span>
+                    <span className="text-lg font-bold">{selectedQuestions.length} 題</span>
+                  </div>
+                  {questionsByType.true_false > 0 && (
+                    <div className="flex justify-between items-center p-2 border rounded">
+                      <span>是非題</span>
+                      <span className="font-semibold">{questionsByType.true_false} 題</span>
+                    </div>
+                  )}
+                  {questionsByType.multiple_choice > 0 && (
+                    <div className="flex justify-between items-center p-2 border rounded">
+                      <span>選擇題</span>
+                      <span className="font-semibold">{questionsByType.multiple_choice} 題</span>
+                    </div>
+                  )}
+                  {questionsByType.short_answer > 0 && (
+                    <div className="flex justify-between items-center p-2 border rounded">
+                      <span>問答題</span>
+                      <span className="font-semibold">{questionsByType.short_answer} 題</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+            
+            {/* 選擇操作類型 */}
+            <div className="space-y-2">
+              <Label>選擇操作</Label>
+              <div className="space-y-2">
+                <div 
+                  className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    exportAction === 'download' ? 'border-primary bg-primary/5' : 'hover:bg-muted'
+                  }`}
+                  onClick={() => setExportAction('download')}
+                >
+                  <input
+                    type="radio"
+                    name="exportAction"
+                    value="download"
+                    checked={exportAction === 'download'}
+                    onChange={() => setExportAction('download')}
+                    className="h-4 w-4"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">下載試卷檔案</div>
+                    <div className="text-sm text-muted-foreground">匯出為Markdown格式檔案，可用於列印或分享</div>
+                  </div>
+                </div>
+                <div 
+                  className={`flex items-center space-x-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    exportAction === 'create_exam' ? 'border-primary bg-primary/5' : 'hover:bg-muted'
+                  }`}
+                  onClick={() => setExportAction('create_exam')}
+                >
+                  <input
+                    type="radio"
+                    name="exportAction"
+                    value="create_exam"
+                    checked={exportAction === 'create_exam'}
+                    onChange={() => setExportAction('create_exam')}
+                    className="h-4 w-4"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">建立線上考試</div>
+                    <div className="text-sm text-muted-foreground">使用這些題目建立線上考試，支援自動評分</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExportConfirmDialog(false)}>
+              取消
+            </Button>
+            <Button onClick={exportAction === 'download' ? exportExamPaper : handleCreateExam}>
+              {exportAction === 'download' ? (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  下載試卷
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  建立考試
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 建立考試對話框 */}
+      <Dialog open={showCreateExamDialog} onOpenChange={setShowCreateExamDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>建立線上考試</DialogTitle>
+            <DialogDescription>
+              請輸入考試的基本資訊
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="examTitle">考試名稱 *</Label>
+              <Input
+                id="examTitle"
+                value={examFormData.title}
+                onChange={(e) => setExamFormData({ ...examFormData, title: e.target.value })}
+                placeholder="例如：新人培訓考核第一次"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timeLimit">考試時間限制（分鐘）*</Label>
+              <Input
+                id="timeLimit"
+                type="number"
+                min="1"
+                value={examFormData.timeLimit}
+                onChange={(e) => setExamFormData({ ...examFormData, timeLimit: parseInt(e.target.value) || 60 })}
+                placeholder="60"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="passingScore">及格分數 *</Label>
+              <Input
+                id="passingScore"
+                type="number"
+                min="0"
+                max="100"
+                value={examFormData.passingScore}
+                onChange={(e) => setExamFormData({ ...examFormData, passingScore: parseInt(e.target.value) || 60 })}
+                placeholder="60"
+              />
+            </div>
+            <div className="p-3 bg-muted rounded-lg">
+              <div className="text-sm text-muted-foreground">
+                將使用 <span className="font-semibold text-foreground">{selectedQuestions.length}</span> 個題目建立考試
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateExamDialog(false)}>
+              取消
+            </Button>
+            <Button onClick={confirmCreateExam} disabled={!examFormData.title.trim()}>
+              <Plus className="h-4 w-4 mr-2" />
+              確認建立
             </Button>
           </DialogFooter>
         </DialogContent>
