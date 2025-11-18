@@ -467,3 +467,12 @@
 - [x] 修復PDF文字提取功能
 - [x] 測試PDF檔案讀取
 - [x] 建立 checkpoint
+
+
+
+## CSV檔案格式支援
+- [x] 在檔案上傳頁面新增CSV格式說明
+- [x] 更新檔案上傳的accept屬性，允許CSV格式
+- [x] 實作後端CSV文字提取功能
+- [x] 測試CSV檔案上傳和讀取
+- [x] 建立 checkpoint

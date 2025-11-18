@@ -48,6 +48,66 @@ export async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
   }
 }
 
+export async function extractTextFromCSV(buffer: Buffer): Promise<string> {
+  try {
+    // Convert buffer to string
+    const csvText = buffer.toString("utf-8");
+    
+    // Parse CSV and convert to readable text format
+    const lines = csvText.split("\n").filter(line => line.trim());
+    
+    if (lines.length === 0) {
+      return "";
+    }
+    
+    // Simple CSV parsing (handles basic cases)
+    const rows = lines.map(line => {
+      // Split by comma, handling quoted fields
+      const fields: string[] = [];
+      let currentField = "";
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          fields.push(currentField.trim());
+          currentField = "";
+        } else {
+          currentField += char;
+        }
+      }
+      fields.push(currentField.trim());
+      
+      return fields;
+    });
+    
+    // Convert to readable text format
+    const header = rows[0];
+    const dataRows = rows.slice(1);
+    
+    let text = "CSV檔案內容：\n\n";
+    text += "欄位：" + header.join(", ") + "\n\n";
+    
+    dataRows.forEach((row, index) => {
+      text += `第 ${index + 1} 筆資料：\n`;
+      header.forEach((col, colIndex) => {
+        if (row[colIndex]) {
+          text += `  ${col}: ${row[colIndex]}\n`;
+        }
+      });
+      text += "\n";
+    });
+    
+    return text;
+  } catch (error) {
+    console.error("CSV extraction error:", error);
+    return "";
+  }
+}
+
 export async function extractTextFromFile(
   buffer: Buffer,
   mimeType: string
@@ -59,6 +119,8 @@ export async function extractTextFromFile(
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   ) {
     return await extractTextFromDOCX(buffer);
+  } else if (mimeType === "text/csv" || mimeType === "application/csv") {
+    return await extractTextFromCSV(buffer);
   }
   return "";
 }

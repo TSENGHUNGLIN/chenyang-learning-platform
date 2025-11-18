@@ -55,7 +55,7 @@ export default function FileUpload() {
   // 從檔案名稱提取人員姓名
   const extractNameFromFilename = (filename: string): string | null => {
     // 移除副檔名
-    const nameWithoutExt = filename.replace(/\.(pdf|docx)$/i, '');
+    const nameWithoutExt = filename.replace(/\.(pdf|docx|csv)$/i, '');
     
     // 常見的非姓名詞彙清單（擴充）
     const excludedWords = [
@@ -134,6 +134,8 @@ export default function FileUpload() {
       const allowedTypes = [
         "application/pdf",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/csv",
+        "application/csv",
       ];
 
       const validFiles = selectedFiles.filter((file) => {
@@ -454,11 +456,11 @@ export default function FileUpload() {
             {/* 檔案上傳 */}
             <TabsContent value="file" className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="file">選擇檔案（PDF、DOCX，最多{MAX_FILES}個）</Label>
+                <Label htmlFor="file">選擇檔案（PDF、DOCX、CSV，最多{MAX_FILES}個）</Label>
                 <Input
                   id="file"
                   type="file"
-                  accept=".pdf,.docx"
+                  accept=".pdf,.docx,.csv"
                   multiple
                   onChange={handleFileChange}
                   disabled={uploading}
