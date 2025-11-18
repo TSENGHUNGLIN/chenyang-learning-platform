@@ -64,12 +64,24 @@ export default function FileUpload() {
       '計劃', '方案', '提案', '簡報', '細節', '說明'
     ];
     
+    // 非姓名後綴詞（常接在姓名後面）
+    const nameSuffixes = ['測', '測驗', '考試', '考核', '報告', '履歷', '轉正', '回饋', '評估'];
+    
     // 優先匹配常見的檔名格式：
     // 1. 「姓名 + 轉正/考核」格式（例：張小明轉正考核.docx）
-    const nameBeforeKeywordPattern = /([\u4e00-\u9fa5]{2,4})(?=[轉正考核報告履歷])/;
+    const nameBeforeKeywordPattern = /([\u4e00-\u9fa5]{2,4})(?=[轉正考核報告履歷測驗回饋])/;
     let match = nameWithoutExt.match(nameBeforeKeywordPattern);
-    if (match && !excludedWords.includes(match[1])) {
-      return match[1];
+    if (match) {
+      let name = match[1];
+      // 移除後綴詞
+      for (const suffix of nameSuffixes) {
+        if (name.endsWith(suffix)) {
+          name = name.slice(0, -suffix.length);
+        }
+      }
+      if (name.length >= 2 && !excludedWords.includes(name)) {
+        return name;
+      }
     }
     
     // 2. 「分隔符 + 姓名 + 分隔符」格式（例：初階報價專課程 – Eva – 湯芸珠薪酬細節.pdf）
@@ -77,19 +89,37 @@ export default function FileUpload() {
     const nameAfterSeparatorPattern = /[\s\-_–—]+([\u4e00-\u9fa5]{2,4})(?=[\s\-_–—]|$)/g;
     const allMatches = nameWithoutExt.matchAll(nameAfterSeparatorPattern);
     const names = Array.from(allMatches)
-      .map(m => m[1])
-      .filter(name => !excludedWords.includes(name));
+      .map(m => {
+        let name = m[1];
+        // 移除後綴詞
+        for (const suffix of nameSuffixes) {
+          if (name.endsWith(suffix)) {
+            name = name.slice(0, -suffix.length);
+          }
+        }
+        return name;
+      })
+      .filter(name => name.length >= 2 && !excludedWords.includes(name));
     
     // 從所有匹配中選擇最後一個中文姓名（通常是人名）
     if (names.length > 0) {
       return names[names.length - 1];
     }
     
-    // 3. 備用：匹配任何 2-4 個中文字（但排除常見詞彙）
+    // 3. 備用：匹配任何 2-4 個中文字（但排除常見詞彙和後綴詞）
     const fallbackPattern = /([\u4e00-\u9fa5]{2,4})/;
     match = nameWithoutExt.match(fallbackPattern);
-    if (match && !excludedWords.includes(match[1])) {
-      return match[1];
+    if (match) {
+      let name = match[1];
+      // 移除後綴詞
+      for (const suffix of nameSuffixes) {
+        if (name.endsWith(suffix)) {
+          name = name.slice(0, -suffix.length);
+        }
+      }
+      if (name.length >= 2 && !excludedWords.includes(name)) {
+        return name;
+      }
     }
     
     return null;

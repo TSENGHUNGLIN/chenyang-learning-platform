@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -30,6 +30,7 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "首頁", path: "/" },
   { icon: Calendar, label: "日曆檢視", path: "/calendar" },
+  { icon: Sparkles, label: "AI 分析", path: "/ai-analysis" },
   { icon: FileText, label: "檔案管理", path: "/files" },
   { icon: Settings, label: "部門與人員", path: "/manage", adminOnly: true },
   { icon: Users, label: "使用者管理", path: "/users", adminOnly: true },

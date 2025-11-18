@@ -9,6 +9,7 @@ import Manage from "./pages/Manage";
 import Users from "./pages/Users";
 import Files from "./pages/Files";
 import CalendarView from "./pages/Calendar";
+import AIAnalysis from "./pages/AIAnalysis";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -19,6 +20,7 @@ function Router() {
       <Route path={"/users"} component={Users} />
       <Route path={"/files"} component={Files} />
       <Route path={"/calendar"} component={CalendarView} />
+      <Route path={"/ai-analysis"} component={AIAnalysis} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
