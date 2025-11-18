@@ -456,11 +456,11 @@ export default function FileUpload() {
             {/* 檔案上傳 */}
             <TabsContent value="file" className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="file">選擇檔案（PDF、DOCX、CSV，最多{MAX_FILES}個）</Label>
+                <Label htmlFor="file">選擇檔案（DOCX、CSV，最多{MAX_FILES}個）</Label>
                 <Input
                   id="file"
                   type="file"
-                  accept=".pdf,.docx,.csv"
+                  accept=".docx,.csv"
                   multiple
                   onChange={handleFileChange}
                   disabled={uploading}
