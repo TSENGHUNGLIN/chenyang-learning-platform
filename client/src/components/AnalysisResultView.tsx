@@ -24,6 +24,20 @@ interface AnalysisResult {
     reason: string;
     difficulty: "簡單" | "中等" | "困難";
   }>;
+  questionsOnly?: Array<{
+    number: number;
+    question: string;
+    type: "是非題" | "選擇題" | "問答題";
+    options?: string[];
+  }>;
+  questionsWithAnswers?: Array<{
+    number: number;
+    question: string;
+    type: "是非題" | "選擇題" | "問答題";
+    options?: string[];
+    answer: string;
+    explanation?: string;
+  }>;
 }
 
 interface AnalysisResultViewProps {
@@ -207,6 +221,96 @@ export default function AnalysisResultView({ result }: AnalysisResultViewProps) 
           </div>
         </CardContent>
       </Card>
+
+      {/* 題目整理（不含答案） */}
+      {result.questionsOnly && result.questionsOnly.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileQuestion className="h-5 w-5" />
+              題目整理
+            </CardTitle>
+            <CardDescription>以下是根據檔案內容生成的考題，不含答案</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {result.questionsOnly.map((q, index) => (
+                <div key={index} className="border rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="font-bold text-lg text-primary">{q.number}.</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline">{q.type}</Badge>
+                      </div>
+                      <p className="text-sm mb-2">{q.question}</p>
+                      {q.options && q.options.length > 0 && (
+                        <ul className="space-y-1 ml-4">
+                          {q.options.map((option, optIdx) => (
+                            <li key={optIdx} className="text-sm text-muted-foreground">
+                              {String.fromCharCode(65 + optIdx)}. {option}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 題目與答案 */}
+      {result.questionsWithAnswers && result.questionsWithAnswers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5" />
+              題目與答案
+            </CardTitle>
+            <CardDescription>完整的考題和答案解析</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {result.questionsWithAnswers.map((q, index) => (
+                <div key={index} className="border rounded-lg p-4 bg-muted/30">
+                  <div className="flex items-start gap-3">
+                    <span className="font-bold text-lg text-primary">{q.number}.</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline">{q.type}</Badge>
+                      </div>
+                      <p className="text-sm mb-2 font-medium">{q.question}</p>
+                      {q.options && q.options.length > 0 && (
+                        <ul className="space-y-1 ml-4 mb-3">
+                          {q.options.map((option, optIdx) => (
+                            <li key={optIdx} className="text-sm text-muted-foreground">
+                              {String.fromCharCode(65 + optIdx)}. {option}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <div className="mt-3 pt-3 border-t">
+                        <div className="flex items-start gap-2 mb-2">
+                          <span className="text-sm font-semibold text-green-700">答案：</span>
+                          <span className="text-sm font-medium text-green-700">{q.answer}</span>
+                        </div>
+                        {q.explanation && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm font-semibold text-blue-700">解釋：</span>
+                            <span className="text-sm text-muted-foreground">{q.explanation}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

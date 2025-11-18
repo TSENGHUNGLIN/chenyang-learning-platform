@@ -27,6 +27,20 @@ interface AnalysisResult {
     reason: string;
     difficulty: string;
   }>;
+  questionsOnly?: Array<{
+    number: number;
+    question: string;
+    type: string;
+    options?: string[];
+  }>;
+  questionsWithAnswers?: Array<{
+    number: number;
+    question: string;
+    type: string;
+    options?: string[];
+    answer: string;
+    explanation?: string;
+  }>;
 }
 
 /**
@@ -76,6 +90,45 @@ function analysisToMarkdown(result: AnalysisResult, fileNames: string[]): string
       md += `### ${index + 1}. ${q.title}\n\n`;
       md += `- **難度**: ${q.difficulty}\n`;
       md += `- **推薦理由**: ${q.reason}\n\n`;
+    });
+  }
+
+  // 題目整理（不含答案）
+  if (result.questionsOnly && result.questionsOnly.length > 0) {
+    md += `\n## 題目整理\n\n`;
+    md += `以下是根據檔案內容生成的考題，不含答案。\n\n`;
+    result.questionsOnly.forEach((q) => {
+      md += `### ${q.number}. ${q.question}\n\n`;
+      md += `- **題型**: ${q.type}\n`;
+      if (q.options && q.options.length > 0) {
+        md += `\n**選項**:\n\n`;
+        q.options.forEach((opt, idx) => {
+          md += `${String.fromCharCode(65 + idx)}. ${opt}\n`;
+        });
+      }
+      md += `\n`;
+    });
+  }
+
+  // 題目與答案
+  if (result.questionsWithAnswers && result.questionsWithAnswers.length > 0) {
+    md += `\n## 題目與答案\n\n`;
+    md += `完整的考題和答案解析。\n\n`;
+    result.questionsWithAnswers.forEach((q) => {
+      md += `### ${q.number}. ${q.question}\n\n`;
+      md += `- **題型**: ${q.type}\n`;
+      if (q.options && q.options.length > 0) {
+        md += `\n**選項**:\n\n`;
+        q.options.forEach((opt, idx) => {
+          md += `${String.fromCharCode(65 + idx)}. ${opt}\n`;
+        });
+        md += `\n`;
+      }
+      md += `**答案**: ${q.answer}\n\n`;
+      if (q.explanation) {
+        md += `**解釋**: ${q.explanation}\n\n`;
+      }
+      md += `---\n\n`;
     });
   }
 

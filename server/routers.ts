@@ -415,7 +415,7 @@ ${file.extractedText || "無法提取文字內容"}`
               }).join('\n')}`
             : "";
           
-          systemPrompt = "你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目（根據分類和標籤篩選），如果題庫中沒有適合的題目，再根據檔案內容生成新題目。";
+          systemPrompt = "你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目（根據分類和標籤篩選），如果題庫中沒有適合的題目，再根據檔案內容生成新題目。請先提供「題目整理」（僅列出題目，不含答案），再提供「題目與答案」（每個題目搭配完整答案）。";
           userPrompt = `請根據以下檔案內容和題庫，${input.customPrompt}${questionBankInfo}\n\n檔案內容：\n${fileContents}`;
         } else if (input.analysisType === "analyze_questions") {
           systemPrompt = "你是一個專業的學習題庫分析助手。你的任務是分析考核檔案，提供全面的分析和建議。";
@@ -490,8 +490,40 @@ ${file.extractedText || "無法提取文字內容"}`
                       },
                       description: "推薦考題",
                     },
+                    questionsOnly: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          number: { type: "number", description: "題號" },
+                          question: { type: "string", description: "題目" },
+                          type: { type: "string", enum: ["是非題", "選擇題", "問答題"], description: "題型" },
+                          options: { type: "array", items: { type: "string" }, description: "選項（僅選擇題）" },
+                        },
+                        required: ["number", "question", "type"],
+                        additionalProperties: false,
+                      },
+                      description: "題目整理（不含答案）",
+                    },
+                    questionsWithAnswers: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          number: { type: "number", description: "題號" },
+                          question: { type: "string", description: "題目" },
+                          type: { type: "string", enum: ["是非題", "選擇題", "問答題"], description: "題型" },
+                          options: { type: "array", items: { type: "string" }, description: "選項（僅選擇題）" },
+                          answer: { type: "string", description: "答案" },
+                          explanation: { type: "string", description: "解釋" },
+                        },
+                        required: ["number", "question", "type", "answer"],
+                        additionalProperties: false,
+                      },
+                      description: "題目與答案",
+                    },
                   },
-                  required: ["summary", "difficulty", "performance", "knowledgeGaps", "recommendedQuestions"],
+                  required: ["summary", "difficulty", "performance", "knowledgeGaps", "recommendedQuestions", "questionsOnly", "questionsWithAnswers"],
                   additionalProperties: false,
                 },
               },

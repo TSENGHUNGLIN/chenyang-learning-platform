@@ -92,7 +92,8 @@ export default function AIAnalysis() {
       return;
     }
 
-    if (!customPrompt.trim()) {
+    // 只有在非出考題模式下才需要提示詞
+    if (analysisType !== "generate_questions" && !customPrompt.trim()) {
       toast.error("請輸入提示詞");
       return;
     }
