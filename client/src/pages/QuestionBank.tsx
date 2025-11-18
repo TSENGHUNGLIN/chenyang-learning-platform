@@ -29,7 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home } from "lucide-react";
+import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home, Download, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type QuestionType = "true_false" | "multiple_choice" | "short_answer";
@@ -38,7 +38,10 @@ type Difficulty = "easy" | "medium" | "hard";
 export default function QuestionBank() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
@@ -63,6 +66,7 @@ export default function QuestionBank() {
   const updateMutation = trpc.questions.update.useMutation();
   const deleteMutation = trpc.questions.delete.useMutation();
   const setTagsMutation = trpc.questionTags.setTags.useMutation();
+  const batchImportMutation = trpc.questions.batchImport.useMutation();
 
   const filteredQuestions = questions?.filter((q: any) => {
     if (searchKeyword && !q.question.toLowerCase().includes(searchKeyword.toLowerCase())) {
@@ -76,6 +80,192 @@ export default function QuestionBank() {
     }
     return true;
   });
+
+  // 處理檔案選擇
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.name.endsWith('.csv')) {
+        toast.error("僅支援 CSV 格式");
+        return;
+      }
+      setImportFile(file);
+    }
+  };
+
+  // 處理批次匯入
+  const handleImport = async () => {
+    if (!importFile) return;
+
+    setIsImporting(true);
+
+    try {
+      // 讀取 CSV 檔案
+      const text = await importFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      
+      if (lines.length < 2) {
+        toast.error("檔案內容為空或格式不正確");
+        setIsImporting(false);
+        return;
+      }
+
+      // 解析 CSV
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+      const questions = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const values: string[] = [];
+        let currentValue = '';
+        let inQuotes = false;
+
+        // 處理含有逗號的欄位
+        for (let char of lines[i]) {
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(currentValue.trim().replace(/^"|"$/g, ''));
+            currentValue = '';
+          } else {
+            currentValue += char;
+          }
+        }
+        values.push(currentValue.trim().replace(/^"|"$/g, ''));
+
+        // 建立題目物件
+        const question: any = {};
+        headers.forEach((header, index) => {
+          const value = values[index] || '';
+          switch (header) {
+            case '題型':
+              question.type = value;
+              break;
+            case '難度':
+              question.difficulty = value;
+              break;
+            case '題目':
+              question.question = value;
+              break;
+            case '選項':
+              question.options = value;
+              break;
+            case '正確答案':
+              question.correctAnswer = value;
+              break;
+            case '解釋說明':
+              question.explanation = value;
+              break;
+            case '分類ID':
+              if (value) question.categoryId = parseInt(value);
+              break;
+            case '標籤ID':
+              if (value) {
+                question.tagIds = value.split(',').map((id: string) => parseInt(id.trim())).filter((id: number) => !isNaN(id));
+              }
+              break;
+          }
+        });
+
+        // 驗證必填欄位
+        if (!question.type || !question.difficulty || !question.question || !question.correctAnswer) {
+          continue;
+        }
+
+        questions.push(question);
+      }
+
+      if (questions.length === 0) {
+        toast.error("沒有有效的題目資料");
+        setIsImporting(false);
+        return;
+      }
+
+      // 呼叫 API 批次匯入
+      const result = await batchImportMutation.mutateAsync(questions);
+      
+      // 顯示結果
+      if (result.success > 0) {
+        toast.success(`成功匯入 ${result.success} 個題目`);
+      }
+      if (result.failed > 0) {
+        toast.error(`${result.failed} 個題目匯入失敗`);
+        if (result.errors.length > 0) {
+          console.error("匯入錯誤：", result.errors);
+        }
+      }
+
+      // 關閉對話框並重新載入
+      setShowImportDialog(false);
+      setImportFile(null);
+      refetchQuestions();
+    } catch (error) {
+      console.error("匯入錯誤：", error);
+      toast.error("匯入失敗，請檢查檔案格式");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // 下載範本檔案
+  const downloadTemplate = () => {
+    const template = [
+      {
+        "題型": "true_false",
+        "難度": "medium",
+        "題目": "設計師在進行品牌設計時，應該優先考慮客戶的需求而非個人風格偏好",
+        "選項": "",
+        "正確答案": "是",
+        "解釋說明": "品牌設計的核心在於滿足客戶需求和目標受眾的期望",
+        "分類ID": "",
+        "標籤ID": ""
+      },
+      {
+        "題型": "multiple_choice",
+        "難度": "easy",
+        "題目": "以下哪一個不是設計原則？",
+        "選項": '[{"label":"A","value":"對齊"},{"label":"B","value":"對比"},{"label":"C","value":"重複"},{"label":"D","value":"隨意"}]',
+        "正確答案": "D",
+        "解釋說明": "設計原則包括對齊、對比、重複等，但不包括隨意",
+        "分類ID": "",
+        "標籤ID": "1,2"
+      },
+      {
+        "題型": "short_answer",
+        "難度": "hard",
+        "題目": "請說明什麼是响應式設計？",
+        "選項": "",
+        "正確答案": "响應式設計是一種網頁設計方法，可以讓網站在不同裝置上都能呈現良好的顯示效果",
+        "解釋說明": "响應式設計使用彈性版面、媒體查詢等技術",
+        "分類ID": "",
+        "標籤ID": ""
+      }
+    ];
+
+    // 建立 CSV 內容
+    const headers = Object.keys(template[0]);
+    const csvContent = [
+      headers.join(","),
+      ...template.map(row => 
+        headers.map(header => {
+          const value = row[header as keyof typeof row];
+          // 如果包含逗號或換行，用雙引號包裹
+          if (typeof value === 'string' && (value.includes(',') || value.includes('\n') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        }).join(",")
+      )
+    ].join("\n");
+
+    // 下載 CSV
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "題庫匯入範本.csv";
+    link.click();
+    
+    toast.success("範本下載成功");
+  };
 
   const resetForm = () => {
     setFormData({
@@ -219,11 +409,20 @@ export default function QuestionBank() {
           <p className="text-muted-foreground mt-2">
             管理考核題庫，支援是非題、選擇題、問答題
           </p>
+        </div>        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadTemplate}>
+            <Download className="h-4 w-4 mr-2" />
+            下載範本
+          </Button>
+          <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            批次匯入
+          </Button>
+          <Button variant="outline" onClick={() => window.location.href = '/'}>
+            <Home className="h-4 w-4 mr-2" />
+            返回首頁
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => window.location.href = '/'}>
-          <Home className="h-4 w-4 mr-2" />
-          返回首頁
-        </Button>
       </div>
 
       {/* 篩選與搜尋區域 */}
@@ -573,6 +772,73 @@ export default function QuestionBank() {
               取消
             </Button>
             <Button onClick={handleEdit}>儲存</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 批次匯入對話框 */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>批次匯入題目</DialogTitle>
+            <DialogDescription>
+              請上傳 CSV 檔案，格式請參考下載的範本檔案
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border-2 border-dashed rounded-lg p-8 text-center">
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="file-upload"
+              />
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-sm text-muted-foreground mb-2">
+                  {importFile ? importFile.name : "點擊選擇檔案或拖放檔案至此"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  僅支援 CSV 格式
+                </p>
+              </label>
+            </div>
+            {importFile && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>檔案名稱：{importFile.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setImportFile(null)}
+                  >
+                    移除
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowImportDialog(false);
+              setImportFile(null);
+            }}>
+              取消
+            </Button>
+            <Button 
+              onClick={handleImport}
+              disabled={!importFile || isImporting}
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  匯入中...
+                </>
+              ) : (
+                "開始匯入"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

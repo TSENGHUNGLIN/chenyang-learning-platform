@@ -675,6 +675,57 @@ ${file.extractedText || "無法提取文字內容"}`
         await deleteQuestion(input);
         return { success: true };
       }),
+    batchImport: protectedProcedure
+      .input(z.array(z.object({
+        categoryId: z.number().optional(),
+        type: z.enum(["true_false", "multiple_choice", "short_answer"]),
+        difficulty: z.enum(["easy", "medium", "hard"]),
+        question: z.string(),
+        options: z.string().optional(),
+        correctAnswer: z.string(),
+        explanation: z.string().optional(),
+        tagIds: z.array(z.number()).optional(),
+      })))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createQuestion } = await import("./db");
+        const { setQuestionTags } = await import("./db");
+        
+        const results = {
+          success: 0,
+          failed: 0,
+          errors: [] as string[],
+        };
+
+        for (let i = 0; i < input.length; i++) {
+          try {
+            const question = input[i];
+            const result = await createQuestion({ 
+              ...question, 
+              createdBy: ctx.user.id 
+            });
+            
+            // Set tags if provided
+            if (question.tagIds && question.tagIds.length > 0) {
+              const insertResult = result as any;
+              const questionId = insertResult.insertId || insertResult[0]?.insertId;
+              if (questionId) {
+                await setQuestionTags(questionId, question.tagIds);
+              }
+            }
+            
+            results.success++;
+          } catch (error) {
+            results.failed++;
+            results.errors.push(`第 ${i + 1} 項：${error instanceof Error ? error.message : '未知錯誤'}`);
+          }
+        }
+
+        return results;
+      }),
   }),
 
   // Question categories router
