@@ -61,7 +61,7 @@ export type InsertEmployee = typeof employees.$inferInsert;
  */
 export const files = mysqlTable("files", {
   id: int("id").autoincrement().primaryKey(),
-  employeeId: int("employeeId").notNull(),
+  employeeId: int("employeeId"),
   filename: varchar("filename", { length: 255 }).notNull(),
   fileKey: varchar("fileKey", { length: 500 }).notNull(),
   fileUrl: varchar("fileUrl", { length: 1000 }).notNull(),

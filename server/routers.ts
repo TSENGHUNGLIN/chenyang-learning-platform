@@ -144,7 +144,7 @@ export const appRouter = router({
       }),
     create: protectedProcedure
       .input(z.object({
-        employeeId: z.number(),
+        employeeId: z.number().nullable(),
         filename: z.string(),
         fileKey: z.string(),
         fileUrl: z.string(),

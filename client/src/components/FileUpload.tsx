@@ -56,10 +56,43 @@ export default function FileUpload() {
   const extractNameFromFilename = (filename: string): string | null => {
     // 移除副檔名
     const nameWithoutExt = filename.replace(/\.(pdf|docx)$/i, '');
-    // 常見的中文姓名模式：2-4個中文字
-    const chineseNamePattern = /([\u4e00-\u9fa5]{2,4})/;
-    const match = nameWithoutExt.match(chineseNamePattern);
-    return match ? match[1] : null;
+    
+    // 常見的非姓名詞彙清單（擴充）
+    const excludedWords = [
+      'Eva', '專課程', '報價', '薪酬', '細節', '考核', '履歷',
+      '初階', '中階', '進階', '高階', '資料', '文件', '報告',
+      '計劃', '方案', '提案', '簡報', '細節', '說明'
+    ];
+    
+    // 優先匹配常見的檔名格式：
+    // 1. 「姓名 + 轉正/考核」格式（例：張小明轉正考核.docx）
+    const nameBeforeKeywordPattern = /([\u4e00-\u9fa5]{2,4})(?=[轉正考核報告履歷])/;
+    let match = nameWithoutExt.match(nameBeforeKeywordPattern);
+    if (match && !excludedWords.includes(match[1])) {
+      return match[1];
+    }
+    
+    // 2. 「分隔符 + 姓名 + 分隔符」格式（例：初階報價專課程 – Eva – 湯芸珠薪酬細節.pdf）
+    // 匹配分隔符後的中文姓名（分隔符可以是空格、橫線、底線等）
+    const nameAfterSeparatorPattern = /[\s\-_–—]+([\u4e00-\u9fa5]{2,4})(?=[\s\-_–—]|$)/g;
+    const allMatches = nameWithoutExt.matchAll(nameAfterSeparatorPattern);
+    const names = Array.from(allMatches)
+      .map(m => m[1])
+      .filter(name => !excludedWords.includes(name));
+    
+    // 從所有匹配中選擇最後一個中文姓名（通常是人名）
+    if (names.length > 0) {
+      return names[names.length - 1];
+    }
+    
+    // 3. 備用：匹配任何 2-4 個中文字（但排除常見詞彙）
+    const fallbackPattern = /([\u4e00-\u9fa5]{2,4})/;
+    match = nameWithoutExt.match(fallbackPattern);
+    if (match && !excludedWords.includes(match[1])) {
+      return match[1];
+    }
+    
+    return null;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,10 +154,8 @@ export default function FileUpload() {
       return;
     }
 
-    if (!selectedEmployee && detectedNames.length === 0) {
-      toast.error("請選擇人員或上傳包含人員姓名的檔案");
-      return;
-    }
+    // 允許沒有人員也能上傳，之後由人工分類
+    // 不再強制要求選擇人員
 
     setUploading(true);
     setUploadProgress(0);
@@ -175,11 +206,7 @@ export default function FileUpload() {
           }
         }
 
-        if (!employeeId) {
-          toast.error(`無法確定 ${file.name} 的人員，已跳過`);
-          failCount++;
-          continue;
-        }
+        // 如果沒有employeeId，也允許上傳（設為null，由人工分類）
 
         const formData = new FormData();
         formData.append("file", file);
@@ -194,7 +221,7 @@ export default function FileUpload() {
             const uploadResult = await response.json();
             // 儲存檔案metadata到資料庫
             await createFileMutation.mutateAsync({
-              employeeId: parseInt(employeeId),
+              employeeId: employeeId ? parseInt(employeeId) : null,
               filename: uploadResult.filename,
               fileUrl: uploadResult.fileUrl,
               fileKey: uploadResult.fileKey,
@@ -495,7 +522,7 @@ export default function FileUpload() {
             <Button variant="outline" onClick={() => setOpen(false)} disabled={uploading}>
               取消
             </Button>
-            <Button onClick={handleUpload} disabled={uploading || !selectedEmployee}>
+            <Button onClick={handleUpload} disabled={uploading || (!selectedEmployee && detectedNames.length === 0)}>
               {uploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
