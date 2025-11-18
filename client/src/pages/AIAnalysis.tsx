@@ -14,10 +14,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Sparkles, FileText, Download, Eye, Home, Clock, X, Trash2 } from "lucide-react";
+import { Loader2, Sparkles, FileText, Download, Eye, Home, Clock, X, Trash2, Database } from "lucide-react";
 import { toast } from "sonner";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
+import ImportQuestionsDialog from "@/components/ImportQuestionsDialog";
 
 export default function AIAnalysis() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
@@ -34,6 +35,11 @@ export default function AIAnalysis() {
   
   // 歷史提示詞功能
   const { history, addPrompt, removePrompt, clearAll, getRelativeTime } = usePromptHistory();
+  
+  // 匯入題庫相關狀態
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [parsedQuestions, setParsedQuestions] = useState<any[]>([]);
+  const [isImporting, setIsImporting] = useState(false);
 
   // 根據分析類型返回提示詞前綴
   const getPromptPrefix = () => {
@@ -130,10 +136,56 @@ export default function AIAnalysis() {
 
   const exportPDFMutation = trpc.analysis.exportPDF.useMutation();
   const exportWordMutation = trpc.analysis.exportWord.useMutation();
+  const batchImportMutation = trpc.questions.batchImport.useMutation();
 
+  // 匯入題庫功能
+  const handleImportToQuestionBank = () => {
+    console.log('點擊匯入題庫按鈕');
+    console.log('analysisResult:', analysisResult);
+    console.log('analysisType:', analysisType);
+    
+    if (!analysisResult) {
+      toast.error("請先執行AI分析以獲取結果");
+      return;
+    }
+    
+    if (analysisType !== 'generate_questions') {
+      toast.error("只有「出考題」類型的分析結果可以匯入題庫");
+      return;
+    }
+    
+    console.log('開始載入解析模組...');
+    
+    // 解析AI分析結果
+    import('@/utils/questionParser').then(({ parseQuestionsFromAnalysis }) => {
+      console.log('模組載入成功，開始解析題目...');
+      try {
+        const questions = parseQuestionsFromAnalysis(analysisResult);
+        console.log('解析結果:', questions);
+        
+        if (questions.length === 0) {
+          toast.error("未能從AI分析結果中提取到題目，請確認結果格式是否正確");
+          return;
+        }
+        
+        console.log(`成功解析 ${questions.length} 個題目`);
+        setParsedQuestions(questions);
+        setShowImportDialog(true);
+        toast.success(`成功解析 ${questions.length} 個題目`);
+      } catch (error) {
+        console.error('解析題目失敗:', error);
+        toast.error(`解析題目失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
+      }
+    }).catch(error => {
+      console.error('載入解析模組失敗:', error);
+      toast.error("系統錯誤，無法載入題目解析模組");
+    });
+  };
+  
+  // 匯出功能
   const handleExport = async (format: 'pdf' | 'word') => {
     if (!analysisResult) {
-      toast.error("尚無分析結果可匯出");
+      toast.error("請先執行AI分析以獲取結果");
       return;
     }
     
@@ -464,6 +516,15 @@ export default function AIAnalysis() {
               </div>
               <div className="flex gap-2">
                 <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleImportToQuestionBank}
+                  disabled={analysisType !== 'generate_questions'}
+                >
+                  <Database className="h-4 w-4 mr-2" />
+                  匯入題庫
+                </Button>
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleExport('pdf')}
@@ -564,6 +625,16 @@ export default function AIAnalysis() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* 匯入題庫對話框 */}
+      <ImportQuestionsDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        questions={parsedQuestions}
+        onImportSuccess={() => {
+          toast.success("題目已成功匯入題庫");
+        }}
+      />
     </div>
   );
 }
