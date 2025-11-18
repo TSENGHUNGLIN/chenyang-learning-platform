@@ -678,3 +678,35 @@
 
 **注意：考試管理入口已成功新增到首頁，管理者可以直接從首頁點擊進入考試管理頁面**
 
+
+
+
+## 使用者管理功能
+### 資料庫設計
+- [ ] 檢查users表格，確認是否需要新增欄位
+- [ ] 新增isExaminee欄位（標記是否為考試人員）
+- [ ] 更新role欄位的enum值（admin, editor, viewer）
+- [ ] 執行資料庫遷移
+
+### 後端API開發
+- [ ] 實作查詢所有使用者API（listUsers）
+- [ ] 實作新增使用者API（createUser）
+- [ ] 實作編輯使用者API（updateUser）
+- [ ] 實作刪除使用者API（deleteUser）
+- [ ] 實作查詢單一使用者API（getUserById）
+
+### 前端UI開發
+- [ ] 建立UserManagement.tsx頁面元件
+- [ ] 實作使用者列表顯示（表格）
+- [ ] 實作新增使用者功能（對話框）
+- [ ] 實作編輯使用者功能（對話框）
+- [ ] 實作刪除使用者功能（確認對話框）
+- [ ] 實作角色選擇（系統角色：admin/editor/viewer）
+- [ ] 實作考試人員標記（checkbox）
+- [ ] 在App.tsx中新增路由
+- [ ] 測試頁面功能
+
+
+
+- [x] 修復AI分析結果匯入題庫功能的錯誤（s.match is not a function）
+

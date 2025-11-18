@@ -140,7 +140,7 @@ export default function AIAnalysis() {
 
   // 匯入題庫功能
   const handleImportToQuestionBank = () => {
-    console.log('===== handleImportToQuestionBank 被呼叫 =====');
+    console.log('===== handleImportToQuestionBank 被呼叫 =====')
     console.log('analysisResult:', analysisResult);
     console.log('analysisType:', analysisType);
     
@@ -154,32 +154,61 @@ export default function AIAnalysis() {
       return;
     }
     
-    console.log('開始載入解析模組...');
-    
-    // 解析AI分析結果
-    import('@/utils/questionParser').then(({ parseQuestionsFromAnalysis }) => {
-      console.log('模組載入成功，開始解析題目...');
-      try {
-        const questions = parseQuestionsFromAnalysis(analysisResult);
-        console.log('解析結果:', questions);
-        
-        if (questions.length === 0) {
-          toast.error("未能從AI分析結果中提取到題目，請確認結果格式是否正確");
-          return;
+    try {
+      // 直接從analysisResult中提取questionsWithAnswers陣列
+      const questionsData = analysisResult.questionsWithAnswers;
+      
+      if (!Array.isArray(questionsData) || questionsData.length === 0) {
+        toast.error("未能從AI分析結果中找到題目資料");
+        return;
+      }
+      
+      console.log('提取的題目資料:', questionsData);
+      
+      // 將AI結構化資料轉換為ParsedQuestion格式
+      const parsedQuestions = questionsData.map((q: any) => {
+        // 轉換題型
+        let type: "true_false" | "multiple_choice" | "short_answer";
+        if (q.type === "是非題") {
+          type = "true_false";
+        } else if (q.type === "選擇題") {
+          type = "multiple_choice";
+        } else {
+          type = "short_answer";
         }
         
-        console.log(`成功解析 ${questions.length} 個題目`);
-        setParsedQuestions(questions);
-        setShowImportDialog(true);
-        toast.success(`成功解析 ${questions.length} 個題目`);
-      } catch (error) {
-        console.error('解析題目失敗:', error);
-        toast.error(`解析題目失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
-      }
-    }).catch(error => {
-      console.error('載入解析模組失敗:', error);
-      toast.error("系統錯誤，無法載入題目解析模組");
-    });
+        // 轉換選項為JSON字串
+        let options: string | undefined;
+        if (type === "multiple_choice" && Array.isArray(q.options)) {
+          const optionsObj: Record<string, string> = {};
+          q.options.forEach((opt: string, idx: number) => {
+            const letter = String.fromCharCode(65 + idx); // A, B, C, D
+            optionsObj[letter] = opt;
+          });
+          options = JSON.stringify(optionsObj);
+        }
+        
+        // 推斷難度
+        const difficulty = type === "true_false" ? "easy" : type === "short_answer" ? "hard" : "medium";
+        
+        return {
+          type,
+          difficulty,
+          question: q.question,
+          options,
+          correctAnswer: q.answer,
+          explanation: q.explanation,
+        };
+      });
+      
+      console.log('轉換後的題目:', parsedQuestions);
+      setParsedQuestions(parsedQuestions);
+      setShowImportDialog(true);
+      toast.success(`成功解析 ${parsedQuestions.length} 個題目`);
+    } catch (error) {
+      console.error('解析題目失敗:', error);
+      toast.error(`解析題目失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
   };
   
   // 匯出功能

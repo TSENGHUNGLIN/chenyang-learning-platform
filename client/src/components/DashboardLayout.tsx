@@ -116,7 +116,8 @@ export default function DashboardLayout({
     );
   }
 
-  if (user?.role === "pending") {
+  // examinee 角色不需要審核，直接顯示主頁面
+  if (false) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">

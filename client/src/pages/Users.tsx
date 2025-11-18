@@ -20,7 +20,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useState } from "react";
 
 export default function Users() {
   const { user: currentUser } = useAuth();
@@ -28,8 +32,16 @@ export default function Users() {
   const updateRoleMutation = trpc.users.updateRole.useMutation();
   const deleteUserMutation = trpc.users.delete.useMutation();
   const utils = trpc.useUtils();
+  
+  // 新增使用者對話框狀態
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: "",
+    email: "",
+    role: "examinee" as "admin" | "editor" | "viewer" | "examinee"
+  });
 
-  const handleRoleChange = async (openId: string, role: "admin" | "editor" | "viewer" | "pending") => {
+  const handleRoleChange = async (openId: string, role: "admin" | "editor" | "viewer" | "examinee") => {
     try {
       await updateRoleMutation.mutateAsync({ openId, role });
       toast.success("角色已更新");
@@ -60,8 +72,8 @@ export default function Users() {
         return "secondary";
       case "viewer":
         return "outline";
-      case "pending":
-        return "destructive";
+      case "examinee":
+        return "secondary";
       default:
         return "outline";
     }
@@ -75,8 +87,8 @@ export default function Users() {
         return "編輯者";
       case "viewer":
         return "訪客";
-      case "pending":
-        return "待審核";
+      case "examinee":
+        return "考試人員";
       default:
         return role;
     }
@@ -105,12 +117,101 @@ export default function Users() {
 
         <Card>
           <CardHeader>
-            <CardTitle>使用者列表</CardTitle>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>使用者列表</CardTitle>
+              </div>
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    新增使用者
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>新增使用者</DialogTitle>
+                    <DialogDescription>
+                      輸入使用者資訊並選擇角色
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="name">姓名 *</Label>
+                      <Input
+                        id="name"
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        placeholder="例如：張三"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">電子郵件 *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        placeholder="例如：zhangsan@example.com"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="role">角色 *</Label>
+                      <Select
+                        value={newUser.role}
+                        onValueChange={(value: any) => setNewUser({ ...newUser, role: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default">管理員</Badge>
+                              <span className="text-sm text-muted-foreground">完整權限</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="editor">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">編輯者</Badge>
+                              <span className="text-sm text-muted-foreground">可編輯題庫和考試</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="viewer">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline">檢視者</Badge>
+                              <span className="text-sm text-muted-foreground">只能查看</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="examinee">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">考試人員</Badge>
+                              <span className="text-sm text-muted-foreground">只能參加考試</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                      取消
+                    </Button>
+                    <Button onClick={() => {
+                      // TODO: 實作新增使用者API呼叫
+                      toast.info("功能開發中...");
+                    }}>
+                      確認新增
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
             <CardDescription>
               共 {users?.length || 0} 位使用者
-              {users?.filter((u) => u.role === "pending").length ? (
-                <Badge variant="destructive" className="ml-2">
-                  {users.filter((u) => u.role === "pending").length} 位待審核
+              {users?.filter((u) => u.role === "examinee").length ? (
+                <Badge variant="secondary" className="ml-2">
+                  {users.filter((u) => u.role === "examinee").length} 位考試人員
                 </Badge>
               ) : null}
             </CardDescription>
@@ -154,7 +255,7 @@ export default function Users() {
                             <SelectItem value="admin">管理員</SelectItem>
                             <SelectItem value="editor">編輯者</SelectItem>
                             <SelectItem value="viewer">訪客</SelectItem>
-                            <SelectItem value="pending">待審核</SelectItem>
+                            <SelectItem value="examinee">考試人員</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>

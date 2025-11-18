@@ -66,7 +66,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         values.role = 'admin';
       } else {
         // 新使用者預設為待審核狀態
-        values.role = 'pending';
+        values.role = 'examinee';
       }
     }
     // 如果使用者已存在且 user.role 未定義，則不更新 role
@@ -345,7 +345,7 @@ export async function getAllUsers() {
   return await db.select().from(users);
 }
 
-export async function updateUserRole(openId: string, role: "admin" | "editor" | "viewer" | "pending") {
+export async function updateUserRole(openId: string, role: "admin" | "editor" | "viewer" | "examinee") {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(users).set({ role }).where(eq(users.openId, openId));

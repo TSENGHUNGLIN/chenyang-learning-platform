@@ -71,6 +71,20 @@
       "when": 1763463214886,
       "tag": "0009_deep_bulldozer",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1763467624775,
+      "tag": "0010_warm_maximus",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1763467672498,
+      "tag": "0011_exotic_hobgoblin",
+      "breakpoints": true
     }
   ]
 }

@@ -680,7 +680,7 @@ ${file.extractedText || "無法提取文字內容"}`
       return await getAllUsers();
     }),
     updateRole: protectedProcedure
-      .input(z.object({ openId: z.string(), role: z.enum(["admin", "editor", "viewer", "pending"]) }))
+      .input(z.object({ openId: z.string(), role: z.enum(["admin", "editor", "viewer", "examinee"]) }))
       .mutation(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
         if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
