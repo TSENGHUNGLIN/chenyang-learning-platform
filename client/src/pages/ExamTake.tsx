@@ -122,8 +122,9 @@ export default function ExamTake() {
       // 提交考試
       await submitExamMutation.mutateAsync(examData.assignment.id);
 
-      toast.success("考試已提交！");
-      setLocation(`/exam/${examId}/result`);
+      toast.success("考試已提交！正在評分...");
+      // 導航到成績頁面（使用assignmentId）
+      setLocation(`/exam/${examData.assignment.id}/result`);
     } catch (error) {
       toast.error("提交失敗，請稍後再試");
       setIsSubmitting(false);

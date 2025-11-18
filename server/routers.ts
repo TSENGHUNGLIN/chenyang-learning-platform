@@ -1216,6 +1216,45 @@ ${file.extractedText || "無法提取文字內容"}`
         const { getExamScore } = await import("./db");
         return await getExamScore(input);
       }),
+    // 統計API
+    getStatistics: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getExamStatistics } = await import("./examStatistics");
+        return await getExamStatistics(input);
+      }),
+    getWrongAnswerRanking: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getWrongAnswerRanking } = await import("./examStatistics");
+        return await getWrongAnswerRanking(input);
+      }),
+    getStudentPerformance: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getStudentPerformance } = await import("./examStatistics");
+        return await getStudentPerformance(input);
+      }),
+    getAllStatistics: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getAllExamsStatistics } = await import("./examStatistics");
+      return await getAllExamsStatistics();
+    }),
   }),
 });
 

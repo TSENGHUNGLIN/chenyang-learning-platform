@@ -1161,29 +1161,50 @@ export async function saveAnswer(data: {
 }
 
 /**
- * 取得考生的作答記錄
+ * 取得考生的作答記錄（包含題目資訊）
  */
 export async function getExamSubmissions(assignmentId: number) {
   const db = await getDb();
   if (!db) return [];
-  const { examSubmissions } = await import("../drizzle/schema");
+  const { examSubmissions, questions } = await import("../drizzle/schema");
   
+  // 查詢作答記錄和題目資訊
   const result = await db
-    .select()
+    .select({
+      id: examSubmissions.id,
+      assignmentId: examSubmissions.assignmentId,
+      questionId: examSubmissions.questionId,
+      answer: examSubmissions.answer,
+      isCorrect: examSubmissions.isCorrect,
+      score: examSubmissions.score,
+      aiEvaluation: examSubmissions.aiEvaluation,
+      submittedAt: examSubmissions.submittedAt,
+      question: {
+        id: questions.id,
+        type: questions.type,
+        question: questions.question,
+        options: questions.options,
+        correctAnswer: questions.correctAnswer,
+        explanation: questions.explanation,
+        difficulty: questions.difficulty,
+      },
+    })
     .from(examSubmissions)
+    .leftJoin(questions, eq(examSubmissions.questionId, questions.id))
     .where(eq(examSubmissions.assignmentId, assignmentId));
   
   return result;
 }
 
 /**
- * 提交考試（更新examAssignment的endTime和status）
+ * 提交考試（更新examAssignment的endTime和status，並自動評分）
  */
 export async function submitExam(assignmentId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const { examAssignments } = await import("../drizzle/schema");
   
+  // 更新考試狀態為已提交
   await db
     .update(examAssignments)
     .set({
@@ -1191,6 +1212,17 @@ export async function submitExam(assignmentId: number) {
       status: "submitted",
     })
     .where(eq(examAssignments.id, assignmentId));
+  
+  // 自動評分
+  try {
+    const { gradeExam, saveGradingResult } = await import("./grading");
+    const gradingResult = await gradeExam(assignmentId);
+    await saveGradingResult(assignmentId, gradingResult);
+    console.log(`[Grading] Assignment ${assignmentId} graded successfully:`, gradingResult);
+  } catch (error) {
+    console.error(`[Grading] Failed to grade assignment ${assignmentId}:`, error);
+    // 評分失敗不影響提交流程，只記錄錯誤
+  }
   
   return { success: true };
 }

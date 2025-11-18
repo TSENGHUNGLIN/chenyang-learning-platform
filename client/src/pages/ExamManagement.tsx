@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users } from "lucide-react";
+import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users, BarChart3 } from "lucide-react";
 import CreateExamWizard from "@/components/CreateExamWizard";
 
 export default function ExamManagement() {
@@ -315,6 +315,14 @@ export default function ExamManagement() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setLocation(`/exam/${exam.id}/statistics`)}
+                            >
+                              <BarChart3 className="h-4 w-4 mr-1" />
+                              統計
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"

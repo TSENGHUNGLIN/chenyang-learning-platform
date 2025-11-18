@@ -59,8 +59,8 @@ export default function MyExams() {
   };
 
   // 查看成績
-  const handleViewResult = (examId: number) => {
-    setLocation(`/exam/${examId}/result`);
+  const handleViewResult = (assignmentId: number) => {
+    setLocation(`/exam/${assignmentId}/result`);
   };
 
   if (isLoading) {
@@ -171,7 +171,7 @@ export default function MyExams() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleViewResult(exam.id)}
+                                  onClick={() => handleViewResult(assignment.id)}
                                 >
                                   <FileText className="h-4 w-4 mr-1" />
                                   查看成績
