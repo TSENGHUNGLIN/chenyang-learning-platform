@@ -770,7 +770,11 @@ export async function createExam(data: {
     createdBy: data.createdBy,
   });
   
-  return result;
+  // 查詢並回傳新建立的考試記錄
+  const insertId = result.insertId;
+  const [newExam] = await db.select().from(exams).where(eq(exams.id, insertId)).limit(1);
+  
+  return newExam;
 }
 
 /**
@@ -850,6 +854,28 @@ export async function addExamQuestion(data: {
   const { examQuestions } = await import("../drizzle/schema");
   
   await db.insert(examQuestions).values(data);
+}
+
+/**
+ * 批次新增考試題目
+ */
+export async function batchAddExamQuestions(examId: number, questions: Array<{
+  questionId: number;
+  questionOrder: number;
+  points: number;
+}>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { sql } = await import("drizzle-orm");
+  
+  // 使用原始SQL查詢繞過Drizzle ORM的問題
+  for (const q of questions) {
+    await db.execute(
+      sql.raw(
+        `INSERT INTO examQuestions (examId, questionId, questionOrder, points) VALUES (${examId}, ${q.questionId}, ${q.questionOrder}, ${q.points})`
+      )
+    );
+  }
 }
 
 /**

@@ -1062,6 +1062,24 @@ ${file.extractedText || "無法提取文字內容"}`
         await addExamQuestion(input);
         return { success: true };
       }),
+    batchAddQuestions: protectedProcedure
+      .input(z.object({
+        examId: z.number(),
+        questions: z.array(z.object({
+          questionId: z.number(),
+          questionOrder: z.number(),
+          points: z.number(),
+        })),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchAddExamQuestions } = await import("./db");
+        await batchAddExamQuestions(input.examId, input.questions);
+        return { success: true, count: input.questions.length };
+      }),
     getQuestions: protectedProcedure
       .input(z.number())
       .query(async ({ input, ctx }) => {

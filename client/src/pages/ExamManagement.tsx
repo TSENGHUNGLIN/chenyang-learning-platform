@@ -25,10 +25,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users } from "lucide-react";
+import CreateExamWizard from "@/components/CreateExamWizard";
 
 export default function ExamManagement() {
   const [, setLocation] = useLocation();
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedExam, setSelectedExam] = useState<any | null>(null);
@@ -244,7 +245,7 @@ export default function ExamManagement() {
               <p className="text-muted-foreground mt-1">建立、編輯和管理線上考試</p>
             </div>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <Button onClick={() => setShowCreateWizard(true)}>
             <Plus className="h-4 w-4 mr-2" />
             建立考試
           </Button>
@@ -259,7 +260,7 @@ export default function ExamManagement() {
               <p className="text-sm text-muted-foreground mt-2">點擊「建立考試」開始建立第一個考試</p>
               <Button
                 className="mt-6"
-                onClick={() => setShowCreateDialog(true)}
+                onClick={() => setShowCreateWizard(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 建立考試
@@ -358,72 +359,12 @@ export default function ExamManagement() {
           </Card>
         )}
 
-        {/* 建立考試對話框 */}
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>建立考試</DialogTitle>
-              <DialogDescription>
-                填寫考試基本資訊，建立後可以選擇題目並指派考生
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">考試名稱 *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="例如：新人培訓考試"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">考試說明</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="簡要說明考試內容和目的"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="timeLimit">考試時長（分鐘）*</Label>
-                  <Input
-                    id="timeLimit"
-                    type="number"
-                    min={1}
-                    value={formData.timeLimit}
-                    onChange={(e) => setFormData({ ...formData, timeLimit: parseInt(e.target.value) || 60 })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="passingScore">及格分數 *</Label>
-                  <Input
-                    id="passingScore"
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={formData.passingScore}
-                    onChange={(e) => setFormData({ ...formData, passingScore: parseInt(e.target.value) || 60 })}
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => {
-                setShowCreateDialog(false);
-                resetForm();
-              }}>
-                取消
-              </Button>
-              <Button onClick={handleCreate} disabled={createExamMutation.isPending}>
-                {createExamMutation.isPending ? "建立中..." : "建立"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* 建立考試精靈 */}
+        <CreateExamWizard
+          open={showCreateWizard}
+          onOpenChange={setShowCreateWizard}
+          onSuccess={refetch}
+        />
 
         {/* 編輯考試對話框 */}
         <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
