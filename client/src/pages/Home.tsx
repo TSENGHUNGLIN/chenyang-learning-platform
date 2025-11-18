@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, Users, TrendingUp, Search } from "lucide-react";
+import { Calendar, FileText, Users, TrendingUp, Search, BookOpen, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 
@@ -28,26 +28,37 @@ export default function Home() {
       color: "from-blue-500 to-cyan-500",
     },
     {
+      icon: TrendingUp,
+      title: "AI 分析出題",
+      description: "使用 AI 分析考核問答內容，提供深入見解",
+      link: "/ai-analysis",
+      color: "from-orange-500 to-red-500",
+    },
+    {
       icon: FileText,
       title: "檔案管理",
       description: "管理所有上傳的考核問答檔案，支援搜尋與篩選",
       link: "/files",
       color: "from-purple-500 to-pink-500",
     },
-    {
-      icon: TrendingUp,
-      title: "AI 分析",
-      description: "使用 AI 分析考核問答內容，提供深入見解",
-      link: "/ai-analysis",
-      color: "from-orange-500 to-red-500",
-    },
+    ...(user?.role === "editor" || user?.role === "admin"
+      ? [
+          {
+            icon: BookOpen,
+            title: "題庫管理",
+            description: "管理考核題庫，支援是非題、選擇題、問答題",
+            link: "/question-bank",
+            color: "from-indigo-500 to-purple-500",
+          },
+        ]
+      : []),
     ...(user?.role === "admin"
       ? [
           {
-            icon: Users,
-            title: "使用者管理",
-            description: "管理系統使用者與權限設定",
-            link: "/users",
+            icon: Settings,
+            title: "部門人員",
+            description: "管理部門與人員資料",
+            link: "/manage",
             color: "from-green-500 to-emerald-500",
           },
         ]

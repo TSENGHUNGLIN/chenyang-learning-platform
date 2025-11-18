@@ -37,12 +37,12 @@ const menuItems: Array<{
 }> = [
   { icon: LayoutDashboard, label: "首頁", path: "/" },
   { icon: Calendar, label: "日曆檢視", path: "/calendar" },
-  { icon: Sparkles, label: "AI 分析", path: "/ai-analysis" },
+  { icon: Sparkles, label: "AI 分析出題", path: "/ai-analysis" },
   { icon: FileText, label: "檔案管理", path: "/files" },
   { icon: BookOpen, label: "題庫管理", path: "/question-bank", editorOnly: true },
   { icon: FolderTree, label: "分類管理", path: "/categories", editorOnly: true },
   { icon: Tag, label: "標籤管理", path: "/tags", editorOnly: true },
-  { icon: Settings, label: "部門與人員", path: "/manage", adminOnly: true },
+  { icon: Settings, label: "部門人員", path: "/manage", adminOnly: true },
   { icon: Users, label: "使用者管理", path: "/users", adminOnly: true },
 ];
 

@@ -167,7 +167,7 @@ export default function AIAnalysis() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Sparkles className="h-8 w-8 text-primary" />
-            AI 分析中心
+            AI 分析出題中心
           </h1>
           <Button
             variant="outline"
