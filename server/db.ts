@@ -917,6 +917,37 @@ export async function assignExam(data: {
 }
 
 /**
+ * 批次指派考試給多個使用者
+ */
+export async function batchAssignExam(data: {
+  examId: number;
+  userIds: number[];
+  deadline?: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examAssignments } = await import("../drizzle/schema");
+  
+  // 準備批次插入的資料
+  const assignments = data.userIds.map(userId => ({
+    examId: data.examId,
+    userId: userId,
+    employeeId: null,
+    deadline: data.deadline || null,
+    status: 'pending' as const,
+  }));
+  
+  // 批次插入（分批處理，每批100筆）
+  const batchSize = 100;
+  for (let i = 0; i < assignments.length; i += batchSize) {
+    const batch = assignments.slice(i, i + batchSize);
+    await db.insert(examAssignments).values(batch);
+  }
+  
+  return { success: true, count: assignments.length };
+}
+
+/**
  * 查詢使用者的考試指派
  */
 export async function getUserExamAssignments(userId: number) {

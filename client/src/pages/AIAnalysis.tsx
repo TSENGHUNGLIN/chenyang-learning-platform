@@ -139,7 +139,7 @@ export default function AIAnalysis() {
   const batchImportMutation = trpc.questions.batchImport.useMutation();
 
   // 匯入題庫功能
-  const handleImportToQuestionBank = useCallback(() => {
+  const handleImportToQuestionBank = () => {
     console.log('===== handleImportToQuestionBank 被呼叫 =====');
     console.log('analysisResult:', analysisResult);
     console.log('analysisType:', analysisType);
@@ -180,7 +180,7 @@ export default function AIAnalysis() {
       console.error('載入解析模組失敗:', error);
       toast.error("系統錯誤，無法載入題目解析模組");
     });
-  }, [analysisResult, analysisType]);
+  };
   
   // 匯出功能
   const handleExport = async (format: 'pdf' | 'word') => {

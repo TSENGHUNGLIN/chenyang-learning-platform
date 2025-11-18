@@ -1102,6 +1102,21 @@ ${file.extractedText || "無法提取文字內容"}`
         await assignExam(input);
         return { success: true };
       }),
+    batchAssign: protectedProcedure
+      .input(z.object({
+        examId: z.number(),
+        userIds: z.array(z.number()),
+        deadline: z.date().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchAssignExam } = await import("./db");
+        const result = await batchAssignExam(input);
+        return result;
+      }),
     getAssignments: protectedProcedure
       .input(z.number())
       .query(async ({ input, ctx }) => {

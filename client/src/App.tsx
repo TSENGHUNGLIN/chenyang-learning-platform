@@ -13,6 +13,8 @@ import AIAnalysis from "./pages/AIAnalysis";
 import QuestionBank from "./pages/QuestionBank";
 import CategoryManagement from "./pages/CategoryManagement";
 import TagManagement from "./pages/TagManagement";
+import AnalysisHistory from "./pages/AnalysisHistory";
+import ExamManagement from "./pages/ExamManagement";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -27,6 +29,8 @@ function Router() {
       <Route path={"/question-bank"} component={QuestionBank} />
       <Route path={"/categories"} component={CategoryManagement} />
       <Route path={"/tags"} component={TagManagement} />
+      <Route path={"/analysis-history"} component={AnalysisHistory} />
+      <Route path={"/exams"} component={ExamManagement} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
