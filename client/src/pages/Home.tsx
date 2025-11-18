@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, Users, TrendingUp, Search, BookOpen, Settings } from "lucide-react";
+import { Calendar, FileText, Users, TrendingUp, Search, BookOpen, Settings, ClipboardList } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 
@@ -49,6 +49,13 @@ export default function Home() {
             description: "管理考核題庫，支援是非題、選擇題、問答題",
             link: "/question-bank",
             color: "from-indigo-500 to-purple-500",
+          },
+          {
+            icon: ClipboardList,
+            title: "考試管理",
+            description: "建立、編輯和管理線上考試，支援批次指派考生",
+            link: "/exams",
+            color: "from-teal-500 to-cyan-500",
           },
         ]
       : []),
