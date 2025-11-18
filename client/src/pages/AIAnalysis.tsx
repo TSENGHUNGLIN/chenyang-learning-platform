@@ -191,6 +191,12 @@ export default function AIAnalysis() {
         // 推斷難度
         const difficulty = type === "true_false" ? "easy" : type === "short_answer" ? "hard" : "medium";
         
+        // 提取檔案名稱作為考題出處
+        const sourceFiles = files
+          ?.filter((f: any) => selectedFiles.includes(f.id))
+          .map((f: any) => f.filename)
+          .join(', ');
+        
         return {
           type,
           difficulty,
@@ -198,6 +204,7 @@ export default function AIAnalysis() {
           options,
           correctAnswer: q.answer,
           explanation: q.explanation,
+          source: sourceFiles || '未知',
         };
       });
       

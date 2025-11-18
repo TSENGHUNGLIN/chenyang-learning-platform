@@ -45,6 +45,7 @@ export default function QuestionBank() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
 
   // Form state
@@ -56,6 +57,7 @@ export default function QuestionBank() {
     correctAnswer: "",
     explanation: "",
     categoryId: undefined as number | undefined,
+    source: "",
   });
   const [selectedTags, setSelectedTags] = useState<number[]>([]);
 
@@ -69,18 +71,31 @@ export default function QuestionBank() {
   const setTagsMutation = trpc.questionTags.setTags.useMutation();
   const batchImportMutation = trpc.questions.batchImport.useMutation();
 
-  const filteredQuestions = questions?.filter((q: any) => {
-    if (searchKeyword && !q.question.toLowerCase().includes(searchKeyword.toLowerCase())) {
-      return false;
-    }
-    if (filterType !== "all" && q.type !== filterType) {
-      return false;
-    }
-    if (filterDifficulty !== "all" && q.difficulty !== filterDifficulty) {
-      return false;
-    }
-    return true;
-  });
+  const filteredQuestions = questions
+    ?.filter((q: any) => {
+      if (searchKeyword && !q.question.toLowerCase().includes(searchKeyword.toLowerCase())) {
+        return false;
+      }
+      if (filterType !== "all" && q.type !== filterType) {
+        return false;
+      }
+      if (filterDifficulty !== "all" && q.difficulty !== filterDifficulty) {
+        return false;
+      }
+      if (filterSource !== "all" && q.source !== filterSource) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a: any, b: any) => {
+      // 按考題出處排序，相同出處的題目排列在一起
+      const sourceA = a.source || "未設定";
+      const sourceB = b.source || "未設定";
+      if (sourceA < sourceB) return -1;
+      if (sourceA > sourceB) return 1;
+      // 相同出處內按ID排序
+      return a.id - b.id;
+    });
 
   // 處理檔案選擇
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -355,6 +370,7 @@ export default function QuestionBank() {
       correctAnswer: question.correctAnswer,
       explanation: question.explanation || "",
       categoryId: question.categoryId,
+      source: question.source || "",
     });
     // Tags will be loaded in the dialog via useEffect
     setShowEditDialog(true);
@@ -602,6 +618,20 @@ export default function QuestionBank() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>考題出處</Label>
+              <Select value={filterSource} onValueChange={setFilterSource}>
+                <SelectTrigger>
+                  <SelectValue placeholder="所有出處" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">所有出處</SelectItem>
+                  {Array.from(new Set(questions?.map((q: any) => q.source).filter(Boolean))).map((source: any) => (
+                    <SelectItem key={source} value={source}>{source}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* 題目列表 */}
@@ -621,6 +651,7 @@ export default function QuestionBank() {
                   <TableHead className="w-[40%]">題目</TableHead>
                   <TableHead>類型</TableHead>
                   <TableHead>難度</TableHead>
+                  <TableHead>考題出處</TableHead>
                   <TableHead>製作者</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
@@ -628,7 +659,7 @@ export default function QuestionBank() {
               <TableBody>
                 {filteredQuestions?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       尚無題目，請新增題目
                     </TableCell>
                   </TableRow>
@@ -656,6 +687,11 @@ export default function QuestionBank() {
                         <Badge className={getDifficultyColor(question.difficulty)}>
                           {getDifficultyLabel(question.difficulty)}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {question.source || "未設定"}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-muted-foreground">
@@ -730,6 +766,14 @@ export default function QuestionBank() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>考題出處</Label>
+              <Input
+                placeholder="輸入考題出處（例：員工轉正考核問答）"
+                value={formData.source}
+                onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label>題目</Label>
@@ -847,6 +891,14 @@ export default function QuestionBank() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>考題出處</Label>
+              <Input
+                placeholder="輸入考題出處（例：員工轉正考核問答）"
+                value={formData.source}
+                onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label>題目</Label>
