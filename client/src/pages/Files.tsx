@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { debounce } from "lodash";
+import AnalysisResultView from "@/components/AnalysisResultView";
+import { Loader2 } from "lucide-react";
 
 export default function Files() {
   const { user } = useAuth();
@@ -59,6 +61,8 @@ export default function Files() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFile, setSelectedFile] = useState<number | null>(null);
   const [analysisPrompt, setAnalysisPrompt] = useState("");
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
 
   // Debounced search
   const debouncedSearch = useMemo(
@@ -115,23 +119,21 @@ export default function Files() {
     );
   };
 
-  const handleAnalysis = async () => {
-    if (!selectedFile || !analysisPrompt) {
-      toast.error("請選擇檔案並輸入分析提示");
-      return;
-    }
-
+  const handleAnalyze = async (fileId: number) => {
     try {
-      await analysisMutation.mutateAsync({
-        fileId: selectedFile,
-        analysisType: "general",
-        prompt: analysisPrompt,
+      setShowAnalysisDialog(true);
+      setAnalysisResult(null);
+      
+      const result = await analysisMutation.mutateAsync({
+        fileId: fileId,
+        analysisType: "comprehensive",
       });
+      
+      setAnalysisResult(result.result);
       toast.success("AI 分析完成");
-      setAnalysisPrompt("");
-      setSelectedFile(null);
     } catch (error) {
       toast.error("AI 分析失敗");
+      setShowAnalysisDialog(false);
     }
   };
 
@@ -372,41 +374,15 @@ export default function Files() {
                               </Button>
                               {(user?.role === "admin" || user?.role === "editor") && (
                                 <>
-                                  <Dialog>
-                                    <DialogTrigger asChild>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setSelectedFile(file.id)}
-                                      >
-                                        <Sparkles className="h-4 w-4 mr-1" />
-                                        AI 分析
-                                      </Button>
-                                    </DialogTrigger>
-                                    <DialogContent>
-                                      <DialogHeader>
-                                        <DialogTitle>AI 分析</DialogTitle>
-                                        <DialogDescription>
-                                          輸入您想要分析的問題或提示
-                                        </DialogDescription>
-                                      </DialogHeader>
-                                      <div className="space-y-4">
-                                        <Textarea
-                                          placeholder="例如：請分析這份考核問答的優缺點..."
-                                          value={analysisPrompt}
-                                          onChange={(e) => setAnalysisPrompt(e.target.value)}
-                                          rows={4}
-                                        />
-                                        <Button
-                                          onClick={handleAnalysis}
-                                          disabled={analysisMutation.isPending}
-                                          className="w-full"
-                                        >
-                                          {analysisMutation.isPending ? "分析中..." : "開始分析"}
-                                        </Button>
-                                      </div>
-                                    </DialogContent>
-                                  </Dialog>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleAnalyze(file.id)}
+                                    disabled={analysisMutation.isPending}
+                                  >
+                                    <Sparkles className="h-4 w-4 mr-1" />
+                                    AI 分析
+                                  </Button>
                                   <Button
                                     variant="outline"
                                     size="sm"
@@ -458,7 +434,27 @@ export default function Files() {
           </CardContent>
         </Card>
       </div>
+      {/* AI分析結果對話框 */}
+      <Dialog open={showAnalysisDialog} onOpenChange={setShowAnalysisDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>AI 分析結果</DialogTitle>
+            <DialogDescription>
+              系統已完成檔案內容的全面分析
+            </DialogDescription>
+          </DialogHeader>
+          {analysisResult ? (
+            <AnalysisResultView result={analysisResult} />
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center space-y-4">
+                <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+                <p className="text-sm text-muted-foreground">AI 分析中，請稍候...</p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
-

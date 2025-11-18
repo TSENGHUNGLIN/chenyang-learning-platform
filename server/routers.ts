@@ -222,8 +222,7 @@ export const appRouter = router({
     create: protectedProcedure
       .input(z.object({
         fileId: z.number(),
-        analysisType: z.string(),
-        prompt: z.string(),
+        analysisType: z.string().optional().default("comprehensive"),
       }))
       .mutation(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
@@ -238,11 +237,89 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "檔案不存在" });
         }
         
+        // 使用結構化輸出生成AI分析結果
         const response = await invokeLLM({
           messages: [
-            { role: "system", content: "你是一個專業的學習題庫分析助手。" },
-            { role: "user", content: `${input.prompt}\n\n檔案內容：\n${file.extractedText || ""}` },
+            { 
+              role: "system", 
+              content: "你是一個專業的學習題庫分析助手。你的任務是分析新人的考核檔案，提供全面的分析和建議。" 
+            },
+            { 
+              role: "user", 
+              content: `請分析以下考核檔案內容，提供：
+1. 整體摘要
+2. 難度評估（簡單/中等/困難，並給出0-100分的分數和評估理由）
+3. 答題表現分析（優勢、弱點、具體建議）
+4. 需要加強的知識點（包含重要性和學習建議）
+5. 推薦相關考題（標題、推薦理由、難度）
+
+檔案內容：
+${file.extractedText || "無法提取文字內容"}` 
+            },
           ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "exam_analysis",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  summary: { type: "string", description: "整體摘要" },
+                  difficulty: {
+                    type: "object",
+                    properties: {
+                      level: { type: "string", enum: ["簡單", "中等", "困難"], description: "難度等級" },
+                      score: { type: "integer", description: "難度分數 (0-100)" },
+                      reasoning: { type: "string", description: "評估理由" }
+                    },
+                    required: ["level", "score", "reasoning"],
+                    additionalProperties: false
+                  },
+                  performance: {
+                    type: "object",
+                    properties: {
+                      strengths: { type: "array", items: { type: "string" }, description: "優勢項目" },
+                      weaknesses: { type: "array", items: { type: "string" }, description: "弱點項目" },
+                      suggestions: { type: "array", items: { type: "string" }, description: "改進建議" }
+                    },
+                    required: ["strengths", "weaknesses", "suggestions"],
+                    additionalProperties: false
+                  },
+                  knowledgeGaps: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        topic: { type: "string", description: "知識點名稱" },
+                        importance: { type: "string", enum: ["high", "medium", "low"], description: "重要性" },
+                        recommendation: { type: "string", description: "學習建議" }
+                      },
+                      required: ["topic", "importance", "recommendation"],
+                      additionalProperties: false
+                    },
+                    description: "需要加強的知識點"
+                  },
+                  recommendedQuestions: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        title: { type: "string", description: "考題標題" },
+                        reason: { type: "string", description: "推薦理由" },
+                        difficulty: { type: "string", enum: ["簡單", "中等", "困難"], description: "難度" }
+                      },
+                      required: ["title", "reason", "difficulty"],
+                      additionalProperties: false
+                    },
+                    description: "推薦考題"
+                  }
+                },
+                required: ["summary", "difficulty", "performance", "knowledgeGaps", "recommendedQuestions"],
+                additionalProperties: false
+              }
+            }
+          }
         });
         
         const messageContent = response.choices[0].message.content;
@@ -255,7 +332,7 @@ export const appRouter = router({
           createdBy: ctx.user.id,
         });
         
-        return { result };
+        return { result: JSON.parse(result) };
       }),
   }),
 
