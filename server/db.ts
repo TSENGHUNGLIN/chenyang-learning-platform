@@ -394,8 +394,29 @@ export async function getFileWithReadInfo(fileId: number, userId: number) {
 export async function getAllQuestions() {
   const db = await getDb();
   if (!db) return [];
-  const { questions } = await import("../drizzle/schema");
-  return await db.select().from(questions).orderBy(questions.createdAt);
+  const { questions, users } = await import("../drizzle/schema");
+  const { sql } = await import("drizzle-orm");
+  
+  const result = await db
+    .select({
+      id: questions.id,
+      categoryId: questions.categoryId,
+      type: questions.type,
+      difficulty: questions.difficulty,
+      question: questions.question,
+      options: questions.options,
+      correctAnswer: questions.correctAnswer,
+      explanation: questions.explanation,
+      createdBy: questions.createdBy,
+      createdAt: questions.createdAt,
+      updatedAt: questions.updatedAt,
+      creatorName: users.name,
+    })
+    .from(questions)
+    .leftJoin(users, eq(questions.createdBy, users.id))
+    .orderBy(questions.createdAt);
+  
+  return result;
 }
 
 export async function getQuestionById(id: number) {

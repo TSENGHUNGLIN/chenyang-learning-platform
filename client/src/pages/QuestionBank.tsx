@@ -45,6 +45,7 @@ export default function QuestionBank() {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
+  const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -398,6 +399,111 @@ export default function QuestionBank() {
     }
   };
 
+  // 選題相關函數
+  const toggleQuestionSelection = (questionId: number) => {
+    setSelectedQuestions(prev => 
+      prev.includes(questionId) 
+        ? prev.filter(id => id !== questionId)
+        : [...prev, questionId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedQuestions.length === filteredQuestions?.length) {
+      setSelectedQuestions([]);
+    } else {
+      setSelectedQuestions(filteredQuestions?.map((q: any) => q.id) || []);
+    }
+  };
+
+  // 匯出考試卷功能
+  const exportExamPaper = () => {
+    if (selectedQuestions.length === 0) {
+      toast.error("請至少選擇一個題目");
+      return;
+    }
+
+    const selectedQuestionsData = questions?.filter((q: any) => 
+      selectedQuestions.includes(q.id)
+    );
+
+    // 按題型分類
+    const questionsByType: Record<string, any[]> = {
+      true_false: [],
+      multiple_choice: [],
+      short_answer: []
+    };
+
+    selectedQuestionsData?.forEach((q: any) => {
+      if (questionsByType[q.type]) {
+        questionsByType[q.type].push(q);
+      }
+    });
+
+    // 生成考試卷內容
+    let examContent = `# 考試卷\n\n`;
+    examContent += `**總題數**: ${selectedQuestions.length} 題\n\n`;
+    examContent += `**考試時間**: _____ 分鐘\n\n`;
+    examContent += `**及格分數**: _____ 分\n\n`;
+    examContent += `---\n\n`;
+
+    let questionNumber = 1;
+
+    // 是非題
+    if (questionsByType.true_false.length > 0) {
+      examContent += `## 一、是非題（共 ${questionsByType.true_false.length} 題）\n\n`;
+      questionsByType.true_false.forEach((q: any) => {
+        examContent += `${questionNumber}. ${q.question}\n\n`;
+        examContent += `   ☐ 是   ☐ 非\n\n`;
+        questionNumber++;
+      });
+      examContent += `\n`;
+    }
+
+    // 選擇題
+    if (questionsByType.multiple_choice.length > 0) {
+      examContent += `## 二、選擇題（共 ${questionsByType.multiple_choice.length} 題）\n\n`;
+      questionsByType.multiple_choice.forEach((q: any) => {
+        examContent += `${questionNumber}. ${q.question}\n\n`;
+        try {
+          const options = JSON.parse(q.options);
+          options.forEach((opt: any) => {
+            examContent += `   ☐ ${opt.label}. ${opt.value}\n`;
+          });
+        } catch (e) {
+          examContent += `   （選項格式錯誤）\n`;
+        }
+        examContent += `\n`;
+        questionNumber++;
+      });
+      examContent += `\n`;
+    }
+
+    // 問答題
+    if (questionsByType.short_answer.length > 0) {
+      examContent += `## 三、問答題（共 ${questionsByType.short_answer.length} 題）\n\n`;
+      questionsByType.short_answer.forEach((q: any) => {
+        examContent += `${questionNumber}. ${q.question}\n\n`;
+        examContent += `   答：_________________________________________________\n\n`;
+        examContent += `   _____________________________________________________\n\n`;
+        questionNumber++;
+      });
+    }
+
+    // 下載檔案
+    const blob = new Blob([examContent], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `考試卷_${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success("考試卷匯出成功！");
+  };
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8 flex items-start justify-between">
@@ -431,12 +537,27 @@ export default function QuestionBank() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>題目列表</CardTitle>
-              <CardDescription>共 {filteredQuestions?.length || 0} 個題目</CardDescription>
+              <CardDescription>
+                共 {filteredQuestions?.length || 0} 個題目
+                {selectedQuestions.length > 0 && (
+                  <span className="ml-4 text-primary font-semibold">
+                    已選擇 {selectedQuestions.length} 題
+                  </span>
+                )}
+              </CardDescription>
             </div>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              新增題目
-            </Button>
+            <div className="flex gap-2">
+              {selectedQuestions.length > 0 && (
+                <Button onClick={exportExamPaper} variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  匯出考試卷 ({selectedQuestions.length})
+                </Button>
+              )}
+              <Button onClick={() => setShowCreateDialog(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                新增題目
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -488,22 +609,43 @@ export default function QuestionBank() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50%]">題目</TableHead>
+                  <TableHead className="w-[50px]">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedQuestions.length === filteredQuestions?.length && filteredQuestions?.length > 0}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4"
+                    />
+                  </TableHead>
+                  <TableHead className="w-[50px]">#</TableHead>
+                  <TableHead className="w-[40%]">題目</TableHead>
                   <TableHead>類型</TableHead>
                   <TableHead>難度</TableHead>
+                  <TableHead>製作者</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredQuestions?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       尚無題目，請新增題目
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredQuestions?.map((question: any) => (
+                  filteredQuestions?.map((question: any, index: number) => (
                     <TableRow key={question.id}>
+                      <TableCell>
+                        <input 
+                          type="checkbox" 
+                          checked={selectedQuestions.includes(question.id)}
+                          onChange={() => toggleQuestionSelection(question.id)}
+                          className="h-4 w-4"
+                        />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {index + 1}
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="line-clamp-2">{question.question}</div>
                       </TableCell>
@@ -514,6 +656,11 @@ export default function QuestionBank() {
                         <Badge className={getDifficultyColor(question.difficulty)}>
                           {getDifficultyLabel(question.difficulty)}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {question.creatorName || "未知"}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
