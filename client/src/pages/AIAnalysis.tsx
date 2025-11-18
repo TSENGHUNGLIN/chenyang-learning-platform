@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Sparkles, FileText, Download } from "lucide-react";
+import { Loader2, Sparkles, FileText, Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 import AnalysisResultView from "@/components/AnalysisResultView";
 
@@ -27,6 +27,8 @@ export default function AIAnalysis() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewFile, setPreviewFile] = useState<any>(null);
 
   // 根據分析類型返回提示詞前綴
   const getPromptPrefix = () => {
@@ -269,6 +271,18 @@ export default function AIAnalysis() {
                       {file.employee?.department?.name}
                     </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviewFile(file);
+                      setShowPreviewDialog(true);
+                    }}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    預視
+                  </Button>
                 </div>
               ))}
             </div>
@@ -377,6 +391,83 @@ export default function AIAnalysis() {
           </CardContent>
         </Card>
       )}
+
+      {/* 檔案預視對話框 */}
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {previewFile?.filename}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            {previewFile && (
+              <div className="space-y-4">
+                {/* PDF預視 */}
+                {previewFile.filename.toLowerCase().endsWith('.pdf') && (
+                  <iframe
+                    src={previewFile.fileUrl}
+                    className="w-full h-[600px] border rounded-lg"
+                    title="PDF Preview"
+                  />
+                )}
+                
+                {/* 圖片預視 */}
+                {(previewFile.filename.toLowerCase().endsWith('.jpg') ||
+                  previewFile.filename.toLowerCase().endsWith('.jpeg') ||
+                  previewFile.filename.toLowerCase().endsWith('.png') ||
+                  previewFile.filename.toLowerCase().endsWith('.gif')) && (
+                  <img
+                    src={previewFile.fileUrl}
+                    alt={previewFile.filename}
+                    className="w-full h-auto rounded-lg"
+                  />
+                )}
+                
+                {/* Word/文字檔案預視（顯示提取的文字） */}
+                {(previewFile.filename.toLowerCase().endsWith('.docx') ||
+                  previewFile.filename.toLowerCase().endsWith('.doc') ||
+                  previewFile.filename.toLowerCase().endsWith('.txt')) && (
+                  <div className="p-6 bg-muted rounded-lg">
+                    {previewFile.extractedText ? (
+                      <div className="whitespace-pre-wrap text-sm">
+                        {previewFile.extractedText}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>無法預視此檔案，請下載後查看</p>
+                        <Button
+                          variant="outline"
+                          className="mt-4"
+                          onClick={() => window.open(previewFile.fileUrl, '_blank')}
+                        >
+                          下載檔案
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* 其他檔案類型 */}
+                {!previewFile.filename.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|docx|doc|txt)$/) && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium mb-2">此檔案類型不支援預視</p>
+                    <p className="text-sm mb-4">請下載檔案後使用專用軟體開啟</p>
+                    <Button
+                      onClick={() => window.open(previewFile.fileUrl, '_blank')}
+                    >
+                      下載檔案
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

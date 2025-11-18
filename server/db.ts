@@ -389,3 +389,82 @@ export async function getFileWithReadInfo(fileId: number, userId: number) {
   };
 }
 
+
+// Question bank queries
+export async function getAllQuestions() {
+  const db = await getDb();
+  if (!db) return [];
+  const { questions } = await import("../drizzle/schema");
+  return await db.select().from(questions).orderBy(questions.createdAt);
+}
+
+export async function getQuestionById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { questions } = await import("../drizzle/schema");
+  const result = await db.select().from(questions).where(eq(questions.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getQuestionsByCategory(categoryId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { questions } = await import("../drizzle/schema");
+  return await db.select().from(questions).where(eq(questions.categoryId, categoryId));
+}
+
+export async function getQuestionsByDifficulty(difficulty: "easy" | "medium" | "hard") {
+  const db = await getDb();
+  if (!db) return [];
+  const { questions } = await import("../drizzle/schema");
+  return await db.select().from(questions).where(eq(questions.difficulty, difficulty));
+}
+
+export async function createQuestion(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questions } = await import("../drizzle/schema");
+  const result = await db.insert(questions).values(data);
+  return result;
+}
+
+export async function updateQuestion(id: number, data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questions } = await import("../drizzle/schema");
+  await db.update(questions).set(data).where(eq(questions.id, id));
+  return { success: true };
+}
+
+export async function deleteQuestion(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questions } = await import("../drizzle/schema");
+  await db.delete(questions).where(eq(questions.id, id));
+  return { success: true };
+}
+
+// Question category queries
+export async function getAllCategories() {
+  const db = await getDb();
+  if (!db) return [];
+  const { questionCategories } = await import("../drizzle/schema");
+  return await db.select().from(questionCategories).orderBy(questionCategories.name);
+}
+
+export async function createCategory(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questionCategories } = await import("../drizzle/schema");
+  const result = await db.insert(questionCategories).values(data);
+  return result;
+}
+
+export async function deleteCategory(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questionCategories } = await import("../drizzle/schema");
+  await db.delete(questionCategories).where(eq(questionCategories.id, id));
+  return { success: true };
+}
+

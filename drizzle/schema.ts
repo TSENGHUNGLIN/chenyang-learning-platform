@@ -104,3 +104,38 @@ export const fileReadLogs = mysqlTable("fileReadLogs", {
 
 export type FileReadLog = typeof fileReadLogs.$inferSelect;
 export type InsertFileReadLog = typeof fileReadLogs.$inferInsert;
+
+/**
+ * 題目分類表格
+ */
+export const questionCategories = mysqlTable("questionCategories", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QuestionCategory = typeof questionCategories.$inferSelect;
+export type InsertQuestionCategory = typeof questionCategories.$inferInsert;
+
+/**
+ * 題庫表格
+ */
+export const questions = mysqlTable("questions", {
+  id: int("id").autoincrement().primaryKey(),
+  categoryId: int("categoryId"),
+  type: mysqlEnum("type", ["true_false", "multiple_choice", "short_answer"]).notNull(),
+  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).notNull(),
+  question: text("question").notNull(),
+  options: text("options"), // JSON格式儲存選項（僅選擇題使用）
+  correctAnswer: text("correctAnswer").notNull(),
+  explanation: text("explanation"),
+  tags: text("tags"), // JSON格式儲存標籤
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Question = typeof questions.$inferSelect;
+export type InsertQuestion = typeof questions.$inferInsert;

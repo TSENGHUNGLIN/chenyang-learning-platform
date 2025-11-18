@@ -21,18 +21,25 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems = [
+const menuItems: Array<{
+  icon: any;
+  label: string;
+  path: string;
+  adminOnly?: boolean;
+  editorOnly?: boolean;
+}> = [
   { icon: LayoutDashboard, label: "首頁", path: "/" },
   { icon: Calendar, label: "日曆檢視", path: "/calendar" },
   { icon: Sparkles, label: "AI 分析", path: "/ai-analysis" },
   { icon: FileText, label: "檔案管理", path: "/files" },
+  { icon: BookOpen, label: "題庫管理", path: "/question-bank", editorOnly: true },
   { icon: Settings, label: "部門與人員", path: "/manage", adminOnly: true },
   { icon: Users, label: "使用者管理", path: "/users", adminOnly: true },
 ];
@@ -236,7 +243,11 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.filter(item => !item.adminOnly || user?.role === "admin").map(item => {
+              {menuItems.filter(item => {
+                if (item.adminOnly && user?.role !== "admin") return false;
+                if (item.editorOnly && user?.role !== "admin" && user?.role !== "editor") return false;
+                return true;
+              }).map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

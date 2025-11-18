@@ -382,8 +382,19 @@ ${file.extractedText || "無法提取文字內容"}`
         const fileContents = validFiles.map(f => `檔案：${f!.filename}\n${f!.extractedText || "無法提取文字內容"}`).join("\n\n");
         
         if (input.analysisType === "generate_questions") {
-          systemPrompt = "你是一個專業的考題出題助手。你的任務是根據檔案內容和使用者的要求，生成適合的考題。";
-          userPrompt = `請根據以下檔案內容，${input.customPrompt}\n\n檔案內容：\n${fileContents}`;
+          // 從題庫獲取所有題目
+          const { getAllQuestions } = await import("./db");
+          const allQuestions = await getAllQuestions();
+          
+          // 將題庫資訊轉換為文字格式
+          const questionBankInfo = allQuestions.length > 0 
+            ? `\n\n可用題庫（共 ${allQuestions.length} 題）：\n${allQuestions.map((q: any, idx: number) => 
+                `${idx + 1}. [類型: ${q.type === 'true_false' ? '是非題' : q.type === 'multiple_choice' ? '選擇題' : '問答題'}, 難度: ${q.difficulty === 'easy' ? '簡單' : q.difficulty === 'medium' ? '中等' : '困難'}] ${q.question}`
+              ).join('\n')}`
+            : "";
+          
+          systemPrompt = "你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目，如果題庫中沒有適合的題目，再根據檔案內容生成新題目。";
+          userPrompt = `請根據以下檔案內容和題庫，${input.customPrompt}${questionBankInfo}\n\n檔案內容：\n${fileContents}`;
         } else if (input.analysisType === "analyze_questions") {
           systemPrompt = "你是一個專業的學習題庫分析助手。你的任務是分析考核檔案，提供全面的分析和建議。";
           userPrompt = `請${input.customPrompt}\n\n檔案內容：\n${fileContents}`;
@@ -392,16 +403,95 @@ ${file.extractedText || "無法提取文字內容"}`
           userPrompt = `${input.customPrompt}\n\n檔案內容：\n${fileContents}`;
         }
         
-        const response = await invokeLLM({
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-        });
-        
-        const result = response.choices[0].message.content || "無法生成分析結果";
-        
-        return { result };
+        // 根據分析類型決定返回格式
+        if (input.analysisType === "generate_questions" || input.analysisType === "analyze_questions") {
+          // 使用結構化輸出（JSON Schema）
+          const response = await invokeLLM({
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            response_format: {
+              type: "json_schema",
+              json_schema: {
+                name: "analysis_result",
+                strict: true,
+                schema: {
+                  type: "object",
+                  properties: {
+                    summary: { type: "string", description: "整體摘要" },
+                    difficulty: {
+                      type: "object",
+                      properties: {
+                        level: { type: "string", enum: ["簡單", "中等", "困難"], description: "難度等級" },
+                        score: { type: "number", description: "難度分數（0-100）" },
+                        reasoning: { type: "string", description: "難度評估理由" },
+                      },
+                      required: ["level", "score", "reasoning"],
+                      additionalProperties: false,
+                    },
+                    performance: {
+                      type: "object",
+                      properties: {
+                        strengths: { type: "array", items: { type: "string" }, description: "優勢" },
+                        weaknesses: { type: "array", items: { type: "string" }, description: "弱點" },
+                        suggestions: { type: "array", items: { type: "string" }, description: "改進建議" },
+                      },
+                      required: ["strengths", "weaknesses", "suggestions"],
+                      additionalProperties: false,
+                    },
+                    knowledgeGaps: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          topic: { type: "string", description: "知識點" },
+                          importance: { type: "string", enum: ["high", "medium", "low"], description: "重要性" },
+                          recommendation: { type: "string", description: "建議" },
+                        },
+                        required: ["topic", "importance", "recommendation"],
+                        additionalProperties: false,
+                      },
+                      description: "知識缺口",
+                    },
+                    recommendedQuestions: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          title: { type: "string", description: "考題標題" },
+                          reason: { type: "string", description: "推薦理由" },
+                          difficulty: { type: "string", enum: ["簡單", "中等", "困難"], description: "難度" },
+                        },
+                        required: ["title", "reason", "difficulty"],
+                        additionalProperties: false,
+                      },
+                      description: "推薦考題",
+                    },
+                  },
+                  required: ["summary", "difficulty", "performance", "knowledgeGaps", "recommendedQuestions"],
+                  additionalProperties: false,
+                },
+              },
+            },
+          });
+          
+          const content = response.choices[0].message.content;
+          const resultText = typeof content === 'string' ? content : JSON.stringify(content);
+          const result = JSON.parse(resultText || "{}");
+          return { result };
+        } else {
+          // 其他類型返回純文字
+          const response = await invokeLLM({
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+          });
+          
+          const result = response.choices[0].message.content || "無法生成分析結果";
+          return { result };
+        }
       }),
     exportWord: protectedProcedure
       .input(z.object({
@@ -453,6 +543,118 @@ ${file.extractedText || "無法提取文字內容"}`
         }
         const { deleteUser } = await import("./db");
         await deleteUser(input);
+        return { success: true };
+      }),
+  }),
+
+  // Question bank management router
+  questions: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getAllQuestions } = await import("./db");
+      return await getAllQuestions();
+    }),
+    getById: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getQuestionById } = await import("./db");
+        return await getQuestionById(input);
+      }),
+    create: protectedProcedure
+      .input(z.object({
+        categoryId: z.number().optional(),
+        type: z.enum(["true_false", "multiple_choice", "short_answer"]),
+        difficulty: z.enum(["easy", "medium", "hard"]),
+        question: z.string(),
+        options: z.string().optional(),
+        correctAnswer: z.string(),
+        explanation: z.string().optional(),
+        tags: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createQuestion } = await import("./db");
+        await createQuestion({ ...input, createdBy: ctx.user.id });
+        return { success: true };
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        categoryId: z.number().optional(),
+        type: z.enum(["true_false", "multiple_choice", "short_answer"]).optional(),
+        difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+        question: z.string().optional(),
+        options: z.string().optional(),
+        correctAnswer: z.string().optional(),
+        explanation: z.string().optional(),
+        tags: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateQuestion } = await import("./db");
+        const { id, ...data } = input;
+        await updateQuestion(id, data);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { deleteQuestion } = await import("./db");
+        await deleteQuestion(input);
+        return { success: true };
+      }),
+  }),
+
+  // Question categories router
+  questionCategories: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getAllCategories } = await import("./db");
+      return await getAllCategories();
+    }),
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createCategory } = await import("./db");
+        await createCategory(input);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { deleteCategory } = await import("./db");
+        await deleteCategory(input);
         return { success: true };
       }),
   }),
