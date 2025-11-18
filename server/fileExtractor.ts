@@ -1,10 +1,41 @@
 import mammoth from "mammoth";
+import { writeFile, unlink } from "fs/promises";
+import { exec } from "child_process";
+import { promisify } from "util";
+import path from "path";
+import os from "os";
+
+const execAsync = promisify(exec);
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-  // PDF text extraction is complex and requires additional setup
-  // For now, return empty string and handle PDF processing separately
-  // In production, consider using external services or command-line tools
-  return "";
+  const tmpDir = os.tmpdir();
+  const timestamp = Date.now();
+  const pdfPath = path.join(tmpDir, `temp-${timestamp}.pdf`);
+  const txtPath = path.join(tmpDir, `temp-${timestamp}.txt`);
+
+  try {
+    // Write buffer to temporary PDF file
+    await writeFile(pdfPath, buffer);
+
+    // Use pdftotext command to extract text
+    await execAsync(`pdftotext "${pdfPath}" "${txtPath}"`);
+
+    // Read extracted text
+    const fs = await import("fs/promises");
+    const text = await fs.readFile(txtPath, "utf-8");
+
+    // Clean up temporary files
+    await unlink(pdfPath).catch(() => {});
+    await unlink(txtPath).catch(() => {});
+
+    return text;
+  } catch (error) {
+    console.error("PDF extraction error:", error);
+    // Clean up on error
+    await unlink(pdfPath).catch(() => {});
+    await unlink(txtPath).catch(() => {});
+    return "";
+  }
 }
 
 export async function extractTextFromDOCX(buffer: Buffer): Promise<string> {
