@@ -24,6 +24,7 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { Link } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
@@ -194,11 +195,14 @@ function DashboardLayoutContent({
             <div className="flex items-center gap-3 pl-2 group-data-[collapsible=icon]:px-0 transition-all w-full">
               {isCollapsed ? (
                 <div className="relative h-8 w-8 shrink-0 group">
-                  <img
-                    src={APP_LOGO}
-                    className="h-8 w-8 rounded-md object-cover ring-1 ring-border"
-                    alt="Logo"
-                  />
+                  <Link href="/">
+                    <img
+                      src={APP_LOGO}
+                      className="h-8 w-8 rounded-md object-cover ring-1 ring-border cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                      alt="Logo"
+                      title="返回首頁"
+                    />
+                  </Link>
                   <button
                     onClick={toggleSidebar}
                     className="absolute inset-0 flex items-center justify-center bg-accent rounded-md ring-1 ring-border opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -208,16 +212,17 @@ function DashboardLayoutContent({
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-3 min-w-0">
+                  <Link href="/" className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity">
                     <img
                       src={APP_LOGO}
-                      className="h-8 w-8 rounded-md object-cover ring-1 ring-border shrink-0"
+                      className="h-8 w-8 rounded-md object-cover ring-1 ring-border shrink-0 cursor-pointer"
                       alt="Logo"
+                      title="返回首頁"
                     />
                     <span className="font-semibold tracking-tight truncate">
                       {APP_TITLE}
                     </span>
-                  </div>
+                  </Link>
                   <button
                     onClick={toggleSidebar}
                     className="ml-auto h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"

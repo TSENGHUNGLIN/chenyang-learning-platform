@@ -334,6 +334,41 @@ ${file.extractedText || "無法提取文字內容"}`
         
         return { result: JSON.parse(result) };
       }),
+    exportPDF: protectedProcedure
+      .input(z.object({
+        result: z.any(),
+        fileNames: z.array(z.string()),
+      }))
+      .mutation(async ({ input }) => {
+        const { exportAnalysisToPDF } = await import("./exportAnalysis");
+        const pdfPath = await exportAnalysisToPDF(input.result, input.fileNames);
+        // 讀取PDF檔案內容
+        const fs = await import("fs/promises");
+        const pdfBuffer = await fs.readFile(pdfPath);
+        // 轉換為base64
+        const base64 = pdfBuffer.toString("base64");
+        // 刪除臨時檔案
+        await fs.unlink(pdfPath);
+        return { base64, filename: `analysis-report-${Date.now()}.pdf` };
+      }),
+    exportWord: protectedProcedure
+      .input(z.object({
+        result: z.any(),
+        fileNames: z.array(z.string()),
+      }))
+      .mutation(async ({ input }) => {
+        const { exportAnalysisToWord } = await import("./exportAnalysis");
+        const docPath = await exportAnalysisToWord(input.result, input.fileNames);
+        // 讀取檔案內容
+        const fs = await import("fs/promises");
+        const docBuffer = await fs.readFile(docPath);
+        // 轉換為base64
+        const base64 = docBuffer.toString("base64");
+        // 刪除臨時檔案
+        await fs.unlink(docPath);
+        const ext = docPath.endsWith(".docx") ? "docx" : "md";
+        return { base64, filename: `analysis-report-${Date.now()}.${ext}` };
+      }),
   }),
 
   // User management router
