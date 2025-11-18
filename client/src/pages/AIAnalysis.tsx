@@ -27,6 +27,9 @@ export default function AIAnalysis() {
   const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
   const [analysisType, setAnalysisType] = useState<string>("generate_questions");
   const [analysisMode, setAnalysisMode] = useState<string>("file_only"); // AI分析模式
+  const [sourceMode, setSourceMode] = useState<string>("manual"); // 考題出處模式：manual 或 ai
+  const [manualSource, setManualSource] = useState(""); // 人工填寫的考題出處
+  const [aiSourceFile, setAiSourceFile] = useState<string>(""); // AI分析選擇的檔案
   const [customPrompt, setCustomPrompt] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -100,6 +103,16 @@ export default function AIAnalysis() {
   const handleAnalyze = async () => {
     if (selectedFiles.length === 0) {
       toast.error("請至少選擇一個檔案");
+      return;
+    }
+
+    // 驗證考題出處是否已填寫
+    if (sourceMode === "manual" && !manualSource.trim()) {
+      toast.error("請填寫考題出處（必填）");
+      return;
+    }
+    if (sourceMode === "ai" && !aiSourceFile) {
+      toast.error("請選擇考題出處檔案");
       return;
     }
 
@@ -424,6 +437,50 @@ export default function AIAnalysis() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="sourceMode">考題出處模式</Label>
+              <Select value={sourceMode} onValueChange={setSourceMode}>
+                <SelectTrigger>
+                  <SelectValue placeholder="選擇出處模式" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manual">人工填寫</SelectItem>
+                  <SelectItem value="ai">AI分析</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* 考題出處輸入欄位 */}
+          <div className="space-y-2">
+            <Label htmlFor="questionSource">
+              考題出處 <span className="text-red-500">*</span>
+            </Label>
+            {sourceMode === "manual" ? (
+              <Input
+                id="questionSource"
+                placeholder="請輸入考題出處（必填）"
+                value={manualSource}
+                onChange={(e) => setManualSource(e.target.value)}
+                className="w-full"
+              />
+            ) : (
+              <Select value={aiSourceFile} onValueChange={setAiSourceFile}>
+                <SelectTrigger>
+                  <SelectValue placeholder="從已上傳檔案中選擇" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredFiles.map((file: any) => (
+                    <SelectItem key={file.id} value={file.filename}>
+                      {file.filename}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
               <Label htmlFor="analysisMode">AI 分析模式</Label>
               <Select value={analysisMode} onValueChange={setAnalysisMode}>
