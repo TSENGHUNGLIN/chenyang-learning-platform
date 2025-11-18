@@ -16,7 +16,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["admin", "editor", "viewer", "pending"]).default("pending").notNull(),
+  role: mysqlEnum("role", ["admin", "editor", "viewer", "examinee", "pending"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -184,3 +184,98 @@ export const assessmentRecords = mysqlTable("assessmentRecords", {
 
 export type AssessmentRecord = typeof assessmentRecords.$inferSelect;
 export type InsertAssessmentRecord = typeof assessmentRecords.$inferInsert;
+
+/**
+ * 考試表格
+ */
+export const exams = mysqlTable("exams", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  timeLimit: int("timeLimit"), // 時間限制（分鐘），null表示不限時
+  passingScore: int("passingScore").notNull(), // 及格分數
+  totalScore: int("totalScore").notNull(), // 總分
+  gradingMethod: mysqlEnum("gradingMethod", ["auto", "manual", "mixed"]).notNull().default("auto"), // 評分方式：自動、人工、混合
+  status: mysqlEnum("status", ["draft", "published", "archived"]).notNull().default("draft"), // 考試狀態
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Exam = typeof exams.$inferSelect;
+export type InsertExam = typeof exams.$inferInsert;
+
+/**
+ * 考試題目關聯表格
+ */
+export const examQuestions = mysqlTable("examQuestions", {
+  id: int("id").autoincrement().primaryKey(),
+  examId: int("examId").notNull(),
+  questionId: int("questionId").notNull(),
+  questionOrder: int("questionOrder").notNull(), // 題目順序
+  points: int("points").notNull(), // 該題分數
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ExamQuestion = typeof examQuestions.$inferSelect;
+export type InsertExamQuestion = typeof examQuestions.$inferInsert;
+
+/**
+ * 考試指派表格
+ */
+export const examAssignments = mysqlTable("examAssignments", {
+  id: int("id").autoincrement().primaryKey(),
+  examId: int("examId").notNull(),
+  userId: int("userId").notNull(), // 考生的user ID
+  employeeId: int("employeeId"), // 考生的employee ID（如果有）
+  assignedAt: timestamp("assignedAt").defaultNow().notNull(),
+  startTime: timestamp("startTime"), // 考試開始時間（null表示未開始）
+  endTime: timestamp("endTime"), // 考試結束時間（null表示未結束）
+  deadline: timestamp("deadline"), // 截止時間（null表示不限期）
+  status: mysqlEnum("status", ["pending", "in_progress", "submitted", "graded"]).notNull().default("pending"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ExamAssignment = typeof examAssignments.$inferSelect;
+export type InsertExamAssignment = typeof examAssignments.$inferInsert;
+
+/**
+ * 考試作答記錄表格
+ */
+export const examSubmissions = mysqlTable("examSubmissions", {
+  id: int("id").autoincrement().primaryKey(),
+  assignmentId: int("assignmentId").notNull(), // 關聯到examAssignments
+  questionId: int("questionId").notNull(),
+  answer: text("answer").notNull(), // 考生的答案
+  isCorrect: int("isCorrect"), // 是否正確（1=正確，0=錯誤，null=待評分）
+  score: int("score"), // 該題得分（null表示未評分）
+  aiEvaluation: text("aiEvaluation"), // AI評分結果（JSON格式，包含評分理由）
+  submittedAt: timestamp("submittedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ExamSubmission = typeof examSubmissions.$inferSelect;
+export type InsertExamSubmission = typeof examSubmissions.$inferInsert;
+
+/**
+ * 考試成績表格
+ */
+export const examScores = mysqlTable("examScores", {
+  id: int("id").autoincrement().primaryKey(),
+  assignmentId: int("assignmentId").notNull().unique(), // 關聯到examAssignments
+  totalScore: int("totalScore").notNull(), // 總得分
+  maxScore: int("maxScore").notNull(), // 滿分
+  percentage: int("percentage").notNull(), // 百分比分數
+  passed: int("passed").notNull(), // 是否及格（1=及格，0=不及格）
+  gradedBy: int("gradedBy"), // 評分人ID（人工評分時使用）
+  gradedAt: timestamp("gradedAt"), // 評分時間
+  feedback: text("feedback"), // 評分人的整體評語
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ExamScore = typeof examScores.$inferSelect;
+export type InsertExamScore = typeof examScores.$inferInsert;
+

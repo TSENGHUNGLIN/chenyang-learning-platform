@@ -50,6 +50,20 @@
       "when": 1763454140252,
       "tag": "0006_swift_jazinda",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1763457203448,
+      "tag": "0007_curved_wolf_cub",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1763457248491,
+      "tag": "0008_nebulous_ulik",
+      "breakpoints": true
     }
   ]
 }

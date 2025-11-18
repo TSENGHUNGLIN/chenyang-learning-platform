@@ -21,14 +21,15 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems: Array<{
+// 管理者/編輯者/檢視者的選單
+const staffMenuItems: Array<{
   icon: any;
   label: string;
   path: string;
@@ -44,6 +45,16 @@ const menuItems: Array<{
   { icon: Tag, label: "標籤管理", path: "/tags", editorOnly: true },
   { icon: Settings, label: "部門人員", path: "/manage", adminOnly: true },
   { icon: Users, label: "使用者管理", path: "/users", adminOnly: true },
+];
+
+// 考生的選單（只能看到考試相關功能）
+const examineeMenuItems: Array<{
+  icon: any;
+  label: string;
+  path: string;
+}> = [
+  { icon: ClipboardList, label: "我的考試", path: "/my-exams" },
+  { icon: Award, label: "我的成績", path: "/my-scores" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -153,6 +164,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const menuItems = user?.role === "examinee" ? examineeMenuItems : staffMenuItems;
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
@@ -246,8 +258,11 @@ function DashboardLayoutContent({
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
               {menuItems.filter(item => {
-                if (item.adminOnly && user?.role !== "admin") return false;
-                if (item.editorOnly && user?.role !== "admin" && user?.role !== "editor") return false;
+                // 考生選單不需要過濾
+                if (user?.role === "examinee") return true;
+                // 管理者/編輯者/檢視者選單需要權限過濾
+                if ('adminOnly' in item && item.adminOnly && user?.role !== "admin") return false;
+                if ('editorOnly' in item && item.editorOnly && user?.role !== "admin" && user?.role !== "editor") return false;
                 return true;
               }).map(item => {
                 const isActive = location === item.path;
