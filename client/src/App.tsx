@@ -15,6 +15,8 @@ import CategoryManagement from "./pages/CategoryManagement";
 import TagManagement from "./pages/TagManagement";
 import AnalysisHistory from "./pages/AnalysisHistory";
 import ExamManagement from "./pages/ExamManagement";
+import ExamTake from "./pages/ExamTake";
+import MyExams from "./pages/MyExams";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -31,6 +33,8 @@ function Router() {
       <Route path={"/tags"} component={TagManagement} />
       <Route path={"/analysis-history"} component={AnalysisHistory} />
       <Route path={"/exams"} component={ExamManagement} />
+      <Route path={"/my-exams"} component={MyExams} />
+      <Route path={"/exam/:id/take"} component={ExamTake} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

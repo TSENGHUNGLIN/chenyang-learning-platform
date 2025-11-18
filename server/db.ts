@@ -1036,3 +1036,222 @@ export async function getExamAssignments(examId: number) {
   return result;
 }
 
+
+/**
+ * 取得考試詳情和題目列表（考生端）
+ */
+export async function getExamForTaking(examId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { exams, examQuestions, questions, examAssignments } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+  
+  // 檢查考生是否被指派此考試
+  const assignment = await db
+    .select()
+    .from(examAssignments)
+    .where(
+      and(
+        eq(examAssignments.examId, examId),
+        eq(examAssignments.userId, userId)
+      )
+    )
+    .limit(1);
+  
+  if (assignment.length === 0) {
+    return null; // 考生未被指派此考試
+  }
+  
+  // 取得考試詳情
+  const exam = await db
+    .select()
+    .from(exams)
+    .where(eq(exams.id, examId))
+    .limit(1);
+  
+  if (exam.length === 0) {
+    return null;
+  }
+  
+  // 取得考試題目列表
+  const examQuestionsData = await db
+    .select({
+      id: examQuestions.id,
+      examId: examQuestions.examId,
+      questionId: examQuestions.questionId,
+      questionOrder: examQuestions.questionOrder,
+      points: examQuestions.points,
+      question: questions,
+    })
+    .from(examQuestions)
+    .leftJoin(questions, eq(examQuestions.questionId, questions.id))
+    .where(eq(examQuestions.examId, examId))
+    .orderBy(examQuestions.questionOrder);
+  
+  return {
+    exam: exam[0],
+    assignment: assignment[0],
+    questions: examQuestionsData,
+  };
+}
+
+/**
+ * 開始考試（更新examAssignment的startTime）
+ */
+export async function startExam(assignmentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examAssignments } = await import("../drizzle/schema");
+  
+  await db
+    .update(examAssignments)
+    .set({
+      startTime: new Date(),
+      status: "in_progress",
+    })
+    .where(eq(examAssignments.id, assignmentId));
+  
+  return { success: true };
+}
+
+/**
+ * 儲存單題答案
+ */
+export async function saveAnswer(data: {
+  assignmentId: number;
+  questionId: number;
+  answer: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examSubmissions } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+  
+  // 檢查是否已經有答案記錄
+  const existing = await db
+    .select()
+    .from(examSubmissions)
+    .where(
+      and(
+        eq(examSubmissions.assignmentId, data.assignmentId),
+        eq(examSubmissions.questionId, data.questionId)
+      )
+    )
+    .limit(1);
+  
+  if (existing.length > 0) {
+    // 更新現有答案
+    await db
+      .update(examSubmissions)
+      .set({
+        answer: data.answer,
+        submittedAt: new Date(),
+      })
+      .where(eq(examSubmissions.id, existing[0].id));
+  } else {
+    // 新增答案記錄
+    await db.insert(examSubmissions).values({
+      assignmentId: data.assignmentId,
+      questionId: data.questionId,
+      answer: data.answer,
+    });
+  }
+  
+  return { success: true };
+}
+
+/**
+ * 取得考生的作答記錄
+ */
+export async function getExamSubmissions(assignmentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examSubmissions } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select()
+    .from(examSubmissions)
+    .where(eq(examSubmissions.assignmentId, assignmentId));
+  
+  return result;
+}
+
+/**
+ * 提交考試（更新examAssignment的endTime和status）
+ */
+export async function submitExam(assignmentId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examAssignments } = await import("../drizzle/schema");
+  
+  await db
+    .update(examAssignments)
+    .set({
+      endTime: new Date(),
+      status: "submitted",
+    })
+    .where(eq(examAssignments.id, assignmentId));
+  
+  return { success: true };
+}
+
+/**
+ * 取得考試成績
+ */
+export async function getExamScore(assignmentId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { examScores } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select()
+    .from(examScores)
+    .where(eq(examScores.assignmentId, assignmentId))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+/**
+ * 儲存考試成績
+ */
+export async function saveExamScore(data: {
+  assignmentId: number;
+  totalScore: number;
+  maxScore: number;
+  percentage: number;
+  passed: number;
+  gradedBy?: number;
+  feedback?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examScores } = await import("../drizzle/schema");
+  
+  // 檢查是否已經有成績記錄
+  const existing = await db
+    .select()
+    .from(examScores)
+    .where(eq(examScores.assignmentId, data.assignmentId))
+    .limit(1);
+  
+  if (existing.length > 0) {
+    // 更新現有成績
+    await db
+      .update(examScores)
+      .set({
+        ...data,
+        gradedAt: new Date(),
+      })
+      .where(eq(examScores.id, existing[0].id));
+  } else {
+    // 新增成績記錄
+    await db.insert(examScores).values({
+      ...data,
+      gradedAt: new Date(),
+    });
+  }
+  
+  return { success: true };
+}
+

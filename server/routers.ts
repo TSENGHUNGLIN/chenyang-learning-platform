@@ -1173,6 +1173,47 @@ ${file.extractedText || "無法提取文字內容"}`
       const { getUserExamAssignments } = await import("./db");
       return await getUserExamAssignments(ctx.user.id);
     }),
+    // 考試作答相關API
+    getForTaking: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { getExamForTaking } = await import("./db");
+        return await getExamForTaking(input, ctx.user.id);
+      }),
+    start: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input }) => {
+        const { startExam } = await import("./db");
+        return await startExam(input);
+      }),
+    saveAnswer: protectedProcedure
+      .input(z.object({
+        assignmentId: z.number(),
+        questionId: z.number(),
+        answer: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { saveAnswer } = await import("./db");
+        return await saveAnswer(input);
+      }),
+    getSubmissions: protectedProcedure
+      .input(z.number())
+      .query(async ({ input }) => {
+        const { getExamSubmissions } = await import("./db");
+        return await getExamSubmissions(input);
+      }),
+    submit: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input }) => {
+        const { submitExam } = await import("./db");
+        return await submitExam(input);
+      }),
+    getScore: protectedProcedure
+      .input(z.number())
+      .query(async ({ input }) => {
+        const { getExamScore } = await import("./db");
+        return await getExamScore(input);
+      }),
   }),
 });
 
