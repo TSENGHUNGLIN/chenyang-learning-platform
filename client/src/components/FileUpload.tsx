@@ -37,17 +37,30 @@ export default function FileUpload() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [activeTab, setActiveTab] = useState("file");
+  const [autoDetectNewEmployee, setAutoDetectNewEmployee] = useState(true);
+  const [detectedNames, setDetectedNames] = useState<string[]>([]);
 
   const { data: departments } = trpc.departments.list.useQuery();
   const { data: employees } = trpc.employees.list.useQuery();
   const createFileMutation = trpc.files.create.useMutation();
   const createTextMutation = trpc.files.createFromText.useMutation();
+  const createEmployeeMutation = trpc.employees.create.useMutation();
   const utils = trpc.useUtils();
 
   // 根據選擇的部門篩選人員
   const filteredEmployees = selectedDepartment
     ? employees?.filter((emp) => emp.departmentId === parseInt(selectedDepartment))
     : employees;
+
+  // 從檔案名稱提取人員姓名
+  const extractNameFromFilename = (filename: string): string | null => {
+    // 移除副檔名
+    const nameWithoutExt = filename.replace(/\.(pdf|docx)$/i, '');
+    // 常見的中文姓名模式：2-4個中文字
+    const chineseNamePattern = /([\u4e00-\u9fa5]{2,4})/;
+    const match = nameWithoutExt.match(chineseNamePattern);
+    return match ? match[1] : null;
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -71,6 +84,25 @@ export default function FileUpload() {
       }
 
       setFiles([...files, ...validFiles]);
+
+      // 自動識別新人姓名
+      if (autoDetectNewEmployee && selectedDepartment) {
+        const names: string[] = [];
+        validFiles.forEach(file => {
+          const name = extractNameFromFilename(file.name);
+          if (name && !names.includes(name)) {
+            // 檢查是否已存在於該部門
+            const existingEmployee = filteredEmployees?.find(emp => emp.name === name);
+            if (!existingEmployee) {
+              names.push(name);
+            }
+          }
+        });
+        if (names.length > 0) {
+          setDetectedNames(names);
+          toast.info(`偵測到新人姓名：${names.join('、')}`);
+        }
+      }
     }
   };
 
@@ -79,8 +111,18 @@ export default function FileUpload() {
   };
 
   const handleFileUpload = async () => {
-    if (files.length === 0 || !selectedEmployee) {
-      toast.error("請選擇檔案和人員");
+    if (files.length === 0) {
+      toast.error("請選擇檔案");
+      return;
+    }
+
+    if (!selectedDepartment) {
+      toast.error("請選擇部門");
+      return;
+    }
+
+    if (!selectedEmployee && detectedNames.length === 0) {
+      toast.error("請選擇人員或上傳包含人員姓名的檔案");
       return;
     }
 
@@ -88,15 +130,59 @@ export default function FileUpload() {
     setUploadProgress(0);
 
     try {
+      // 如果有偵測到新人姓名，先批次建立人員資料
+      const createdEmployeeIds: Record<string, string> = {};
+      if (autoDetectNewEmployee && detectedNames.length > 0) {
+        for (const name of detectedNames) {
+          try {
+            const newEmployee = await createEmployeeMutation.mutateAsync({
+              name,
+              departmentId: parseInt(selectedDepartment),
+            });
+            createdEmployeeIds[name] = newEmployee.id.toString();
+            toast.success(`已自動新增人員：${name}`);
+          } catch (error) {
+            toast.error(`新增人員 ${name} 失敗`);
+          }
+        }
+        await utils.employees.list.invalidate();
+      }
+
       const totalFiles = files.length;
       let successCount = 0;
       let failCount = 0;
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
+        
+        // 決定使用哪個員工ID
+        let employeeId = selectedEmployee;
+        
+        // 如果啟用自動識別，嘗試從檔案名稱匹配員工
+        if (autoDetectNewEmployee) {
+          const detectedName = extractNameFromFilename(file.name);
+          if (detectedName) {
+            // 優先使用新建立的員工
+            if (createdEmployeeIds[detectedName]) {
+              employeeId = createdEmployeeIds[detectedName];
+            } else {
+              // 否則查找現有員工
+              const existingEmployee = filteredEmployees?.find(emp => emp.name === detectedName);
+              if (existingEmployee) {
+                employeeId = existingEmployee.id.toString();
+              }
+            }
+          }
+        }
+
+        if (!employeeId) {
+          toast.error(`無法確定 ${file.name} 的人員，已跳過`);
+          failCount++;
+          continue;
+        }
+
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("employeeId", selectedEmployee);
 
         try {
           const response = await fetch("/api/upload", {
@@ -105,6 +191,18 @@ export default function FileUpload() {
           });
 
           if (response.ok) {
+            const uploadResult = await response.json();
+            // 儲存檔案metadata到資料庫
+            await createFileMutation.mutateAsync({
+              employeeId: parseInt(employeeId),
+              filename: uploadResult.filename,
+              fileUrl: uploadResult.fileUrl,
+              fileKey: uploadResult.fileKey,
+              mimeType: uploadResult.mimeType,
+              fileSize: uploadResult.fileSize,
+              uploadDate: new Date(),
+              extractedText: uploadResult.extractedText || "",
+            });
             successCount++;
           } else {
             failCount++;
@@ -113,6 +211,7 @@ export default function FileUpload() {
         } catch (error) {
           failCount++;
           toast.error(`${file.name} 上傳失敗`);
+          console.error(`Upload error for ${file.name}:`, error);
         }
 
         setUploadProgress(((i + 1) / totalFiles) * 100);
@@ -124,6 +223,7 @@ export default function FileUpload() {
         setFiles([]);
         setSelectedDepartment("");
         setSelectedEmployee("");
+        setDetectedNames([]);
         setOpen(false);
       }
 
@@ -241,14 +341,14 @@ export default function FileUpload() {
 
           {/* 人員選擇 */}
           <div className="space-y-2">
-            <Label htmlFor="employee">人員</Label>
+            <Label htmlFor="employee">人員（選填）</Label>
             <Select
               value={selectedEmployee}
               onValueChange={setSelectedEmployee}
               disabled={!selectedDepartment}
             >
               <SelectTrigger>
-                <SelectValue placeholder={selectedDepartment ? "選擇人員" : "請先選擇部門"} />
+                <SelectValue placeholder={selectedDepartment ? "選擇人員或留空自動識別" : "請先選擇部門"} />
               </SelectTrigger>
               <SelectContent>
                 {filteredEmployees?.map((emp) => (
@@ -258,7 +358,21 @@ export default function FileUpload() {
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-sm text-muted-foreground">
+              💡 提示：如果檔案名稱包含人員姓名（例如：蔣昀眞轉正考核.docx），系統會自動識別並建立新人員資料
+            </p>
           </div>
+
+          {/* 偵測到的新人姓名 */}
+          {detectedNames.length > 0 && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm font-medium text-blue-900 mb-1">✨ 偵測到新人姓名</p>
+              <p className="text-sm text-blue-700">
+                系統將自動新增以下人員到 {departments?.find(d => d.id.toString() === selectedDepartment)?.name}：
+                <span className="font-medium ml-1">{detectedNames.join('、')}</span>
+              </p>
+            </div>
+          )}
 
           {/* 上傳方式選擇 */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>

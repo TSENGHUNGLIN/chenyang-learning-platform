@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { InsertUser, users, departments, InsertDepartment, employees, InsertEmployee, files, InsertFile, analysisResults, InsertAnalysisResult, fileReadLogs, InsertFileReadLog } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -159,7 +159,10 @@ export async function createEmployee(data: InsertEmployee) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(employees).values(data);
-  return result;
+  // 查詢新建立的員工資料
+  const newEmployee = await db.select().from(employees).where(eq(employees.name, data.name)).orderBy(desc(employees.id)).limit(1);
+  if (newEmployee.length === 0) throw new Error("Failed to create employee");
+  return newEmployee[0];
 }
 
 export async function updateEmployee(data: { id: number; name: string; departmentId: number; email?: string; phone?: string; position?: string }) {
