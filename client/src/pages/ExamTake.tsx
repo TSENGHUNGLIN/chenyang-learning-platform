@@ -163,6 +163,26 @@ export default function ExamTake() {
   }
 
   const { exam, questions } = examData;
+
+  // 檢查考試是否有題目
+  if (!questions || questions.length === 0) {
+    return (
+      <div className="container mx-auto py-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            此考試尚未設定題目，請聯繫管理員。
+          </AlertDescription>
+        </Alert>
+        <Button 
+          className="mt-4" 
+          onClick={() => setLocation('/my-exams')}
+        >
+          返回考試列表
+        </Button>
+      </div>
+    );
+  }
   const currentQuestion = questions[currentQuestionIndex];
   const answeredCount = Object.keys(answers).length;
   const progress = (answeredCount / questions.length) * 100;

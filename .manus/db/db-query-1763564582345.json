@@ -1,0 +1,9 @@
+{
+  "query": "SELECT eq.id, eq.examId, eq.questionId, eq.points, q.type, q.question \nFROM examQuestions eq \nLEFT JOIN questions q ON eq.questionId = q.id \nWHERE eq.examId IN (SELECT id FROM exams WHERE title LIKE '%工務%') \nLIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute SELECT eq.id, eq.examId, eq.questionId, eq.points, q.type, q.question \nFROM examQuestions eq \nLEFT JOIN questions q ON eq.questionId = q.id \nWHERE eq.examId IN (SELECT id FROM exams WHERE title LIKE '%工務%') \nLIMIT 10",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1529
+}

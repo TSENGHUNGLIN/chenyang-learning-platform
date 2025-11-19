@@ -1559,3 +1559,10 @@
 - [x] 測試成績顯示
 - [x] 建立 checkpoint
 
+
+
+## 錯誤修復 - 考試作答頁面（2025/11/19）
+- [x] 修復考試作答頁面的 TypeError: Cannot read properties of undefined (reading 'toLowerCase')
+- [x] 確保當考試沒有題目時顯示友善的錯誤訊息，而不是拋出 JavaScript 錯誤
+- [x] 在 ExamTake.tsx 中增加檢查，驗證考試是否有題目
+
