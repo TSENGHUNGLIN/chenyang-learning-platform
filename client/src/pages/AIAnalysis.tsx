@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -394,6 +395,27 @@ export default function AIAnalysis() {
     try {
       setIsSavingBank(true);
       
+      // 檢查題庫名稱是否已存在
+      let finalBankName = bankName.trim();
+      const checkResult = await trpc.questionBanks.checkNameExists.query(finalBankName);
+      if (checkResult.exists) {
+        setIsSavingBank(false);
+        const confirmed = window.confirm(
+          `題庫「${finalBankName}」已存在！\n\n點擊「確定」自動加上時間戳並繼續儲存\n點擊「取消」修改名稱後再試`
+        );
+        if (!confirmed) {
+          // 使用者選擇取消，讓他修改名稱
+          toast.info("請修改題庫名稱後再試一次");
+          return;
+        }
+        // 使用者選擇確定，自動加上時間戳
+        const timestamp = new Date().getTime();
+        finalBankName = `${finalBankName} (${timestamp})`;
+        setBankName(finalBankName);
+        toast.info(`已自動調整為「${finalBankName}」`);
+        setIsSavingBank(true);
+      }
+      
       // 從 AI 分析結果中提取題目資料
       const questionsData = analysisResult.questionsWithAnswers;
       
@@ -452,18 +474,24 @@ export default function AIAnalysis() {
       
       // 呼叫新的 createWithQuestions API（一次完成所有操作）
       const result = await createWithQuestionsMutation.mutateAsync({
-        name: bankName,
+        name: finalBankName,
         description: bankDescription || `由AI分析生成，包含 ${questions.length} 道題目`,
         questions,
       });
       
       console.log('[儲存題庫] API回應:', result);
       
-      // 顯示成功訊息
+      // 顯示成功訊息，帶有「立即查看」按鈕
       toast.success(
-        `已建立題庫檔案「${result.bankName}」`,
+        `已成功儲存 ${result.results.success} 道題目到題庫「${result.bankName}」`,
         {
-          description: `成功匯入 ${result.results.success} 道題目${result.results.failed > 0 ? `，${result.results.failed} 道失敗` : ''}`,
+          description: result.results.failed > 0 ? `${result.results.failed} 道題目儲存失敗` : '所有題目均儲存成功',
+          action: {
+            label: '立即查看',
+            onClick: () => {
+              window.location.href = `/question-banks/${result.bankId}`;
+            },
+          },
         }
       );
       

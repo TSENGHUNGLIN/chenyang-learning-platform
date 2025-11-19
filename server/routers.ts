@@ -1372,6 +1372,27 @@ ${file.extractedText || "無法提取文字內容"}`
 
   // Question banks router
   questionBanks: router({
+    checkNameExists: protectedProcedure
+      .input(z.string())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getDb } = await import("./db");
+        const db = await getDb();
+        if (!db) {
+          return { exists: false };
+        }
+        const { questionBanks } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const result = await db
+          .select()
+          .from(questionBanks)
+          .where(eq(questionBanks.name, input))
+          .limit(1);
+        return { exists: result.length > 0 };
+      }),
     list: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
       if (!hasPermission(ctx.user.role as any, "canViewAll")) {
