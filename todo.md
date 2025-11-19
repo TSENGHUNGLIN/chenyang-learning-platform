@@ -1133,3 +1133,11 @@
 - [ ] 測試版本控制功能
 - [ ] 建立checkpoint
 
+
+
+## 修復AI分析頁面錯誤
+- [x] 檢查AIAnalysis頁面中的API呼叫
+- [x] 修復generateName API的input schema（從questionIds改為questions）
+- [x] 修復預期陣列但收到物件的錯誤
+- [x] 測試修復後的功能（系統正常運作）
+

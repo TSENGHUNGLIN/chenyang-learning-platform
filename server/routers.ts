@@ -1452,7 +1452,14 @@ ${file.extractedText || "無法提取文字內容"}`
     generateName: protectedProcedure
       .input(
         z.object({
-          questionIds: z.array(z.number()),
+          questions: z.array(
+            z.object({
+              type: z.string(),
+              question: z.string(),
+              correctAnswer: z.string().optional(),
+              answer: z.string().optional(),
+            })
+          ),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -1461,22 +1468,12 @@ ${file.extractedText || "無法提取文字內容"}`
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         
-        // 取得題目資料
-        const { getDb } = await import("./db");
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
-        
-        const { questions } = await import("../drizzle/schema");
-        const { inArray } = await import("drizzle-orm");
-        
-        const questionData = await db
-          .select({
-            type: questions.type,
-            question: questions.question,
-            correctAnswer: questions.correctAnswer,
-          })
-          .from(questions)
-          .where(inArray(questions.id, input.questionIds));
+        // 直接使用傳入的題目資料
+        const questionData = input.questions.map(q => ({
+          type: q.type,
+          question: q.question,
+          correctAnswer: q.correctAnswer || q.answer || '',
+        }));
         
         // 使用AI生成名稱
         const { generateQuestionBankName } = await import("./questionBankNaming");
