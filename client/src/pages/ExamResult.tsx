@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle2, XCircle, Home, ArrowLeft, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { CheckCircle2, XCircle, Home, ArrowLeft, TrendingUp, TrendingDown, Minus, Loader2, Clock } from "lucide-react";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface ExamResultProps {
   params: {
@@ -18,12 +19,19 @@ export default function ExamResult({ params }: ExamResultProps) {
   const { user, loading: authLoading } = useAuth();
   const [, navigate] = useLocation();
   const assignmentId = parseInt(params.assignmentId);
+  const [pollingCount, setPollingCount] = useState(0);
+  const [estimatedTime, setEstimatedTime] = useState(30);
 
   // 取得考試指派資訊
   const { data: assignment, isLoading: assignmentLoading } = trpc.exams.getAssignment.useQuery(assignmentId);
 
-  // 取得考試成績
-  const { data: score, isLoading: scoreLoading } = trpc.exams.getScore.useQuery(assignmentId);
+  // 取得考試成績（啟用自動輪詢）
+  const { data: score, isLoading: scoreLoading, refetch: refetchScore } = trpc.exams.getScore.useQuery(
+    assignmentId,
+    {
+      refetchInterval: assignment?.status === "submitted" ? 5000 : false, // 每5秒輪詢一次
+    }
+  );
 
   // 取得考試題目和答案
   const { data: submissions, isLoading: submissionsLoading } = trpc.exams.getSubmissions.useQuery(assignmentId);
@@ -33,6 +41,17 @@ export default function ExamResult({ params }: ExamResultProps) {
     assignment?.examId || 0,
     { enabled: !!assignment }
   );
+
+  // 計時器：減少預估等待時間
+  useEffect(() => {
+    if (assignment?.status === "submitted" && !score) {
+      const timer = setInterval(() => {
+        setEstimatedTime(prev => Math.max(0, prev - 1));
+        setPollingCount(prev => prev + 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [assignment?.status, score]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -73,6 +92,59 @@ export default function ExamResult({ params }: ExamResultProps) {
 
   // 檢查考試是否已提交和評分
   if (!score) {
+    // 如果考試已提交，顯示評分進度
+    if (assignment.status === "submitted") {
+      const progress = Math.min(100, (pollingCount / 6) * 100); // 30秒內達到100%
+      
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
+          <Card className="w-full max-w-md shadow-lg">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+              <CardTitle className="text-2xl">正在評分中...</CardTitle>
+              <CardDescription className="mt-2">
+                系統正在自動評閱您的答案，請稍候
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">評分進度</span>
+                  <span className="font-medium">{Math.round(progress)}%</span>
+                </div>
+                <Progress value={progress} className="h-2" />
+              </div>
+              
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span>預估還需 {estimatedTime} 秒</span>
+              </div>
+
+              <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900">
+                <p className="font-medium mb-1">提示：</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>系統會自動重新整理頁面，無需手動操作</li>
+                  <li>評分完成後會立即顯示成績</li>
+                </ul>
+              </div>
+
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/my-exams")} 
+                className="w-full"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                返回考試列表
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    
+    // 如果考試尚未提交
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
