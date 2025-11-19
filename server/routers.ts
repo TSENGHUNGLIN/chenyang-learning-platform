@@ -708,7 +708,7 @@ ${file.extractedText || "無法提取文字內容"}`
   questions: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
-      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
         throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
       }
       const { getAllQuestions } = await import("./db");
@@ -718,7 +718,7 @@ ${file.extractedText || "無法提取文字內容"}`
       .input(z.number())
       .query(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { getQuestionById } = await import("./db");
@@ -835,7 +835,7 @@ ${file.extractedText || "無法提取文字內容"}`
   questionCategories: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
-      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
         throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
       }
       const { getAllCategories } = await import("./db");
@@ -843,7 +843,7 @@ ${file.extractedText || "無法提取文字內容"}`
     }),
     tree: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
-      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
         throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
       }
       const { getCategoryTree } = await import("./db");
@@ -898,7 +898,7 @@ ${file.extractedText || "無法提取文字內容"}`
   tags: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
-      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
         throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
       }
       const { getAllTags } = await import("./db");
@@ -953,7 +953,7 @@ ${file.extractedText || "無法提取文字內容"}`
       .input(z.number())
       .query(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { getQuestionTags } = await import("./db");
@@ -979,7 +979,7 @@ ${file.extractedText || "無法提取文字內容"}`
   exams: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
-      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
         throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
       }
       const { getAllExams } = await import("./db");
@@ -989,7 +989,7 @@ ${file.extractedText || "無法提取文字內容"}`
       .input(z.number())
       .query(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { getExamById } = await import("./db");
@@ -1110,7 +1110,7 @@ ${file.extractedText || "無法提取文字內容"}`
       .input(z.number())
       .query(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { getExamQuestions } = await import("./db");
@@ -1165,7 +1165,7 @@ ${file.extractedText || "無法提取文字內容"}`
       .input(z.number())
       .query(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { getExamAssignments } = await import("./db");
@@ -1221,7 +1221,7 @@ ${file.extractedText || "無法提取文字內容"}`
       .input(z.number())
       .query(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { getExamStatistics } = await import("./examStatistics");
@@ -1231,7 +1231,7 @@ ${file.extractedText || "無法提取文字內容"}`
       .input(z.number())
       .query(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { getWrongAnswerRanking } = await import("./examStatistics");
@@ -1241,7 +1241,7 @@ ${file.extractedText || "無法提取文字內容"}`
       .input(z.number())
       .query(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { getStudentPerformance } = await import("./examStatistics");
@@ -1249,7 +1249,7 @@ ${file.extractedText || "無法提取文字內容"}`
       }),
     getAllStatistics: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
-      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
         throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
       }
       const { getAllExamsStatistics } = await import("./examStatistics");

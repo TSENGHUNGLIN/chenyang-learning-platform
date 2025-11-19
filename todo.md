@@ -1058,3 +1058,13 @@
 - [x] 修復勾選框無法選擇的問題（加入stopPropagation阻止事件冒泡）
 - [x] 測試指派考生流程
 - [ ] 建立 checkpoint
+
+
+## 區分viewer和examinee的權限
+- [x] 新增權限項目（canViewAll、canTakeExam）來區分viewer和examinee
+- [x] 更新permissions.ts，viewer可以查看所有內容，examinee只能看被指派的考試
+- [x] 調整API權限檢查，查看類的API從canEdit改為canViewAll
+- [x] 調整前端頁面，根據canViewAll權限顯示/隱藏導航選項
+- [x] 測試admin角色可以看到完整選單
+- [ ] 測試viewer和examinee的功能差異
+- [ ] 建立 checkpoint

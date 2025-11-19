@@ -27,6 +27,7 @@ import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { getPermissions } from "@shared/permissions";
 
 // 管理者/編輯者/檢視者的選單
 const staffMenuItems: Array<{
@@ -167,7 +168,9 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const menuItems = user?.role === "examinee" ? examineeMenuItems : staffMenuItems;
+  // 根據權限選擇選單
+  const permissions = user ? getPermissions(user.role as any) : null;
+  const menuItems = permissions?.canViewAll ? staffMenuItems : examineeMenuItems;
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
@@ -261,9 +264,9 @@ function DashboardLayoutContent({
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
               {menuItems.filter(item => {
-                // 考生選單不需要過濾
-                if (user?.role === "examinee") return true;
-                // 管理者/編輯者/檢視者選單需要權限過濾
+                // 沒有canViewAll權限（examinee）不過濾
+                if (!permissions?.canViewAll) return true;
+                // 有canViewAll權限（admin/editor/viewer）需要權限過濾
                 if ('adminOnly' in item && item.adminOnly && user?.role !== "admin") return false;
                 if ('editorOnly' in item && item.editorOnly && user?.role !== "admin" && user?.role !== "editor") return false;
                 return true;
