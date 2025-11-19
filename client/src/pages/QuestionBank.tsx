@@ -29,9 +29,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home, Download, Upload, Loader2, ClipboardList } from "lucide-react";
+import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home, Download, Upload, Loader2, ClipboardList, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 type QuestionType = "true_false" | "multiple_choice" | "short_answer";
 type Difficulty = "easy" | "medium" | "hard";
@@ -56,6 +57,11 @@ export default function QuestionBank() {
     timeLimit: 60,
     passingScore: 60,
   });
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+  const [deleteCountdown, setDeleteCountdown] = useState(15);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const { user } = useAuth();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -369,28 +375,72 @@ export default function QuestionBank() {
     }
   };
 
-  const handleBatchDelete = async () => {
+  // 開啟刪除確認對話框
+  const openDeleteConfirmDialog = () => {
     if (selectedQuestions.length === 0) {
       toast.error("請至少選擇一個題目");
       return;
     }
 
-    if (!confirm(`確定要刪除選中的 ${selectedQuestions.length} 個題目嗎？此操作無法復原！`)) {
+    // 檢查權限
+    if (!user || (user.role !== 'admin' && user.role !== 'editor')) {
+      toast.error("您沒有權限刪除題目，只有管理員和編輯者可以刪除");
       return;
     }
 
+    setDeleteCountdown(15);
+    setShowDeleteConfirmDialog(true);
+  };
+
+  // 倒數計時
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (showDeleteConfirmDialog && deleteCountdown > 0) {
+      timer = setTimeout(() => {
+        setDeleteCountdown(deleteCountdown - 1);
+      }, 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [showDeleteConfirmDialog, deleteCountdown]);
+
+  // 執行批次刪除
+  const confirmBatchDelete = async () => {
+    setIsDeleting(true);
     try {
-      // 逐個刪除選中的題目
+      let successCount = 0;
+      let failCount = 0;
+      
       for (const questionId of selectedQuestions) {
-        await deleteMutation.mutateAsync(questionId);
+        try {
+          await deleteMutation.mutateAsync(questionId);
+          successCount++;
+        } catch (error) {
+          failCount++;
+          console.error(`刪除題目 ${questionId} 失敗:`, error);
+        }
       }
       
-      toast.success(`成功刪除 ${selectedQuestions.length} 個題目`);
+      if (successCount > 0) {
+        toast.success(`成功刪除 ${successCount} 個題目${failCount > 0 ? `，${failCount} 個失敗` : ''}`);
+      } else {
+        toast.error("批次刪除失敗，請稍後再試");
+      }
+      
       setSelectedQuestions([]);
+      setShowDeleteConfirmDialog(false);
       refetchQuestions();
     } catch (error) {
       toast.error("批次刪除失敗，請稍後再試");
+    } finally {
+      setIsDeleting(false);
     }
+  };
+
+  // 取消刪除
+  const cancelBatchDelete = () => {
+    setShowDeleteConfirmDialog(false);
+    setDeleteCountdown(15);
+    toast.info("已取消刪除操作");
   };
 
   const openEditDialog = (question: any) => {
@@ -653,7 +703,11 @@ export default function QuestionBank() {
             <div className="flex gap-2">
               {selectedQuestions.length > 0 && (
                 <>
-                  <Button onClick={handleBatchDelete} variant="destructive">
+                  <Button 
+                    onClick={openDeleteConfirmDialog} 
+                    variant="destructive"
+                    disabled={!user || (user.role !== 'admin' && user.role !== 'editor')}
+                  >
                     <Trash2 className="h-4 w-4 mr-2" />
                     批次刪除 ({selectedQuestions.length})
                   </Button>
@@ -1309,6 +1363,84 @@ export default function QuestionBank() {
             <Button onClick={confirmCreateExam} disabled={!examFormData.title.trim()}>
               <Plus className="h-4 w-4 mr-2" />
               確認建立
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 批次刪除確認對話框（15秒緩衝期） */}
+      <Dialog open={showDeleteConfirmDialog} onOpenChange={(open) => {
+        if (!open && !isDeleting) {
+          cancelBatchDelete();
+        }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              確認刪除題目
+            </DialogTitle>
+            <DialogDescription>
+              此操作無法復原，請謹慎操作
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <div className="text-sm space-y-2">
+                <p className="font-semibold text-destructive">
+                  您即將刪除 {selectedQuestions.length} 個題目
+                </p>
+                <p className="text-muted-foreground">
+                  刪除後，這些題目將從題庫中永久移除，且無法恢復。
+                </p>
+              </div>
+            </div>
+            
+            {deleteCountdown > 0 && (
+              <div className="flex items-center justify-center p-6 bg-muted rounded-lg">
+                <div className="text-center">
+                  <div className="text-5xl font-bold text-destructive mb-2">
+                    {deleteCountdown}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    秒後可以確認刪除
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {deleteCountdown === 0 && (
+              <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                <p className="text-sm text-green-800 dark:text-green-200 text-center">
+                  ✓ 現在可以執行刪除操作
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={cancelBatchDelete}
+              disabled={isDeleting}
+            >
+              取消
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmBatchDelete}
+              disabled={deleteCountdown > 0 || isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  刪除中...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  確認刪除
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
