@@ -52,7 +52,7 @@ export default function ExamDetail() {
   const [templateDescription, setTemplateDescription] = useState("");
 
   const { user } = useAuth();
-  const createAssignmentMutation = trpc.exams.assignExam.useMutation();
+  const createAssignmentMutation = trpc.exams.assign.useMutation();
   const startExamMutation = trpc.exams.start.useMutation();
 
   // 查詢考卷資訊
