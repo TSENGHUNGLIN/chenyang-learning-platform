@@ -51,16 +51,54 @@ export default function ExamResult({ params }: ExamResultProps) {
     );
   }
 
-  if (!assignment || !score || !exam) {
+  // 檢查考試指派和考試資訊是否存在
+  if (!assignment || !exam) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>找不到成績</CardTitle>
-            <CardDescription>無法載入考試成績資訊</CardDescription>
+            <CardTitle>找不到考試</CardTitle>
+            <CardDescription>無法載入考試資訊</CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={() => navigate("/my-exams")} className="w-full">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              返回考試列表
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 檢查考試是否已提交和評分
+  if (!score) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>成績尚未公布</CardTitle>
+            <CardDescription>
+              {assignment.status === "in_progress" 
+                ? "考試尚未提交，請先完成考試並提交答案" 
+                : "考試已提交，正在評分中，請稍後再查看成績"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {assignment.status === "in_progress" && (
+              <Button 
+                onClick={() => navigate(`/exam/${assignmentId}/take`)} 
+                className="w-full"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                繼續作答
+              </Button>
+            )}
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/my-exams")} 
+              className="w-full"
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
               返回考試列表
             </Button>
