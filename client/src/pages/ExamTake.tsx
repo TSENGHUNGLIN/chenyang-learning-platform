@@ -15,7 +15,7 @@ import { toast } from "sonner";
 export default function ExamTake() {
   const params = useParams();
   const [, setLocation] = useLocation();
-  const examId = params.id ? parseInt(params.id) : 0;
+  const assignmentId = params.assignmentId ? parseInt(params.assignmentId) : 0;
 
   // 狀態管理
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -25,7 +25,7 @@ export default function ExamTake() {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
   // API查詢
-  const { data: examData, isLoading } = trpc.exams.getForTaking.useQuery(examId);
+  const { data: examData, isLoading } = trpc.exams.getForTaking.useQuery(assignmentId);
   const { data: submissions } = trpc.exams.getSubmissions.useQuery(
     examData?.assignment?.id || 0,
     { enabled: !!examData?.assignment?.id }

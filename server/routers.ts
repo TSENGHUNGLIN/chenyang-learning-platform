@@ -1344,8 +1344,8 @@ ${file.extractedText || "無法提取文字內容"}`
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { assignExam } = await import("./db");
-        await assignExam(input);
-        return { success: true };
+        const assignment = await assignExam(input);
+        return assignment;
       }),
     batchAssign: protectedProcedure
       .input(z.object({

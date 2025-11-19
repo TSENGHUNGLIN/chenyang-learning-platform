@@ -47,7 +47,7 @@ function Router() {
       <Route path={"/exams/:id"} component={ExamDetail} />
       <Route path={"/exam-templates"} component={ExamTemplates} />
       <Route path={"/my-exams"} component={MyExams} />
-      <Route path={"/exam/:id/take"} component={ExamTake} />
+      <Route path={"/exam/:assignmentId/take"} component={ExamTake} />
       <Route path={"/exam/:assignmentId/result"} component={ExamResult} />
       <Route path={"/exam/:id/statistics"} component={ExamStatistics} />
       <Route path={"/exam/:assignmentId/grade"} component={ManualGrading} />

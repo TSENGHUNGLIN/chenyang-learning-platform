@@ -1147,13 +1147,18 @@ export async function assignExam(data: {
   if (!db) throw new Error("Database not available");
   const { examAssignments } = await import("../drizzle/schema");
   
-  await db.insert(examAssignments).values({
+  const result = await db.insert(examAssignments).values({
     examId: data.examId,
     userId: data.userId,
     employeeId: data.employeeId || null,
     deadline: data.deadline || null,
     status: 'pending',
   });
+  
+  // 回傳新建的 assignment ID
+  const insertId = result[0].insertId;
+  const assignment = await db.select().from(examAssignments).where(eq(examAssignments.id, insertId)).limit(1);
+  return assignment[0];
 }
 
 /**

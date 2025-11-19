@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import QuestionSelector from "@/components/QuestionSelector";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ExamDetail() {
   const params = useParams();
@@ -49,6 +50,10 @@ export default function ExamDetail() {
   const [editPoints, setEditPoints] = useState<number>(1);
   const [templateName, setTemplateName] = useState("");
   const [templateDescription, setTemplateDescription] = useState("");
+
+  const { user } = useAuth();
+  const createAssignmentMutation = trpc.exams.assignExam.useMutation();
+  const startExamMutation = trpc.exams.start.useMutation();
 
   // 查詢考卷資訊
   const { data: exam, isLoading: examLoading, refetch: refetchExam } = trpc.exams.getById.useQuery(examId);
@@ -118,6 +123,30 @@ export default function ExamDetail() {
       examId,
       questionId,
     });
+  };
+
+  // 開始考試
+  const handleStartExam = async () => {
+    if (!user) {
+      toast.error("請先登入");
+      return;
+    }
+
+    try {
+      // 建立考試指派（自己指派給自己）
+      const assignment = await createAssignmentMutation.mutateAsync({
+        examId,
+        userId: user.id,
+      });
+
+      // 開始考試
+      await startExamMutation.mutateAsync(assignment.id);
+
+      // 跳轉到考試作答頁面
+      setLocation(`/exam/${assignment.id}/take`);
+    } catch (error: any) {
+      toast.error(error.message || "開始考試失敗");
+    }
   };
 
   const getQuestionTypeLabel = (type: string) => {
@@ -193,7 +222,7 @@ export default function ExamDetail() {
               <FileStack className="h-4 w-4 mr-2" />
               另存為範本
             </Button>
-            <Button onClick={() => toast.info("功能開發中")}>
+            <Button onClick={handleStartExam}>
               <Play className="h-4 w-4 mr-2" />
               開始考試
             </Button>
