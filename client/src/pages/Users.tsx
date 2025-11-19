@@ -20,11 +20,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Trash2, UserPlus, Edit2 } from "lucide-react";
+import { Trash2, UserPlus, Edit2, Settings, Building2, Users as UsersIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState, useEffect } from "react";
 
 export default function Users() {
   const { user: currentUser } = useAuth();
@@ -46,6 +47,26 @@ export default function Users() {
   const [isEditNameDialogOpen, setIsEditNameDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editName, setEditName] = useState("");
+  
+  // 編輯者權限管理對話框狀態
+  const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
+  const [permissionUser, setPermissionUser] = useState<any>(null);
+  const [selectedDepartments, setSelectedDepartments] = useState<number[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  
+  // 查詢部門和使用者列表
+  const { data: departments } = trpc.departments.list.useQuery();
+  const { data: allUsers } = trpc.users.list.useQuery();
+  const setDepartmentAccessMutation = trpc.users.setDepartmentAccess.useMutation();
+  const setUserAccessMutation = trpc.users.setUserAccess.useMutation();
+  const { data: departmentAccess } = trpc.users.getDepartmentAccess.useQuery(
+    permissionUser?.id || 0,
+    { enabled: !!permissionUser }
+  );
+  const { data: userAccess } = trpc.users.getUserAccess.useQuery(
+    permissionUser?.id || 0,
+    { enabled: !!permissionUser }
+  );
 
   const handleRoleChange = async (openId: string, role: "admin" | "editor" | "viewer" | "examinee") => {
     try {
@@ -91,6 +112,48 @@ export default function Users() {
       setIsEditNameDialogOpen(false);
       setEditingUser(null);
       setEditName("");
+    } catch (error) {
+      toast.error("更新失敗");
+    }
+  };
+  
+  const handleManagePermission = (user: any) => {
+    setPermissionUser(user);
+    setIsPermissionDialogOpen(true);
+  };
+  
+  // 當權限資料載入完成時，更新選擇狀態
+  useEffect(() => {
+    if (departmentAccess) {
+      setSelectedDepartments(departmentAccess.map(d => d.departmentId));
+    }
+  }, [departmentAccess]);
+  
+  useEffect(() => {
+    if (userAccess) {
+      setSelectedUsers(userAccess.map(u => u.userId));
+    }
+  }, [userAccess]);
+  
+  const handleSavePermissions = async () => {
+    if (!permissionUser) return;
+    
+    try {
+      await setDepartmentAccessMutation.mutateAsync({
+        editorId: permissionUser.id,
+        departmentIds: selectedDepartments
+      });
+      
+      await setUserAccessMutation.mutateAsync({
+        editorId: permissionUser.id,
+        userIds: selectedUsers
+      });
+      
+      toast.success("權限已更新");
+      setIsPermissionDialogOpen(false);
+      setPermissionUser(null);
+      setSelectedDepartments([]);
+      setSelectedUsers([]);
     } catch (error) {
       toast.error("更新失敗");
     }
@@ -298,10 +361,21 @@ export default function Users() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {user.role === "editor" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleManagePermission(user)}
+                              title="管理權限"
+                            >
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditName(user)}
+                            title="編輯名稱"
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -310,6 +384,7 @@ export default function Users() {
                             size="sm"
                             onClick={() => handleDelete(user.openId)}
                             disabled={user.openId === currentUser?.openId}
+                            title="刪除使用者"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -356,6 +431,106 @@ export default function Users() {
             </Button>
             <Button onClick={handleSaveName}>
               儲存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* 編輯者權限管理對話框 */}
+      <Dialog open={isPermissionDialogOpen} onOpenChange={setIsPermissionDialogOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>管理編輯者權限</DialogTitle>
+            <DialogDescription>
+              設定 {permissionUser?.name || "編輯者"} 可以訪問的部門和考生
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* 部門權限 */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                部門訪問權限
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                選擇編輯者可以管理的部門，將自動獲得該部門所有考生的訪問權
+              </p>
+              <div className="grid grid-cols-2 gap-3 p-4 border rounded-md">
+                {departments?.map((dept) => (
+                  <div key={dept.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`dept-${dept.id}`}
+                      checked={selectedDepartments.includes(dept.id)}
+                      onCheckedChange={() => {
+                        setSelectedDepartments(prev =>
+                          prev.includes(dept.id)
+                            ? prev.filter(id => id !== dept.id)
+                            : [...prev, dept.id]
+                        );
+                      }}
+                    />
+                    <Label
+                      htmlFor={`dept-${dept.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {dept.name}
+                    </Label>
+                  </div>
+                ))}
+                {(!departments || departments.length === 0) && (
+                  <p className="text-sm text-muted-foreground col-span-2">沒有可用的部門</p>
+                )}
+              </div>
+            </div>
+            
+            {/* 考生權限 */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold flex items-center gap-2">
+                <UsersIcon className="h-4 w-4" />
+                考生訪問權限
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                選擇特定考生，編輯者將只能看到這些考生的資料
+              </p>
+              <div className="grid grid-cols-2 gap-3 p-4 border rounded-md max-h-64 overflow-y-auto">
+                {allUsers?.filter(u => u.role === 'examinee').map((examinee) => (
+                  <div key={examinee.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`user-${examinee.id}`}
+                      checked={selectedUsers.includes(examinee.id)}
+                      onCheckedChange={() => {
+                        setSelectedUsers(prev =>
+                          prev.includes(examinee.id)
+                            ? prev.filter(id => id !== examinee.id)
+                            : [...prev, examinee.id]
+                        );
+                      }}
+                    />
+                    <Label
+                      htmlFor={`user-${examinee.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {examinee.name || examinee.email || `使用者 ${examinee.id}`}
+                    </Label>
+                  </div>
+                ))}
+                {(!allUsers || allUsers.filter(u => u.role === 'examinee').length === 0) && (
+                  <p className="text-sm text-muted-foreground col-span-2">沒有可用的考生</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsPermissionDialogOpen(false);
+              setPermissionUser(null);
+              setSelectedDepartments([]);
+              setSelectedUsers([]);
+            }}>
+              取消
+            </Button>
+            <Button onClick={handleSavePermissions}>
+              儲存權限
             </Button>
           </DialogFooter>
         </DialogContent>

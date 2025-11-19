@@ -25,7 +25,6 @@ import ManualGrading from "./pages/ManualGrading";
 import ExamDetail from "./pages/ExamDetail";
 import ExamTemplates from "./pages/ExamTemplates";
 import QuestionRecycleBin from "./pages/QuestionRecycleBin";
-import EditorPermissions from "./pages/EditorPermissions";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -53,7 +52,6 @@ function Router() {
       <Route path={"/exam/:id/statistics"} component={ExamStatistics} />
       <Route path={"/exam/:assignmentId/grade"} component={ManualGrading} />
       <Route path={"/manage"} component={Manage} />
-      <Route path={"/editor-permissions"} component={EditorPermissions} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

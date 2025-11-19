@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -50,7 +50,6 @@ const staffMenuItems: Array<{
   { icon: FileStack, label: "考卷範本", path: "/exam-templates", editorOnly: true },
   { icon: Settings, label: "部門人員", path: "/manage", adminOnly: true },
   { icon: Users, label: "使用者管理", path: "/users", adminOnly: true },
-  { icon: ShieldCheck, label: "編輯者權限", path: "/editor-permissions", adminOnly: true },
 ];
 
 // 考生的選單（只能看到考試相關功能）
