@@ -1534,6 +1534,7 @@ ${file.extractedText || "無法提取文字內容"}`
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
 
+        const { getDb } = await import("./db");
         const db = await getDb();
         if (!db) {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "資料庫連線失敗" });
