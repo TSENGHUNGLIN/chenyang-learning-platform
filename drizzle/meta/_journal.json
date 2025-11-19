@@ -106,6 +106,13 @@
       "when": 1763525981867,
       "tag": "0014_public_pestilence",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "5",
+      "when": 1763526781484,
+      "tag": "0015_military_daredevil",
+      "breakpoints": true
     }
   ]
 }

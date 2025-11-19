@@ -1097,3 +1097,39 @@
 - [x] 在CreateExamWizard中新增快速匯入區塊
 - [x] 測試完整流程（系統正常運作，導航選單已更新）
 - [ ] 建立 checkpoint
+
+
+## AI分析出題整合
+- [x] 在AIAnalysis頁面新增「儲存為題庫檔案」按鈕
+- [x] 實作儲存對話框（可選擇AI自動命名或手動輸入）
+- [x] 呼叫generateName API取得AI建議名稱
+- [x] 建立題庫檔案並批次新增題目
+- [x] 顯示成功訊息
+- [x] 實作handleGenerateAIName和handleSaveAsQuestionBank函數
+
+## 題庫檔案標籤系統
+- [x] 在questionBanks表中新增tags欄位（JSON格式）
+- [x] 修復departments表缺失的問題
+- [x] 推送資料庫schema變更
+- [ ] 更新questionBanks.ts的CRUD函數支援標籤
+- [ ] 在QuestionBanks頁面新增標籤篩選器
+- [ ] 在建立/編輯對話框中新增標籤輸入
+- [ ] 在題庫檔案卡片上顯示標籤
+
+## 題庫檔案版本控制
+- [ ] 建立questionBankVersions資料表
+- [ ] 建立questionBankChanges資料表（記錄變更歷史）
+- [ ] 推送資料庫schema變更
+- [ ] 實作版本建立API（createVersion）
+- [ ] 實作版本列表API（getVersions）
+- [ ] 實作版本回溯API（restoreVersion）
+- [ ] 在QuestionBankDetail頁面新增版本歷史按鈕
+- [ ] 實作版本歷史對話框
+- [ ] 實作版本比較功能
+
+## 測試與交付
+- [ ] 測試AI分析出題整合流程
+- [ ] 測試標籤篩選功能
+- [ ] 測試版本控制功能
+- [ ] 建立checkpoint
+

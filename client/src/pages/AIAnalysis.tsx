@@ -43,6 +43,14 @@ export default function AIAnalysis() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [parsedQuestions, setParsedQuestions] = useState<any[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  
+  // 儲存為題庫檔案相關狀態
+  const [showSaveBankDialog, setShowSaveBankDialog] = useState(false);
+  const [bankName, setBankName] = useState("");
+  const [bankDescription, setBankDescription] = useState("");
+  const [useAIName, setUseAIName] = useState(true);
+  const [isGeneratingName, setIsGeneratingName] = useState(false);
+  const [isSavingBank, setIsSavingBank] = useState(false);
 
   // 根據分析類型返回提示詞前綴
   const getPromptPrefix = () => {
@@ -161,6 +169,11 @@ export default function AIAnalysis() {
   const exportPDFMutation = trpc.analysis.exportPDF.useMutation();
   const exportWordMutation = trpc.analysis.exportWord.useMutation();
   const batchImportMutation = trpc.questions.batchImport.useMutation();
+  
+  // 題庫檔案相關mutation
+  const generateNameMutation = trpc.questionBanks.generateName.useMutation();
+  const createBankMutation = trpc.questionBanks.create.useMutation();
+  const addQuestionsToBankMutation = trpc.questionBanks.addQuestions.useMutation();
 
   // 匯入題庫功能
   const handleImportToQuestionBank = () => {
@@ -243,6 +256,94 @@ export default function AIAnalysis() {
     } catch (error) {
       console.error('解析題目失敗:', error);
       toast.error(`解析題目失敗：${error instanceof Error ? error.message : '未知錯誤'}`);
+    }
+  };
+  
+  // AI自動命名
+  const handleGenerateAIName = async () => {
+    if (!analysisResult || analysisType !== 'generate_questions') {
+      toast.error("請先執行AI分析以獲取結果");
+      return;
+    }
+    
+    try {
+      setIsGeneratingName(true);
+      const questionsData = analysisResult.questionsWithAnswers;
+      const result = await generateNameMutation.mutateAsync({ questions: questionsData });
+      setBankName(result.name);
+      toast.success("已生成AI建議名稱");
+    } catch (error: any) {
+      toast.error(`AI命名失敗：${error.message}`);
+    } finally {
+      setIsGeneratingName(false);
+    }
+  };
+  
+  // 儲存為題庫檔案
+  const handleSaveAsQuestionBank = async () => {
+    if (!analysisResult || analysisType !== 'generate_questions') {
+      toast.error("只有「出考題」類型的分析結果可以儲存為題庫檔案");
+      return;
+    }
+    
+    if (!bankName.trim()) {
+      toast.error("請輸入檔案名稱");
+      return;
+    }
+    
+    try {
+      setIsSavingBank(true);
+      
+      // 1. 先匯入所有題目到題庫
+      const questionsData = analysisResult.questionsWithAnswers;
+      const parsedQuestions = questionsData.map((q: any) => {
+        let questionType: 'true_false' | 'multiple_choice' | 'short_answer' = 'short_answer';
+        if (q.type === '是非題' || q.type === 'true_false') {
+          questionType = 'true_false';
+        } else if (q.type === '選擇題' || q.type === 'multiple_choice') {
+          questionType = 'multiple_choice';
+        }
+        
+        return {
+          question: q.question,
+          type: questionType,
+          options: q.options || [],
+          correctAnswer: q.correctAnswer || q.answer || '',
+          explanation: q.explanation || '',
+          difficulty: 'medium' as const,
+          points: 1,
+          categoryId: null,
+          tags: [],
+          source: manualSource || '由AI分析生成',
+        };
+      });
+      
+      const importResult = await batchImportMutation.mutateAsync({ questions: parsedQuestions });
+      const questionIds = importResult.questionIds;
+      
+      // 2. 建立題庫檔案
+      const bank = await createBankMutation.mutateAsync({
+        name: bankName,
+        description: bankDescription || `由AI分析生成，包含 ${questionIds.length} 道題目`,
+      });
+      
+      // 3. 將題目加入題庫檔案
+      await addQuestionsToBankMutation.mutateAsync({
+        bankId: bank.id,
+        questionIds,
+      });
+      
+      toast.success(`已建立題庫檔案「${bankName}」，包含 ${questionIds.length} 道題目`);
+      
+      // 關閉對話框並重置狀態
+      setShowSaveBankDialog(false);
+      setBankName("");
+      setBankDescription("");
+      setUseAIName(true);
+    } catch (error: any) {
+      toast.error(`儲存失敗：${error.message}`);
+    } finally {
+      setIsSavingBank(false);
     }
   };
   
@@ -627,13 +728,22 @@ export default function AIAnalysis() {
                   variant="default"
                   size="sm"
                   onClick={() => {
-                    console.log('===== 按鈕被點擊 =====');
+                    console.log('===== 按鈕被點擊 ====');
                     console.log('analysisType:', analysisType);
                     handleImportToQuestionBank();
                   }}
                 >
                   <Database className="h-4 w-4 mr-2" />
-                  匯入題庫 ({analysisType})
+                  匯入題庫
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowSaveBankDialog(true)}
+                  className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  儲存為題庫檔案
                 </Button>
                 <Button
                   variant="outline"
@@ -746,6 +856,103 @@ export default function AIAnalysis() {
           toast.success("題目已成功匯入題庫");
         }}
       />
+      
+      {/* 儲存為題庫檔案對話框 */}
+      <Dialog open={showSaveBankDialog} onOpenChange={setShowSaveBankDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-500" />
+              儲存為題庫檔案
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="useAIName"
+                checked={useAIName}
+                onCheckedChange={(checked) => {
+                  setUseAIName(checked as boolean);
+                  if (checked && !bankName) {
+                    handleGenerateAIName();
+                  }
+                }}
+              />
+              <Label htmlFor="useAIName" className="text-sm font-medium cursor-pointer">
+                使用 AI 自動命名
+              </Label>
+            </div>
+            
+            <div>
+              <Label htmlFor="bankName">檔案名稱 *</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="bankName"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  placeholder="例如：新人培訓題庫"
+                  disabled={useAIName && isGeneratingName}
+                />
+                {useAIName && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateAIName}
+                    disabled={isGeneratingName}
+                  >
+                    {isGeneratingName ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="bankDescription">檔案說明</Label>
+              <Textarea
+                id="bankDescription"
+                value={bankDescription}
+                onChange={(e) => setBankDescription(e.target.value)}
+                placeholder="簡單描述這個題庫檔案的內容..."
+                rows={3}
+              />
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowSaveBankDialog(false);
+                  setBankName("");
+                  setBankDescription("");
+                  setUseAIName(true);
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveAsQuestionBank}
+                disabled={!bankName || isSavingBank}
+              >
+                {isSavingBank ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    儲存中...
+                  </>
+                ) : (
+                  "儲存"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

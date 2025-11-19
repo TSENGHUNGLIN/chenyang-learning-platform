@@ -30,7 +30,7 @@ export type InsertUser = typeof users.$inferInsert;
  */
 export const departments = mysqlTable("departments", {
   id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -176,6 +176,7 @@ export const questionBanks = mysqlTable("questionBanks", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 200 }).notNull(), // 題庫檔案名稱
   description: text("description"), // 描述
+  tags: text("tags"), // JSON格式儲存標籤陣列
   source: varchar("source", { length: 255 }), // 來源（匯入檔案名或手動建立）
   questionCount: int("questionCount").default(0).notNull(), // 題目數量
   createdBy: int("createdBy").notNull(), // 建立者用戶ID
