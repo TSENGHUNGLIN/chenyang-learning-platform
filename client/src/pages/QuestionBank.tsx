@@ -369,6 +369,30 @@ export default function QuestionBank() {
     }
   };
 
+  const handleBatchDelete = async () => {
+    if (selectedQuestions.length === 0) {
+      toast.error("請至少選擇一個題目");
+      return;
+    }
+
+    if (!confirm(`確定要刪除選中的 ${selectedQuestions.length} 個題目嗎？此操作無法復原！`)) {
+      return;
+    }
+
+    try {
+      // 逐個刪除選中的題目
+      for (const questionId of selectedQuestions) {
+        await deleteMutation.mutateAsync(questionId);
+      }
+      
+      toast.success(`成功刪除 ${selectedQuestions.length} 個題目`);
+      setSelectedQuestions([]);
+      refetchQuestions();
+    } catch (error) {
+      toast.error("批次刪除失敗，請稍後再試");
+    }
+  };
+
   const openEditDialog = (question: any) => {
     setEditingQuestion(question);
     setFormData({
@@ -628,10 +652,16 @@ export default function QuestionBank() {
             </div>
             <div className="flex gap-2">
               {selectedQuestions.length > 0 && (
-                <Button onClick={openExportConfirmDialog} variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  匯出考試卷 ({selectedQuestions.length})
-                </Button>
+                <>
+                  <Button onClick={handleBatchDelete} variant="destructive">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    批次刪除 ({selectedQuestions.length})
+                  </Button>
+                  <Button onClick={openExportConfirmDialog} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    匯出考試卷 ({selectedQuestions.length})
+                  </Button>
+                </>
               )}
               <Button onClick={() => setShowCreateDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -703,7 +733,14 @@ export default function QuestionBank() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[50px]">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedQuestions.length > 0 && selectedQuestions.length === filteredQuestions?.length}
+                      onChange={toggleSelectAll}
+                      className="h-4 w-4"
+                    />
+                  </TableHead>
                   <TableHead className="w-[50px]">#</TableHead>
                   <TableHead className="w-[40%]">題目</TableHead>
                   <TableHead>類型</TableHead>

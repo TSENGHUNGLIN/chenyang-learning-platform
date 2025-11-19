@@ -1662,25 +1662,48 @@ ${file.extractedText || "無法提取文字內容"}`
 
         // 2. 批次建立題目
         const { questions: questionsTable } = await import("../drizzle/schema");
+        const { eq, desc } = await import("drizzle-orm");
         const questionIds: number[] = [];
         const results = { success: 0, failed: 0, errors: [] as string[] };
 
         for (const q of input.questions) {
           try {
-            await db.insert(questionsTable).values({
-              categoryId: q.categoryId,
+            console.log('[createWithQuestions] 正在插入題目:', q);
+            
+            // 過濾掉 undefined 的欄位
+            const values: any = {
               type: q.type,
               difficulty: q.difficulty,
               question: q.question,
-              options: q.options,
               correctAnswer: q.correctAnswer,
-              explanation: q.explanation,
-              source: q.source,
               createdBy: ctx.user.id,
+            };
+            
+            if (q.categoryId !== undefined) values.categoryId = q.categoryId;
+            if (q.options !== undefined) values.options = q.options;
+            if (q.explanation !== undefined) values.explanation = q.explanation;
+            if (q.source !== undefined) values.source = q.source;
+            
+            console.log('[createWithQuestions] 準備插入的值:', values);
+            console.log('[createWithQuestions] 值的類型:', {
+              type: typeof values.type,
+              difficulty: typeof values.difficulty,
+              question: typeof values.question,
+              correctAnswer: typeof values.correctAnswer,
+              createdBy: typeof values.createdBy,
+              options: typeof values.options,
+              explanation: typeof values.explanation,
+              source: typeof values.source,
             });
             
+            // 確保所有必填欄位都有值
+            if (!values.type || !values.difficulty || !values.question || !values.correctAnswer || !values.createdBy) {
+              throw new Error(`必填欄位缺失: type=${values.type}, difficulty=${values.difficulty}, question=${values.question}, correctAnswer=${values.correctAnswer}, createdBy=${values.createdBy}`);
+            }
+            
+            await db.insert(questionsTable).values(values);
+            
             // 查詢新建立的題目記錄
-            const { eq, desc } = await import("drizzle-orm");
             const newQuestion = await db
               .select()
               .from(questionsTable)
@@ -1695,9 +1718,12 @@ ${file.extractedText || "無法提取文字內容"}`
               results.failed++;
               results.errors.push(`題目建立失敗: 無法獲取題目 ID`);
             }
-          } catch (error) {
+          } catch (error: any) {
+            console.error('[createWithQuestions] 題目建立失敗:', error);
+            console.error('[createWithQuestions] 失敗的題目資料:', q);
             results.failed++;
-            results.errors.push(`題目建立失敗: ${error}`);
+            const errorMsg = error?.message || error?.toString() || '未知錯誤';
+            results.errors.push(`題目建立失敗: ${errorMsg}`);
           }
         }
 

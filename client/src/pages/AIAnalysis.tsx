@@ -31,7 +31,7 @@ export default function AIAnalysis() {
   const [analysisMode, setAnalysisMode] = useState<string>("file_only"); // AI分析模式
   const [sourceMode, setSourceMode] = useState<string>("manual"); // 考題出處模式：manual 或 ai
   const [manualSource, setManualSource] = useState(""); // 人工填寫的考題出處
-  const [aiSourceFile, setAiSourceFile] = useState<string>(""); // AI分析選擇的檔案
+  const [aiSourceFile, setAiSourceFile] = useState<number | null>(null); // AI分析選擇的檔案ID
   const [customPrompt, setCustomPrompt] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -175,7 +175,7 @@ export default function AIAnalysis() {
       } else if (sourceMode === "ai" && aiSourceFile) {
         // 從檔案列表中找到對應的檔案名稱
         const sourceFile = files?.find(f => f.id === aiSourceFile);
-        questionSource = sourceFile?.filename || aiSourceFile;
+        questionSource = sourceFile?.filename || String(aiSourceFile);
       }
 
       // 階段 3: 執行 AI 分析
@@ -291,6 +291,7 @@ export default function AIAnalysis() {
   // 題庫檔案相關mutation
   const generateNameMutation = trpc.questionBanks.generateName.useMutation();
   const createWithQuestionsMutation = trpc.questionBanks.createWithQuestions.useMutation();
+  const utils = trpc.useUtils();
 
   // 匯入題庫功能
   const handleImportToQuestionBank = () => {
@@ -352,7 +353,7 @@ export default function AIAnalysis() {
         } else if (sourceMode === "ai" && aiSourceFile) {
           // 從檔案列表中找到對應的檔案名稱
           const sourceFile = files?.find((f: any) => f.id === aiSourceFile);
-          questionSource = sourceFile?.filename || aiSourceFile;
+          questionSource = sourceFile?.filename || String(aiSourceFile);
         }
         
         return {
@@ -433,7 +434,7 @@ export default function AIAnalysis() {
       
       // 檢查題庫名稱是否已存在
       let finalBankName = bankName.trim();
-      const checkResult = await trpc.questionBanks.checkNameExists.query(finalBankName);
+      const checkResult = await utils.questionBanks.checkNameExists.fetch(finalBankName);
       if (checkResult.exists) {
         setIsSavingBank(false);
         const confirmed = window.confirm(
@@ -482,7 +483,7 @@ export default function AIAnalysis() {
         }
         
         // 推斷難度
-        const difficulty = type === 'true_false' ? 'easy' : type === 'short_answer' ? 'hard' : 'medium';
+        const difficulty: 'easy' | 'medium' | 'hard' = type === 'true_false' ? 'easy' : type === 'short_answer' ? 'hard' : 'medium';
         
         // 使用使用者填寫或選擇的考題出處
         let questionSource = "";
@@ -491,7 +492,7 @@ export default function AIAnalysis() {
         } else if (sourceMode === "ai" && aiSourceFile) {
           // 從檔案列表中找到對應的檔案名稱
           const sourceFile = files?.find((f: any) => f.id === aiSourceFile);
-          questionSource = sourceFile?.filename || aiSourceFile;
+          questionSource = sourceFile?.filename || String(aiSourceFile);
         }
         
         return {
@@ -499,7 +500,7 @@ export default function AIAnalysis() {
           difficulty,
           question: q.question,
           options,
-          correctAnswer: q.correctAnswer || q.answer || '',
+          correctAnswer: q.answer || q.correctAnswer || '',
           explanation: q.explanation || '',
           source: questionSource || '由AI分析生成',
         };
@@ -508,7 +509,12 @@ export default function AIAnalysis() {
       console.log('[儲存題庫] 轉換後的題目:', questions);
       console.log('[儲存題庫] 題目數量:', questions.length);
       
+      // 檢查 mutation 是否存在
+      console.log('[儲存題庫] createWithQuestionsMutation:', createWithQuestionsMutation);
+      console.log('[儲存題庫] mutateAsync 類型:', typeof createWithQuestionsMutation.mutateAsync);
+      
       // 呼叫新的 createWithQuestions API（一次完成所有操作）
+      console.log('[儲存題庫] 準備呼叫 API...');
       const result = await createWithQuestionsMutation.mutateAsync({
         name: finalBankName,
         description: bankDescription || `由AI分析生成，包含 ${questions.length} 道題目`,
@@ -517,26 +523,27 @@ export default function AIAnalysis() {
       
       console.log('[儲存題庫] API回應:', result);
       
-      // 顯示成功訊息，帶有「立即查看」按鈕
-      toast.success(
-        `已成功儲存 ${result.results.success} 道題目到題庫「${result.bankName}」`,
-        {
-          description: result.results.failed > 0 ? `${result.results.failed} 道題目儲存失敗` : '所有題目均儲存成功',
-          action: {
-            label: '立即查看',
-            onClick: () => {
-              window.location.href = `/question-banks/${result.bankId}`;
-            },
+      // 顯示成功訊息
+      const successMessage = `已成功儲存 ${result.results.success} 道題目到題庫「${result.bankName}」`;
+      const descriptionText = result.results.failed > 0 
+        ? `${result.results.failed} 道題目儲存失敗` 
+        : '所有題目均儲存成功';
+      
+      toast.success(successMessage, {
+        description: descriptionText,
+        action: {
+          label: '立即查看',
+          onClick: () => {
+            window.location.href = `/question-banks/${result.bankId}`;
           },
-        }
-      );
+        },
+      });
       
       // 如果有錯誤，顯示錯誤訊息
-      if (result.results.errors.length > 0) {
+      if (result.results.errors && Array.isArray(result.results.errors) && result.results.errors.length > 0) {
         console.error('[儲存題庫] 錯誤:', result.results.errors);
-        toast.warning("部分題目匯入失敗", {
-          description: result.results.errors.slice(0, 3).join('\n'),
-        });
+        const errorMessages = result.results.errors.slice(0, 3).join('\n');
+        toast.warning(`部分題目匣入失敗: ${errorMessages}`);
       }
       
       // 關閉對話框並重置狀態
@@ -797,13 +804,13 @@ export default function AIAnalysis() {
                 className="w-full"
               />
             ) : (
-              <Select value={aiSourceFile} onValueChange={setAiSourceFile}>
+              <Select value={aiSourceFile?.toString()} onValueChange={(val) => setAiSourceFile(parseInt(val))}>
                 <SelectTrigger>
                   <SelectValue placeholder="從已上傳檔案中選擇" />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredFiles.map((file: any) => (
-                    <SelectItem key={file.id} value={file.filename}>
+                    <SelectItem key={file.id} value={file.id.toString()}>
                       {file.filename}
                     </SelectItem>
                   ))}
