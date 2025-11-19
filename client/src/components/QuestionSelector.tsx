@@ -72,7 +72,10 @@ export default function QuestionSelector({
 
     return allQuestions.filter((q) => {
       // 搜尋過濾
-      if (searchQuery && !q.content.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (searchQuery && q.content && !q.content.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      if (searchQuery && !q.content) {
         return false;
       }
 
@@ -289,7 +292,14 @@ export default function QuestionSelector({
                     >
                       <Checkbox
                         checked={isSelected}
-                        onCheckedChange={() => handleToggleQuestion(question.id)}
+                        onCheckedChange={(checked) => {
+                          // 阻止事件冒泡，避免重複觸發
+                          handleToggleQuestion(question.id);
+                        }}
+                        onClick={(e) => {
+                          // 阻止事件冒泡
+                          e.stopPropagation();
+                        }}
                       />
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center gap-2">

@@ -1633,3 +1633,12 @@
 - [x] 顯示統計數據卡片（平均分、及格率等）
 - [x] 測試統計報表功能
 
+
+
+
+## QuestionSelector 錯誤修復（2025/11/19）
+
+- [x] 修復搜尋功能的 toLowerCase 錯誤（Cannot read properties of undefined）
+- [x] 修復 checkbox 無法勾選的問題
+- [x] 測試修復後的題目選擇功能
+
