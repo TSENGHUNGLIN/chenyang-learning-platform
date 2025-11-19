@@ -1555,7 +1555,7 @@ ${file.extractedText || "無法提取文字內容"}`
 
         for (const q of input.questions) {
           try {
-            const result = await db.insert(questionsTable).values({
+            await db.insert(questionsTable).values({
               categoryId: q.categoryId,
               type: q.type,
               difficulty: q.difficulty,
@@ -1566,9 +1566,23 @@ ${file.extractedText || "無法提取文字內容"}`
               source: q.source,
               createdBy: ctx.user.id,
             });
-            const questionId = Number(result.insertId);
-            questionIds.push(questionId);
-            results.success++;
+            
+            // 查詢新建立的題目記錄
+            const { eq, desc } = await import("drizzle-orm");
+            const newQuestion = await db
+              .select()
+              .from(questionsTable)
+              .where(eq(questionsTable.question, q.question))
+              .orderBy(desc(questionsTable.id))
+              .limit(1);
+            
+            if (newQuestion.length > 0 && newQuestion[0].id) {
+              questionIds.push(newQuestion[0].id);
+              results.success++;
+            } else {
+              results.failed++;
+              results.errors.push(`題目建立失敗: 無法獲取題目 ID`);
+            }
           } catch (error) {
             results.failed++;
             results.errors.push(`題目建立失敗: ${error}`);
