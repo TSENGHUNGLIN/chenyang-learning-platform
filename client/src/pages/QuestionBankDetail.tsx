@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, FileText, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, FileText, Trash2, Plus, Download } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -32,6 +32,80 @@ export default function QuestionBankDetail() {
       refetch();
     } catch (error: any) {
       toast.error(error.message || "移除失敗");
+    }
+  };
+
+  const handleExportToWord = () => {
+    if (!bank || !questions || questions.length === 0) {
+      toast.error("無法匯出：題庫中沒有題目");
+      return;
+    }
+
+    try {
+      // 建立 Word 文件內容（使用 Markdown 格式）
+      let content = `# ${bank.name}\n\n`;
+      
+      if (bank.description) {
+        content += `${bank.description}\n\n`;
+      }
+      
+      content += `**題目總數：** ${questions.length} 題\n\n`;
+      if (bank.source) {
+        content += `**來源：** ${bank.source}\n\n`;
+      }
+      content += `**建立日期：** ${new Date(bank.createdAt).toLocaleDateString("zh-TW")}\n\n`;
+      content += `---\n\n`;
+      
+      // 加入所有題目
+      questions.forEach((q, index) => {
+        content += `## 題目 ${index + 1}\n\n`;
+        content += `**類型：** ${getTypeText(q.type)}\n\n`;
+        content += `**難度：** ${getDifficultyText(q.difficulty)}\n\n`;
+        content += `**題目：** ${q.question}\n\n`;
+        
+        // 如果是選擇題，顯示選項
+        if (q.type === 'multiple_choice' && q.options) {
+          try {
+            const options = JSON.parse(q.options);
+            content += `**選項：**\n\n`;
+            Object.entries(options).forEach(([key, value]) => {
+              content += `- ${key}. ${value}\n`;
+            });
+            content += `\n`;
+          } catch (e) {
+            // 如果解析失敗，直接顯示原始內容
+            content += `**選項：** ${q.options}\n\n`;
+          }
+        }
+        
+        content += `**正確答案：** ${q.correctAnswer}\n\n`;
+        
+        if (q.explanation) {
+          content += `**解釋：** ${q.explanation}\n\n`;
+        }
+        
+        if (q.source) {
+          content += `**題目來源：** ${q.source}\n\n`;
+        }
+        
+        content += `---\n\n`;
+      });
+      
+      // 建立 Blob 並下載
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${bank.name}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("已匯出題庫檔案");
+    } catch (error: any) {
+      console.error('匯出錯誤:', error);
+      toast.error(error.message || "匯出失敗");
     }
   };
 
@@ -137,15 +211,24 @@ export default function QuestionBankDetail() {
                   </span>
                 </div>
               </div>
-              <Button
-                onClick={() => {
-                  toast.info("此功能將在題庫管理頁面中實作");
-                  setLocation("/question-bank");
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                新增題目
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleExportToWord}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  匯出
+                </Button>
+                <Button
+                  onClick={() => {
+                    toast.info("此功能將在題庫管理頁面中實作");
+                    setLocation("/question-bank");
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  新增題目
+                </Button>
+              </div>
             </div>
           </CardHeader>
         </Card>

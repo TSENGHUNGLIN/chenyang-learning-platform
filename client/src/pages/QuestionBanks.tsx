@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { FileText, Plus, Trash2, Eye, Calendar, User } from "lucide-react";
+import { FileText, Plus, Trash2, Eye, Calendar, User, CheckSquare, Square } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ export default function QuestionBanks() {
   const [newBankTags, setNewBankTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedBankIds, setSelectedBankIds] = useState<number[]>([]);
 
   const { data: banks, isLoading, refetch } = trpc.questionBanks.list.useQuery();
   const createBankMutation = trpc.questionBanks.create.useMutation();
@@ -90,6 +91,53 @@ export default function QuestionBanks() {
     }
   };
 
+  const handleToggleSelectBank = (bankId: number) => {
+    setSelectedBankIds(prev => 
+      prev.includes(bankId) 
+        ? prev.filter(id => id !== bankId)
+        : [...prev, bankId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (!banks) return;
+    const filteredBanks = banks.filter((bank) => {
+      if (selectedTags.length === 0) return true;
+      if (!bank.tags) return false;
+      try {
+        const bankTags = JSON.parse(bank.tags as string);
+        return selectedTags.some((tag) => bankTags.includes(tag));
+      } catch {
+        return false;
+      }
+    });
+    const allIds = filteredBanks.map(b => b.id);
+    setSelectedBankIds(selectedBankIds.length === allIds.length ? [] : allIds);
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedBankIds.length === 0) {
+      toast.error("請至少選擇一個題庫檔案");
+      return;
+    }
+
+    if (!confirm(`確定要刪除 ${selectedBankIds.length} 個題庫檔案嗎？這將移除所有關聯，但不會刪除題目本身。`)) {
+      return;
+    }
+
+    try {
+      // 逐個刪除（暂時使用單個刪除 API）
+      for (const id of selectedBankIds) {
+        await deleteBankMutation.mutateAsync(id);
+      }
+      toast.success(`已刪除 ${selectedBankIds.length} 個題庫檔案`);
+      setSelectedBankIds([]);
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "批次刪除失敗");
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -112,10 +160,37 @@ export default function QuestionBanks() {
               組織和管理題目集合，快速派送到考試
             </p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            建立題庫檔案
-          </Button>
+          <div className="flex gap-2">
+            {banks && banks.length > 0 && (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={handleSelectAll}
+                  disabled={!banks || banks.length === 0}
+                >
+                  {selectedBankIds.length > 0 ? (
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Square className="h-4 w-4 mr-2" />
+                  )}
+                  {selectedBankIds.length > 0 ? `已選 ${selectedBankIds.length}` : '全選'}
+                </Button>
+                {selectedBankIds.length > 0 && (
+                  <Button 
+                    variant="destructive" 
+                    onClick={handleBatchDelete}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    批次刪除
+                  </Button>
+                )}
+              </>
+            )}
+            <Button onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              建立題庫檔案
+            </Button>
+          </div>
         </div>
 
         {banks && banks.length > 0 && (() => {
@@ -193,8 +268,26 @@ export default function QuestionBanks() {
                 }
               })
               .map((bank) => (
-              <Card key={bank.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
+              <Card 
+                key={bank.id} 
+                className={`hover:shadow-lg transition-shadow relative ${
+                  selectedBankIds.includes(bank.id) ? 'ring-2 ring-primary' : ''
+                }`}
+              >
+                <div 
+                  className="absolute top-3 left-3 z-10 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleSelectBank(bank.id);
+                  }}
+                >
+                  {selectedBankIds.includes(bank.id) ? (
+                    <CheckSquare className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Square className="h-5 w-5 text-muted-foreground hover:text-primary" />
+                  )}
+                </div>
+                <CardHeader className="pl-12">
                   <CardTitle className="flex items-center justify-between">
                     <span className="truncate">{bank.name}</span>
                     <span className="text-sm font-normal text-muted-foreground ml-2">

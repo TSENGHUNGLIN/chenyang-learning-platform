@@ -37,6 +37,8 @@ export default function AIAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisStartTime, setAnalysisStartTime] = useState<number | null>(null);
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+  const [analysisStage, setAnalysisStage] = useState<string>("");
+  const [analysisProgress, setAnalysisProgress] = useState<number>(0);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
   const [useCache, setUseCache] = useState(true); // 是否使用快取
@@ -141,13 +143,31 @@ export default function AIAnalysis() {
     setIsAnalyzing(true);
     setAnalysisStartTime(Date.now());
     setShowTimeoutWarning(false);
+    setAnalysisStage("正在讀取檔案...");
+    setAnalysisProgress(10);
     
     // 設定30秒後顯示提示
     const timeoutWarning = setTimeout(() => {
       setShowTimeoutWarning(true);
     }, 30000);
     
+    // 模擬進度更新
+    const progressInterval = setInterval(() => {
+      setAnalysisProgress(prev => {
+        if (prev < 90) return prev + 5;
+        return prev;
+      });
+    }, 2000);
+    
     try {
+      // 階段 1: 讀取檔案
+      setAnalysisStage("正在讀取檔案...");
+      setAnalysisProgress(20);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 階段 2: 準備分析
+      setAnalysisStage("正在準備分析...");
+      setAnalysisProgress(30);
       // 準備考題出處
       let questionSource = "";
       if (sourceMode === "manual") {
@@ -158,6 +178,10 @@ export default function AIAnalysis() {
         questionSource = sourceFile?.filename || aiSourceFile;
       }
 
+      // 階段 3: 執行 AI 分析
+      setAnalysisStage("正在執行 AI 分析...");
+      setAnalysisProgress(50);
+      
       const response = await customAnalysisMutation.mutateAsync({
         fileIds: selectedFiles,
         analysisType: analysisType as "generate_questions" | "analyze_questions" | "other",
@@ -167,10 +191,19 @@ export default function AIAnalysis() {
         useCache: useCache, // 使用快取設定
       });
       
+      // 階段 4: 處理結果
+      setAnalysisStage("正在處理結果...");
+      setAnalysisProgress(90);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       setAnalysisResult(response.result);
       setFromCache(response.fromCache || false);
       setCurrentAnalysisId(response.cacheId || null);
       setHasRated(false); // 重置評分狀態
+      
+      // 完成
+      setAnalysisStage("分析完成！");
+      setAnalysisProgress(100);
       
       // 如果使用了快取，顯示提示
       if (response.fromCache) {
@@ -206,9 +239,12 @@ export default function AIAnalysis() {
       });
     } finally {
       clearTimeout(timeoutWarning);
+      clearInterval(progressInterval);
       setIsAnalyzing(false);
       setAnalysisStartTime(null);
       setShowTimeoutWarning(false);
+      setAnalysisStage("");
+      setAnalysisProgress(0);
     }
   };
 
@@ -895,7 +931,7 @@ export default function AIAnalysis() {
             {isAnalyzing ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                分析中...
+                {analysisStage} ({analysisProgress}%)
               </>
             ) : (
               <>
