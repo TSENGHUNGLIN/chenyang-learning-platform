@@ -1,4 +1,4 @@
-import { eq, desc, sql } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { getDb } from "./db";
 import { questionBanks, questionBankItems, questions, InsertQuestionBank, InsertQuestionBankItem } from "../drizzle/schema";
 
@@ -9,14 +9,21 @@ export async function createQuestionBank(data: InsertQuestionBank) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(questionBanks).values(data);
-  const bankId = Number(result.insertId);
+  await db.insert(questionBanks).values(data);
   
-  if (isNaN(bankId) || bankId <= 0) {
-    throw new Error(`Failed to create question bank: invalid insertId ${result.insertId}`);
+  // 查詢新建立的題庫記錄
+  const newBank = await db
+    .select()
+    .from(questionBanks)
+    .where(eq(questionBanks.name, data.name))
+    .orderBy(desc(questionBanks.id))
+    .limit(1);
+  
+  if (newBank.length === 0) {
+    throw new Error("Failed to create question bank: record not found");
   }
   
-  return { id: bankId, name: data.name, description: data.description, createdBy: data.createdBy };
+  return newBank[0];
 }
 
 /**
