@@ -302,15 +302,23 @@ export default function QuestionBankDetail() {
                         </Badge>
                       </div>
                       <p className="text-base mb-3">{q.question}</p>
-                      {q.type === "multiple_choice" && q.options && (
-                        <div className="space-y-1 text-sm text-muted-foreground mb-2">
-                          {JSON.parse(q.options).map((option: string, i: number) => (
-                            <div key={i}>
-                              {String.fromCharCode(65 + i)}. {option}
+                      {q.type === "multiple_choice" && q.options && (() => {
+                        try {
+                          const parsed = JSON.parse(q.options);
+                          const optionsArray = Array.isArray(parsed) ? parsed : [];
+                          return (
+                            <div className="space-y-1 text-sm text-muted-foreground mb-2">
+                              {optionsArray.map((option: any, i: number) => (
+                                <div key={i}>
+                                  {String.fromCharCode(65 + i)}. {typeof option === 'object' && option.value ? option.value : option}
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      )}
+                          );
+                        } catch (e) {
+                          return null;
+                        }
+                      })()}
                       <div className="text-sm">
                         <span className="text-muted-foreground">正確答案：</span>
                         <span className="font-medium">{q.correctAnswer}</span>
