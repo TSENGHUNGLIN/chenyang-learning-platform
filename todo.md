@@ -1141,3 +1141,35 @@
 - [x] 修復預期陣列但收到物件的錯誤
 - [x] 測試修復後的功能（系統正常運作）
 
+
+
+## 標籤系統前端介面
+- [x] 在QuestionBanks頁面的建立對話框中新增標籤輸入欄位
+- [x] 實作多標籤輸入功能（按Enter或逗號新增標籤）
+- [x] 在列表頁面新增標籤篩選器
+- [x] 在題庫檔案卡片上顯示標籤徽章
+- [x] 支援點擊標籤徽章快速篩選
+- [x] 測試標籤功能（系統正常運作）
+
+## 題庫檔案版本控制
+- [ ] 建立questionBankVersions資料表
+- [ ] 推送資料庫schema變更
+- [ ] 在questionBanks.ts中新增版本記錄功能
+- [ ] 修改addQuestionToBank和removeQuestionFromBank，自動記錄版本
+- [ ] 建立版本查詢API（getVersions、getVersionDetail）
+- [ ] 建立回溯API（restoreVersion）
+- [ ] 在QuestionBankDetail頁面新增「版本歷史」標籤
+- [ ] 顯示歷史版本列表和變更詳情
+- [ ] 實作一鍵回溯功能
+- [ ] 測試版本控制功能
+
+## 題庫檔案使用統計
+- [ ] 在questionBanks表中新增usedCount和lastUsedAt欄位
+- [ ] 推送資料庫schema變更
+- [ ] 建立更新統計的API（incrementUsedCount）
+- [ ] 修改CreateExamWizard，從題庫檔案匯入時呼叫統計API
+- [ ] 在QuestionBanks頁面的卡片上顯示使用次數
+- [ ] 顯示熱度指標（使用徽章或顏色）
+- [ ] 新增排序功能（按使用次數、最後使用時間、建立時間）
+- [ ] 測試統計功能
+

@@ -25,10 +25,32 @@ export default function QuestionBanks() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newBankName, setNewBankName] = useState("");
   const [newBankDescription, setNewBankDescription] = useState("");
+  const [newBankTags, setNewBankTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const { data: banks, isLoading, refetch } = trpc.questionBanks.list.useQuery();
   const createBankMutation = trpc.questionBanks.create.useMutation();
   const deleteBankMutation = trpc.questionBanks.delete.useMutation();
+
+  const handleAddTag = () => {
+    const tag = tagInput.trim();
+    if (tag && !newBankTags.includes(tag)) {
+      setNewBankTags([...newBankTags, tag]);
+      setTagInput("");
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setNewBankTags(newBankTags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
 
   const handleCreateBank = async () => {
     if (!newBankName.trim()) {
@@ -40,11 +62,14 @@ export default function QuestionBanks() {
       await createBankMutation.mutateAsync({
         name: newBankName,
         description: newBankDescription || undefined,
+        tags: newBankTags.length > 0 ? JSON.stringify(newBankTags) : undefined,
       });
       toast.success("題庫檔案建立成功");
       setIsCreateDialogOpen(false);
       setNewBankName("");
       setNewBankDescription("");
+      setNewBankTags([]);
+      setTagInput("");
       refetch();
     } catch (error: any) {
       toast.error(error.message || "建立失敗");
@@ -93,6 +118,53 @@ export default function QuestionBanks() {
           </Button>
         </div>
 
+        {banks && banks.length > 0 && (() => {
+          const allTags = Array.from(
+            new Set(
+              banks
+                .filter(bank => bank.tags)
+                .flatMap(bank => {
+                  try {
+                    return JSON.parse(bank.tags as string);
+                  } catch {
+                    return [];
+                  }
+                })
+            )
+          );
+
+          return allTags.length > 0 ? (
+            <div className="mb-6">
+              <Label className="text-sm font-medium mb-2 block">篩選標籤</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={selectedTags.length === 0 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedTags([])}
+                >
+                  全部
+                </Button>
+                {allTags.map((tag) => (
+                  <Button
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setSelectedTags(
+                        selectedTags.includes(tag)
+                          ? selectedTags.filter((t) => t !== tag)
+                          : [...selectedTags, tag]
+                      );
+                    }}
+                  >
+                    {tag}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : null;
+        })()}
+
         {!banks || banks.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
@@ -109,7 +181,18 @@ export default function QuestionBanks() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {banks.map((bank) => (
+            {banks
+              .filter((bank) => {
+                if (selectedTags.length === 0) return true;
+                if (!bank.tags) return false;
+                try {
+                  const bankTags = JSON.parse(bank.tags as string);
+                  return selectedTags.some((tag) => bankTags.includes(tag));
+                } catch {
+                  return false;
+                }
+              })
+              .map((bank) => (
               <Card key={bank.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
@@ -125,6 +208,26 @@ export default function QuestionBanks() {
                   )}
                 </CardHeader>
                 <CardContent>
+                  {bank.tags && (() => {
+                    try {
+                      const tags = JSON.parse(bank.tags as string);
+                      return tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {tags.map((tag: string) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center px-2 py-0.5 bg-primary/10 text-primary rounded-md text-xs cursor-pointer hover:bg-primary/20 transition-colors"
+                              onClick={() => setSelectedTags([tag])}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null;
+                    } catch {
+                      return null;
+                    }
+                  })()}
                   <div className="space-y-2 text-sm text-muted-foreground mb-4">
                     {bank.source && (
                       <div className="flex items-center gap-2">
@@ -190,6 +293,40 @@ export default function QuestionBanks() {
                   onChange={(e) => setNewBankDescription(e.target.value)}
                   rows={3}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tags">標籤</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="tags"
+                    placeholder="輸入標籤後按Enter或逗號"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                  />
+                  <Button type="button" variant="outline" onClick={handleAddTag}>
+                    新增
+                  </Button>
+                </div>
+                {newBankTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {newBankTags.map((tag) => (
+                      <div
+                        key={tag}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-sm"
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTag(tag)}
+                          className="hover:text-primary/80"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter>
