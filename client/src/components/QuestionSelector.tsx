@@ -1,13 +1,5 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Search, Plus } from "lucide-react";
+import { Search, X, Plus } from "lucide-react";
 
 interface QuestionSelectorProps {
   open: boolean;
@@ -53,16 +45,16 @@ export default function QuestionSelector({
   // 查詢標籤
   const { data: tags } = trpc.tags.list.useQuery();
 
-  // 批次加入題目
-  const addQuestionsMutation = trpc.exams.batchAddExamQuestions.useMutation({
-    onSuccess: (data) => {
-      toast.success(`已成功加入 ${data.count} 道題目`);
+  // 加入題目到考試
+  const addQuestionsMutation = trpc.exams.addQuestions.useMutation({
+    onSuccess: () => {
+      toast.success(`成功加入 ${selectedQuestions.length} 道題目`);
       setSelectedQuestions([]);
       onSuccess();
       onOpenChange(false);
     },
-    onError: (error: any) => {
-      toast.error(error.message || "加入失敗");
+    onError: (error) => {
+      toast.error(`加入題目失敗：${error.message}`);
     },
   });
 
@@ -71,12 +63,35 @@ export default function QuestionSelector({
     if (!allQuestions) return [];
 
     return allQuestions.filter((q) => {
-      // 搜尋過濾
-      if (searchQuery && q.content && !q.content.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
-      }
-      if (searchQuery && !q.content) {
-        return false;
+      // 搜尋過濾（智慧匹配）
+      if (searchQuery) {
+        if (!q.question) return false;
+        
+        const query = searchQuery.toLowerCase().trim();
+        const content = q.question.toLowerCase();
+        
+        // 支援多個關鍵字（空格分隔）
+        const keywords = query.split(/\s+/).filter(k => k.length > 0);
+        
+        // 所有關鍵字都必須匹配
+        const allMatch = keywords.every(keyword => {
+          // 直接包含匹配
+          if (content.includes(keyword)) return true;
+          
+          // 部分字元匹配（支援中文部分匹配）
+          // 例如：搜尋「晨陽」可以找到「晨陽建設」
+          if (keyword.length >= 2) {
+            for (let i = 0; i < content.length - keyword.length + 1; i++) {
+              if (content.substring(i, i + keyword.length) === keyword) {
+                return true;
+              }
+            }
+          }
+          
+          return false;
+        });
+        
+        if (!allMatch) return false;
       }
 
       // 題型過濾
@@ -153,19 +168,121 @@ export default function QuestionSelector({
     return labels[difficulty] || { text: difficulty, variant: "secondary" };
   };
 
+  // 關鍵字高亮顯示
+  const highlightKeywords = (text: string) => {
+    if (!searchQuery || !text) return text;
+
+    const query = searchQuery.toLowerCase().trim();
+    const keywords = query.split(/\s+/).filter(k => k.length > 0);
+    
+    if (keywords.length === 0) return text;
+
+    // 將所有關鍵字的位置找出來
+    const matches: Array<{ start: number; end: number; keyword: string }> = [];
+    
+    keywords.forEach(keyword => {
+      const lowerText = text.toLowerCase();
+      let index = 0;
+      
+      while (index < lowerText.length) {
+        const foundIndex = lowerText.indexOf(keyword, index);
+        if (foundIndex === -1) break;
+        
+        matches.push({
+          start: foundIndex,
+          end: foundIndex + keyword.length,
+          keyword
+        });
+        
+        index = foundIndex + 1;
+      }
+    });
+
+    if (matches.length === 0) return text;
+
+    // 按起始位置排序
+    matches.sort((a, b) => a.start - b.start);
+
+    // 合併重疊的匹配
+    const mergedMatches: Array<{ start: number; end: number }> = [];
+    let current = matches[0];
+    
+    for (let i = 1; i < matches.length; i++) {
+      if (matches[i].start <= current.end) {
+        current.end = Math.max(current.end, matches[i].end);
+      } else {
+        mergedMatches.push(current);
+        current = matches[i];
+      }
+    }
+    mergedMatches.push(current);
+
+    // 建立高亮文字
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    mergedMatches.forEach((match, i) => {
+      // 加入未高亮的部分
+      if (match.start > lastIndex) {
+        parts.push(text.substring(lastIndex, match.start));
+      }
+      
+      // 加入高亮的部分
+      parts.push(
+        <mark key={i} className="bg-yellow-200 text-foreground px-0.5 rounded">
+          {text.substring(match.start, match.end)}
+        </mark>
+      );
+      
+      lastIndex = match.end;
+    });
+
+    // 加入最後的未高亮部分
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    return <>{parts}</>;
+  };
+
   const totalPoints = selectedQuestions.length; // 每題1分
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>從題庫選擇題目</DialogTitle>
-          <DialogDescription>
-            選擇要加入考卷的題目，每題預設 1 分
-          </DialogDescription>
-        </DialogHeader>
+  if (!open) return null;
 
-        <div className="space-y-4">
+  return (
+    <div className="fixed inset-0 z-50 bg-background">
+      {/* 頂部標題欄 */}
+      <div className="border-b bg-background">
+        <div className="container flex items-center justify-between py-4">
+          <div>
+            <h2 className="text-2xl font-bold">從題庫選擇題目</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              選擇要加入考卷的題目，每題預設 1 分
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleAddQuestions}
+              disabled={selectedQuestions.length === 0 || addQuestionsMutation.isPending}
+              size="lg"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              加入 {selectedQuestions.length} 道題目
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* 主要內容區域 */}
+      <div className="container py-6 h-[calc(100vh-88px)] overflow-auto">
+        <div className="space-y-6">
           {/* 篩選區域 */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="space-y-2">
@@ -248,7 +365,7 @@ export default function QuestionSelector({
           </div>
 
           {/* 統計資訊 */}
-          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
             <div className="flex items-center gap-4">
               <Checkbox
                 checked={selectedQuestions.length === filteredQuestions.length && filteredQuestions.length > 0}
@@ -267,95 +384,90 @@ export default function QuestionSelector({
           </div>
 
           {/* 題目列表 */}
-          <ScrollArea className="h-[400px] border rounded-lg">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">載入中...</p>
-              </div>
-            ) : filteredQuestions.length === 0 ? (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">沒有符合條件的題目</p>
-              </div>
-            ) : (
-              <div className="space-y-2 p-4">
-                {filteredQuestions.map((question) => {
-                  const difficultyInfo = getDifficultyLabel(question.difficulty);
-                  const isSelected = selectedQuestions.includes(question.id);
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-muted-foreground">載入中...</p>
+            </div>
+          ) : filteredQuestions.length === 0 ? (
+            <div className="flex items-center justify-center h-64">
+              <p className="text-muted-foreground">沒有符合條件的題目</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredQuestions.map((question) => {
+                const difficultyInfo = getDifficultyLabel(question.difficulty);
+                const isSelected = selectedQuestions.includes(question.id);
 
-                  return (
-                    <div
-                      key={question.id}
-                      className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                        isSelected ? "bg-primary/5 border-primary" : "hover:bg-muted"
-                      }`}
-                      onClick={() => handleToggleQuestion(question.id)}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => {
-                          // 阻止事件冒泡，避免重複觸發
-                          handleToggleQuestion(question.id);
-                        }}
-                        onClick={(e) => {
-                          // 阻止事件冒泡
-                          e.stopPropagation();
-                        }}
-                      />
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">
-                            {getQuestionTypeLabel(question.type)}
-                          </Badge>
-                          <Badge variant={difficultyInfo.variant}>
-                            {difficultyInfo.text}
-                          </Badge>
-                        </div>
-                        <p className="text-sm font-medium">{question.question}</p>
-                        {question.options && (() => {
-                          try {
-                            const opts = JSON.parse(question.options);
-                            if (Array.isArray(opts)) {
-                              return (
-                                <div className="text-xs text-muted-foreground space-y-1 mt-2">
-                                  {opts.map((opt: string, idx: number) => (
-                                    <div key={idx}>
-                                      {String.fromCharCode(65 + idx)}. {opt}
-                                    </div>
-                                  ))}
-                                </div>
-                              );
-                            }
-                          } catch (e) {
-                            // 如果解析失敗，不顯示選項
-                          }
-                          return null;
-                        })()}
+                return (
+                  <div
+                    key={question.id}
+                    className={`flex items-start gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                      isSelected ? "bg-primary/5 border-primary" : "hover:bg-muted"
+                    }`}
+                    onClick={() => handleToggleQuestion(question.id)}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => {
+                        // 阻止事件冒泡，避免重複觸發
+                        handleToggleQuestion(question.id);
+                      }}
+                      onClick={(e) => {
+                        // 阻止事件冒泡
+                        e.stopPropagation();
+                      }}
+                    />
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">
+                          {getQuestionTypeLabel(question.type)}
+                        </Badge>
+                        <Badge variant={difficultyInfo.variant}>
+                          {difficultyInfo.text}
+                        </Badge>
+                        {question.category && (
+                          <Badge variant="secondary">{question.category.name}</Badge>
+                        )}
+                        {question.tags && question.tags.length > 0 && (
+                          <div className="flex gap-1">
+                            {question.tags.map((tag: any) => (
+                              <Badge key={tag.id} variant="outline" className="text-xs">
+                                {tag.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-sm text-muted-foreground">1 分</div>
+                      <div className="text-sm">{highlightKeywords(question.question)}</div>
+                      {(() => {
+                        try {
+                          if (question.type === "multipleChoice" && question.options) {
+                            const options = JSON.parse(question.options);
+                            return (
+                              <div className="text-sm text-muted-foreground space-y-1 pl-4">
+                                {options.map((opt: string, idx: number) => (
+                                  <div key={idx}>
+                                    {String.fromCharCode(65 + idx)}. {opt}
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                        } catch (e) {
+                          // 如果解析失敗，不顯示選項
+                        }
+                        return null;
+                      })()}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </ScrollArea>
+                    <div className="text-sm text-muted-foreground">1 分</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            取消
-          </Button>
-          <Button
-            onClick={handleAddQuestions}
-            disabled={selectedQuestions.length === 0 || addQuestionsMutation.isPending}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {addQuestionsMutation.isPending
-              ? "加入中..."
-              : `加入 ${selectedQuestions.length} 道題目`}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
 

@@ -1274,6 +1274,27 @@ ${file.extractedText || "無法提取文字內容"}`
         await batchAddExamQuestions(input.examId, questions);
         return { success: true, count: questions.length };
       }),
+    // Alias for batchAddExamQuestions (for backward compatibility)
+    addQuestions: protectedProcedure
+      .input(z.object({
+        examId: z.number(),
+        questionIds: z.array(z.number()),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchAddExamQuestions } = await import("./db");
+        // 自動設定題目順序和分數（每題1分）
+        const questions = input.questionIds.map((questionId, index) => ({
+          questionId,
+          questionOrder: index + 1,
+          points: 1,
+        }));
+        await batchAddExamQuestions(input.examId, questions);
+        return { success: true, count: questions.length };
+      }),
     getQuestions: protectedProcedure
       .input(z.number())
       .query(async ({ input, ctx }) => {
