@@ -212,6 +212,9 @@ export const analysisHistory = mysqlTable("analysisHistory", {
   fileIds: text("fileIds").notNull(), // 相關檔案ID（JSON陣列）
   fileNames: text("fileNames"), // 檔案名稱列表（JSON陣列，方便顯示）
   result: text("result").notNull(), // 分析結果（JSON格式）
+  resultHash: varchar("resultHash", { length: 32 }), // MD5雜湊（用於快取）
+  qualityScore: int("qualityScore"), // 品質評分（1=好，-1=壞，null=未評分）
+  userFeedback: text("userFeedback"), // 使用者反饋文字
   createdBy: int("createdBy").notNull(), // 執行分析的使用者ID
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

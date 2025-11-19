@@ -364,15 +364,38 @@ ${file.extractedText || "無法提取文字內容"}`
         analysisMode: z.enum(["file_only", "external", "mixed"]).default("file_only"),
         customPrompt: z.string(),
         questionSource: z.string().optional(), // 新增考題出處
+        useCache: z.boolean().default(true), // 是否使用快取
       }))
       .mutation(async ({ input, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
         if (!hasPermission(ctx.user.role as any, "canAnalyze")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
-        const { getFileById } = await import("./db");
+        const { getFileById, getAnalysisHistoryByHash, createAnalysisHistory } = await import("./db");
         const { invokeLLM } = await import("./_core/llm");
         const { invokeLLMWithRetry, parseLLMResponse } = await import("./aiAnalysisHelper");
+        const { calculateAnalysisHash, findCachedAnalysis } = await import("./analysisCacheHelper");
+        
+        // 計算快取hash
+        const resultHash = calculateAnalysisHash({
+          fileIds: input.fileIds,
+          analysisType: input.analysisType,
+          analysisMode: input.analysisMode,
+          customPrompt: input.customPrompt,
+        });
+        
+        // 如果啟用快取，先查找快取結果
+        if (input.useCache) {
+          const cachedResult = await findCachedAnalysis(resultHash, getAnalysisHistoryByHash);
+          if (cachedResult) {
+            console.log(`[快取] 返回快取結果，ID: ${cachedResult.id}`);
+            return {
+              result: typeof cachedResult.result === 'string' ? JSON.parse(cachedResult.result) : cachedResult.result,
+              fromCache: true,
+              cacheId: cachedResult.id,
+            };
+          }
+        }
         
         // 獲取所有選擇的檔案
         const files = await Promise.all(
@@ -576,10 +599,11 @@ ${file.extractedText || "無法提取文字內容"}`
             fileIds: input.fileIds,
             fileNames,
             result: JSON.stringify(result),
+            resultHash,
             createdBy: ctx.user.id,
           });
           
-          return { result };
+          return { result, fromCache: false };
         } else {
           // 其他類型返回純文字
           const response = await invokeLLMWithRetry(invokeLLM, {
@@ -621,10 +645,11 @@ ${file.extractedText || "無法提取文字內容"}`
             fileIds: input.fileIds,
             fileNames,
             result: typeof result === 'string' ? result : JSON.stringify(result),
+            resultHash,
             createdBy: ctx.user.id,
           });
           
-          return { result };
+          return { result, fromCache: false };
         }
       }),
     // AI分析歷史記錄相關API
@@ -637,6 +662,17 @@ ${file.extractedText || "無法提取文字內容"}`
       .query(async ({ input }) => {
         const { getAnalysisHistoryById } = await import("./db");
         return await getAnalysisHistoryById(input);
+      }),
+    rateAnalysis: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        qualityScore: z.number().min(-1).max(1), // 1=好，-1=壞
+        userFeedback: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { updateAnalysisQuality } = await import("./db");
+        await updateAnalysisQuality(input.id, input.qualityScore, input.userFeedback);
+        return { success: true };
       }),
     deleteHistory: protectedProcedure
       .input(z.number())

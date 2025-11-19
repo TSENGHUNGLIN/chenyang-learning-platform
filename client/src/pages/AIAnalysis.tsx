@@ -12,9 +12,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Sparkles, FileText, Download, Eye, Home, Clock, X, Trash2, Database } from "lucide-react";
+import { Loader2, Sparkles, FileText, Download, Eye, Home, Clock, X, Trash2, Database, ThumbsUp, ThumbsDown } from "lucide-react";
 import { toast } from "sonner";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
@@ -37,6 +38,10 @@ export default function AIAnalysis() {
   const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
+  const [useCache, setUseCache] = useState(true); // 是否使用快取
+  const [fromCache, setFromCache] = useState(false); // 當前結果是否來自快取
+  const [currentAnalysisId, setCurrentAnalysisId] = useState<number | null>(null); // 當前分析的ID
+  const [hasRated, setHasRated] = useState(false); // 是否已評分
   
   // 歷史提示詞功能
   const { history, addPrompt, removePrompt, clearAll, getRelativeTime } = usePromptHistory();
@@ -158,9 +163,20 @@ export default function AIAnalysis() {
         analysisMode: analysisMode as "file_only" | "external" | "mixed",
         customPrompt: customPrompt,
         questionSource: questionSource, // 新增考題出處
+        useCache: useCache, // 使用快取設定
       });
       
       setAnalysisResult(response.result);
+      setFromCache(response.fromCache || false);
+      setCurrentAnalysisId(response.cacheId || null);
+      setHasRated(false); // 重置評分狀態
+      
+      // 如果使用了快取，顯示提示
+      if (response.fromCache) {
+        toast.success("使用快取結果，節省了分析時間！", {
+          description: "此結果來自之前的分析，如需重新分析請關閉快取功能",
+        });
+      }
       
       // 儲存提示詞到歷史記錄
       if (customPrompt.trim()) {
@@ -197,6 +213,42 @@ export default function AIAnalysis() {
 
   const exportPDFMutation = trpc.analysis.exportPDF.useMutation();
   const exportWordMutation = trpc.analysis.exportWord.useMutation();
+  const rateAnalysisMutation = trpc.analysis.rateAnalysis.useMutation();
+  
+  // 評分函數
+  const handleRateAnalysis = async (score: number) => {
+    if (!currentAnalysisId) {
+      toast.error("無法評分：未找到分析記錄ID");
+      return;
+    }
+    
+    if (hasRated) {
+      toast.info("您已經評分過此結果");
+      return;
+    }
+    
+    try {
+      await rateAnalysisMutation.mutateAsync({
+        id: currentAnalysisId,
+        qualityScore: score,
+      });
+      
+      setHasRated(true);
+      
+      if (score > 0) {
+        toast.success("感謝您的正面反饋！", {
+          description: "我們會繼續保持AI分析的高品質",
+        });
+      } else {
+        toast.success("感謝您的反饋！", {
+          description: "我們會持續改進AI分析品質",
+        });
+      }
+    } catch (error) {
+      console.error("評分錯誤：", error);
+      toast.error("評分失敗，請稍後再試");
+    }
+  };
   const batchImportMutation = trpc.questions.batchImport.useMutation();
   
   // 題庫檔案相關mutation
@@ -728,6 +780,21 @@ export default function AIAnalysis() {
               </div>
             )}
           </div>
+          {/* 快取開關 */}
+          <div className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg mb-4">
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">使用快取結果</p>
+                <p className="text-xs text-muted-foreground">相同的檔案和提示詞將直接返回之前的分析結果</p>
+              </div>
+            </div>
+            <Switch
+              checked={useCache}
+              onCheckedChange={setUseCache}
+            />
+          </div>
+          
           <Button
             onClick={handleAnalyze}
             disabled={isAnalyzing || selectedFiles.length === 0}
@@ -812,6 +879,44 @@ export default function AIAnalysis() {
           </CardHeader>
           <CardContent>
             <AnalysisResultView result={analysisResult} />
+            
+            {/* 品質評分區域 */}
+            <div className="mt-6 pt-6 border-t">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">此分析結果是否有幫助？</p>
+                  <p className="text-xs text-muted-foreground mt-1">您的反饋將幫助我們持續改進AI分析品質</p>
+                </div>
+                <div className="flex gap-2">
+                  {hasRated ? (
+                    <p className="text-sm text-muted-foreground">感謝您的反饋！</p>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRateAnalysis(1)}
+                        className="hover:bg-green-50 hover:border-green-500 hover:text-green-600"
+                        disabled={!currentAnalysisId}
+                      >
+                        <ThumbsUp className="h-4 w-4 mr-1" />
+                        有幫助
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRateAnalysis(-1)}
+                        className="hover:bg-red-50 hover:border-red-500 hover:text-red-600"
+                        disabled={!currentAnalysisId}
+                      >
+                        <ThumbsDown className="h-4 w-4 mr-1" />
+                        需改進
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

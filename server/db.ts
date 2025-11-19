@@ -686,6 +686,7 @@ export async function createAnalysisHistory(data: {
   fileIds: number[];
   fileNames: string[];
   result: string;
+  resultHash?: string;
   createdBy: number;
 }) {
   const db = await getDb();
@@ -695,6 +696,7 @@ export async function createAnalysisHistory(data: {
     analysisType: data.analysisType,
     analysisMode: data.analysisMode,
     prompt: data.prompt || null,
+    resultHash: data.resultHash || null,
     fileIds: JSON.stringify(data.fileIds),
     fileNames: JSON.stringify(data.fileNames),
     result: data.result,
@@ -736,6 +738,23 @@ export async function getAnalysisHistoryById(id: number) {
 }
 
 /**
+ * 根擜hash查詢AI分析歷史記錄（用於快取）
+ */
+export async function getAnalysisHistoryByHash(hash: string) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db
+    .select()
+    .from(analysisHistory)
+    .where(eq(analysisHistory.resultHash, hash))
+    .orderBy(desc(analysisHistory.createdAt))
+    .limit(1);
+  
+  return result[0] || null;
+}
+
+/**
  * 根據使用者ID查詢AI分析歷史記錄
  */
 export async function getAnalysisHistoryByUser(userId: number) {
@@ -759,6 +778,22 @@ export async function deleteAnalysisHistory(id: number) {
   if (!db) throw new Error("Database not available");
   
   await db.delete(analysisHistory).where(eq(analysisHistory.id, id));
+}
+
+/**
+ * 更新AI分析的品質評分
+ */
+export async function updateAnalysisQuality(id: number, qualityScore: number, userFeedback?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db
+    .update(analysisHistory)
+    .set({
+      qualityScore,
+      userFeedback: userFeedback || null,
+    })
+    .where(eq(analysisHistory.id, id));
 }
 
 

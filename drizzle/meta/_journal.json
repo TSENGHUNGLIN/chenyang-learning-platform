@@ -113,6 +113,13 @@
       "when": 1763526781484,
       "tag": "0015_military_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1763532132707,
+      "tag": "0016_fast_gladiator",
+      "breakpoints": true
     }
   ]
 }
