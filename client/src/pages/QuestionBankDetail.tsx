@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, FileText, Trash2, Plus, Download } from "lucide-react";
+import { ArrowLeft, FileText, Trash2, Plus, Download, FileCheck } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -17,6 +17,37 @@ export default function QuestionBankDetail() {
   const { data: bank, isLoading: isBankLoading } = trpc.questionBanks.getById.useQuery(bankId);
   const { data: questions, isLoading: isQuestionsLoading, refetch } = trpc.questionBanks.getQuestions.useQuery(bankId);
   const removeQuestionMutation = trpc.questionBanks.removeQuestion.useMutation();
+  const createExamFromBankMutation = trpc.exams.createFromBank.useMutation();
+
+  const handleCreateExam = async () => {
+    if (!bank || !questions || questions.length === 0) {
+      toast.error("無法建立考卷：題庫中沒有題目");
+      return;
+    }
+
+    try {
+      const result = await createExamFromBankMutation.mutateAsync({
+        bankId,
+        title: `${bank.name} - 考卷`,
+        description: bank.description,
+        passingScore: 60,
+        pointsPerQuestion: 1,
+        status: "draft",
+      });
+      
+      toast.success(
+        `已成功建立考卷！共 ${result.questionCount} 道題目，總分 ${result.totalScore} 分`,
+        {
+          action: {
+            label: "立即查看",
+            onClick: () => setLocation(`/exams/${result.examId}`),
+          },
+        }
+      );
+    } catch (error: any) {
+      toast.error(error.message || "建立考卷失敗");
+    }
+  };
 
   const handleRemoveQuestion = async (questionId: number) => {
     if (!confirm("確定要從此題庫檔案移除這題嗎？")) {
@@ -218,6 +249,14 @@ export default function QuestionBankDetail() {
                 >
                   <Download className="h-4 w-4 mr-2" />
                   匯出
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handleCreateExam}
+                  disabled={!questions || questions.length === 0 || createExamFromBankMutation.isPending}
+                >
+                  <FileCheck className="h-4 w-4 mr-2" />
+                  {createExamFromBankMutation.isPending ? "建立中..." : "建立考卷"}
                 </Button>
                 <Button
                   onClick={() => {

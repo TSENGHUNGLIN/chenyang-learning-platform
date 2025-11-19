@@ -1062,6 +1062,64 @@ ${file.extractedText || "無法提取文字內容"}`
           createdBy: ctx.user.id,
         });
       }),
+    // 從題庫建立考卷（快速建立）
+    createFromBank: protectedProcedure
+      .input(z.object({
+        bankId: z.number(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        timeLimit: z.number().optional(),
+        passingScore: z.number().optional().default(60),
+        pointsPerQuestion: z.number().optional().default(1),
+        status: z.enum(["draft", "published", "archived"]).optional().default("draft"),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        
+        const { getQuestionBankById } = await import("./questionBanks");
+        const { getQuestionBankQuestions } = await import("./questionBanks");
+        const bank = await getQuestionBankById(input.bankId);
+        if (!bank) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "找不到題庫檔案" });
+        }
+        
+        const questions = await getQuestionBankQuestions(input.bankId);
+        if (!questions || questions.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "題庫中沒有題目" });
+        }
+        
+        const totalScore = questions.length * (input.pointsPerQuestion || 1);
+        
+        const { createExam } = await import("./db");
+        const exam = await createExam({
+          title: input.title || `${bank.name} - 考卷`,
+          description: input.description || bank.description || `從「${bank.name}」題庫建立的考卷`,
+          timeLimit: input.timeLimit,
+          passingScore: input.passingScore || 60,
+          totalScore,
+          gradingMethod: "auto",
+          status: input.status || "draft",
+          createdBy: ctx.user.id,
+        });
+        
+        const { batchAddExamQuestions } = await import("./db");
+        const examQuestions = questions.map((q: any, index: number) => ({
+          questionId: q.id,
+          questionOrder: index + 1,
+          points: input.pointsPerQuestion || 1,
+        }));
+        await batchAddExamQuestions(exam.id, examQuestions);
+        
+        return {
+          success: true,
+          examId: exam.id,
+          questionCount: questions.length,
+          totalScore,
+        };
+      }),
     update: protectedProcedure
       .input(z.object({
         id: z.number(),
