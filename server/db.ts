@@ -960,6 +960,61 @@ export async function getExamQuestions(examId: number) {
 }
 
 /**
+ * 更新考試題目資訊（分數、順序）
+ */
+export async function updateExamQuestion(data: {
+  examId: number;
+  questionId: number;
+  points?: number;
+  questionOrder?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examQuestions } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+  
+  const updateData: any = {};
+  if (data.points !== undefined) updateData.points = data.points;
+  if (data.questionOrder !== undefined) updateData.questionOrder = data.questionOrder;
+  
+  if (Object.keys(updateData).length > 0) {
+    await db.update(examQuestions)
+      .set(updateData)
+      .where(
+        and(
+          eq(examQuestions.examId, data.examId),
+          eq(examQuestions.questionId, data.questionId)
+        )
+      );
+  }
+}
+
+/**
+ * 批次調整考試題目順序
+ */
+export async function reorderExamQuestions(
+  examId: number,
+  questionOrders: { questionId: number; questionOrder: number }[]
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examQuestions } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+  
+  // 批次更新每個題目的順序
+  for (const { questionId, questionOrder } of questionOrders) {
+    await db.update(examQuestions)
+      .set({ questionOrder })
+      .where(
+        and(
+          eq(examQuestions.examId, examId),
+          eq(examQuestions.questionId, questionId)
+        )
+      );
+  }
+}
+
+/**
  * 刪除考試題目
  */
 export async function deleteExamQuestion(examId: number, questionId: number) {
@@ -1320,5 +1375,276 @@ export async function saveExamScore(data: {
   }
   
   return { success: true };
+}
+
+
+
+// ==================== 考卷範本相關函數 ====================
+
+/**
+ * 查詢所有考卷範本
+ */
+export async function getAllExamTemplates() {
+  const db = await getDb();
+  if (!db) return [];
+  const { examTemplates } = await import("../drizzle/schema");
+  const { desc } = await import("drizzle-orm");
+  
+  const result = await db
+    .select()
+    .from(examTemplates)
+    .orderBy(desc(examTemplates.createdAt));
+  
+  return result;
+}
+
+/**
+ * 根據ID查詢考卷範本
+ */
+export async function getExamTemplateById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { examTemplates } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select()
+    .from(examTemplates)
+    .where(eq(examTemplates.id, id))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+/**
+ * 建立考卷範本
+ */
+export async function createExamTemplate(data: {
+  name: string;
+  description?: string;
+  timeLimit?: number;
+  passingScore: number;
+  gradingMethod: "auto" | "manual" | "mixed";
+  createdBy: number;
+  questionIds: number[];
+  questionPoints: number[];
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examTemplates, examTemplateQuestions } = await import("../drizzle/schema");
+  
+  // 建立範本
+  const result = await db.insert(examTemplates).values({
+    name: data.name,
+    description: data.description,
+    timeLimit: data.timeLimit,
+    passingScore: data.passingScore,
+    gradingMethod: data.gradingMethod,
+    createdBy: data.createdBy,
+  });
+  
+  const templateId = Number(result[0].insertId);
+  
+  // 新增範本題目
+  if (data.questionIds.length > 0) {
+    const templateQuestions = data.questionIds.map((questionId, index) => ({
+      templateId,
+      questionId,
+      questionOrder: index + 1,
+      points: data.questionPoints[index] || 1,
+    }));
+    
+    await db.insert(examTemplateQuestions).values(templateQuestions);
+  }
+  
+  return { id: templateId, success: true };
+}
+
+/**
+ * 從考卷建立範本
+ */
+export async function createExamTemplateFromExam(
+  examId: number,
+  name: string,
+  description: string | undefined,
+  createdBy: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { exams, examQuestions, examTemplates, examTemplateQuestions } = await import("../drizzle/schema");
+  
+  // 查詢考卷資訊
+  const exam = await db
+    .select()
+    .from(exams)
+    .where(eq(exams.id, examId))
+    .limit(1);
+  
+  if (exam.length === 0) {
+    throw new Error("找不到考卷");
+  }
+  
+  // 查詢考卷題目
+  const questions = await db
+    .select()
+    .from(examQuestions)
+    .where(eq(examQuestions.examId, examId))
+    .orderBy(examQuestions.questionOrder);
+  
+  // 建立範本
+  const result = await db.insert(examTemplates).values({
+    name,
+    description: description || exam[0].description,
+    timeLimit: exam[0].timeLimit,
+    passingScore: exam[0].passingScore,
+    gradingMethod: exam[0].gradingMethod,
+    createdBy,
+  });
+  
+  const templateId = Number(result[0].insertId);
+  
+  // 複製題目到範本
+  if (questions.length > 0) {
+    const templateQuestions = questions.map((q) => ({
+      templateId,
+      questionId: q.questionId,
+      questionOrder: q.questionOrder,
+      points: q.points,
+    }));
+    
+    await db.insert(examTemplateQuestions).values(templateQuestions);
+  }
+  
+  return { id: templateId, success: true };
+}
+
+/**
+ * 更新考卷範本
+ */
+export async function updateExamTemplate(id: number, data: {
+  name?: string;
+  description?: string;
+  timeLimit?: number;
+  passingScore?: number;
+  gradingMethod?: "auto" | "manual" | "mixed";
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examTemplates } = await import("../drizzle/schema");
+  
+  await db.update(examTemplates).set(data).where(eq(examTemplates.id, id));
+  return { success: true };
+}
+
+/**
+ * 刪除考卷範本
+ */
+export async function deleteExamTemplate(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examTemplates, examTemplateQuestions } = await import("../drizzle/schema");
+  
+  // 先刪除範本題目
+  await db.delete(examTemplateQuestions).where(eq(examTemplateQuestions.templateId, id));
+  
+  // 再刪除範本
+  await db.delete(examTemplates).where(eq(examTemplates.id, id));
+  
+  return { success: true };
+}
+
+/**
+ * 從範本建立考卷
+ */
+export async function createExamFromTemplate(
+  templateId: number,
+  title: string | undefined,
+  description: string | undefined,
+  status: "draft" | "published" | "archived",
+  createdBy: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { examTemplates, examTemplateQuestions, exams, examQuestions } = await import("../drizzle/schema");
+  
+  // 查詢範本資訊
+  const template = await db
+    .select()
+    .from(examTemplates)
+    .where(eq(examTemplates.id, templateId))
+    .limit(1);
+  
+  if (template.length === 0) {
+    throw new Error("找不到範本");
+  }
+  
+  // 查詢範本題目
+  const questions = await db
+    .select()
+    .from(examTemplateQuestions)
+    .where(eq(examTemplateQuestions.templateId, templateId))
+    .orderBy(examTemplateQuestions.questionOrder);
+  
+  // 計算總分
+  const totalScore = questions.reduce((sum, q) => sum + q.points, 0);
+  
+  // 建立考卷
+  const result = await db.insert(exams).values({
+    title: title || template[0].name,
+    description: description || template[0].description,
+    timeLimit: template[0].timeLimit,
+    passingScore: template[0].passingScore,
+    totalScore,
+    gradingMethod: template[0].gradingMethod,
+    status,
+    createdBy,
+  });
+  
+  const examId = Number(result[0].insertId);
+  
+  // 複製題目到考卷
+  if (questions.length > 0) {
+    const examQuestionsData = questions.map((q) => ({
+      examId,
+      questionId: q.questionId,
+      questionOrder: q.questionOrder,
+      points: q.points,
+    }));
+    
+    await db.insert(examQuestions).values(examQuestionsData);
+  }
+  
+  return { 
+    id: examId, 
+    success: true,
+    questionCount: questions.length,
+    totalScore,
+  };
+}
+
+/**
+ * 查詢範本的所有題目
+ */
+export async function getExamTemplateQuestions(templateId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examTemplateQuestions, questions } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select({
+      templateQuestionId: examTemplateQuestions.id,
+      questionId: examTemplateQuestions.questionId,
+      questionOrder: examTemplateQuestions.questionOrder,
+      points: examTemplateQuestions.points,
+      type: questions.type,
+      content: questions.content,
+      difficulty: questions.difficulty,
+      categoryId: questions.categoryId,
+    })
+    .from(examTemplateQuestions)
+    .leftJoin(questions, eq(examTemplateQuestions.questionId, questions.id))
+    .where(eq(examTemplateQuestions.templateId, templateId))
+    .orderBy(examTemplateQuestions.questionOrder);
+  
+  return result;
 }
 

@@ -275,6 +275,39 @@ export type ExamQuestion = typeof examQuestions.$inferSelect;
 export type InsertExamQuestion = typeof examQuestions.$inferInsert;
 
 /**
+ * 考卷範本表格
+ */
+export const examTemplates = mysqlTable("examTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  timeLimit: int("timeLimit"), // 時間限制（分鐘）
+  passingScore: int("passingScore").notNull(), // 及格分數
+  gradingMethod: mysqlEnum("gradingMethod", ["auto", "manual", "mixed"]).notNull().default("auto"),
+  createdBy: int("createdBy").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ExamTemplate = typeof examTemplates.$inferSelect;
+export type InsertExamTemplate = typeof examTemplates.$inferInsert;
+
+/**
+ * 範本題目關聯表格
+ */
+export const examTemplateQuestions = mysqlTable("examTemplateQuestions", {
+  id: int("id").autoincrement().primaryKey(),
+  templateId: int("templateId").notNull(),
+  questionId: int("questionId").notNull(),
+  questionOrder: int("questionOrder").notNull(), // 題目順序
+  points: int("points").notNull(), // 該題分數
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ExamTemplateQuestion = typeof examTemplateQuestions.$inferSelect;
+export type InsertExamTemplateQuestion = typeof examTemplateQuestions.$inferInsert;
+
+/**
  * 考試指派表格
  */
 export const examAssignments = mysqlTable("examAssignments", {

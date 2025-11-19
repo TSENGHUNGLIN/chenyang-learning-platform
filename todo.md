@@ -1306,3 +1306,97 @@
 - [ ] 建立考卷資料表（exams, examQuestions, examAttempts, examAnswers）
 - [ ] 實作考卷建立 API
 - [ ] 實作考卷管理頁面（列表、詳細、編輯）
+
+
+
+## 考試系統進階功能（已完成）
+### 功能一：考卷詳細頁面（/exams/:id）
+- [ ] 建立考卷詳細頁面元件（ExamDetail.tsx）
+- [ ] 顯示考卷基本資訊（標題、說明、時間限制、及格分數、總分）
+- [ ] 顯示考卷題目列表（題號、題型、難度、題目內容、分數）
+- [ ] 實作編輯題目功能（修改題目內容、分數、順序）
+- [ ] 實作新增題目功能（從題庫選擇題目加入考卷）
+- [ ] 實作刪除題目功能（從考卷中移除題目）
+- [ ] 實作調整題目順序功能（拖曳排序）
+- [ ] 實作「開始考試」按鈕（導航到考試頁面）
+- [ ] 新增後端API：exams.getById（獲取考卷詳細資訊）
+- [ ] 新增後端API：exams.getQuestions（獲取考卷題目列表）
+- [ ] 新增後端API：exams.updateQuestion（更新題目資訊）
+- [ ] 新增後端API：exams.removeQuestion（從考卷移除題目）
+- [ ] 新增後端API：exams.reorderQuestions（調整題目順序）
+- [ ] 在App.tsx中新增路由（/exams/:id）
+- [ ] 測試考卷詳細頁面所有功能
+
+### 功能二：從題庫選題功能
+- [ ] 建立題目選擇對話框元件（QuestionSelector.tsx）
+- [ ] 實作題目列表顯示（題號、題型、難度、題目內容）
+- [ ] 實作多選功能（checkbox選擇題目）
+- [ ] 實作全選/取消全選功能
+- [ ] 實作篩選功能（依題型、難度、分類、標籤）
+- [ ] 實作搜尋功能（關鍵字搜尋題目內容）
+- [ ] 實作分頁功能（每頁20題）
+- [ ] 顯示已選題目數量和預計總分
+- [ ] 實作「加入考卷」按鈕（將選中的題目加入考卷）
+- [ ] 新增後端API：exams.addQuestions（批次加入題目到考卷）
+- [ ] 整合到考卷詳細頁面和建立考卷流程
+- [ ] 測試選題功能
+
+### 功能三：考卷範本系統
+- [ ] 設計考卷範本資料庫schema（examTemplates表）
+- [ ] 建立範本管理頁面（/exam-templates）
+- [ ] 實作新增範本功能（從現有考卷建立範本）
+- [ ] 實作編輯範本功能（修改範本名稱、說明）
+- [ ] 實作刪除範本功能
+- [ ] 實作從範本建立考卷功能（複製範本的所有設定和題目）
+- [ ] 建立預設範本（新人考核範本、月度測驗範本、季度考核範本）
+- [ ] 新增後端API：examTemplates.list（獲取範本列表）
+- [ ] 新增後端API：examTemplates.create（建立範本）
+- [ ] 新增後端API：examTemplates.update（更新範本）
+- [ ] 新增後端API：examTemplates.delete（刪除範本）
+- [ ] 新增後端API：examTemplates.createExamFromTemplate（從範本建立考卷）
+- [ ] 在建立考卷流程中整合範本選擇功能
+- [ ] 在側邊欄新增「考卷範本」選單項目
+- [ ] 測試範本系統所有功能
+
+
+
+## 考試系統進階功能進度更新
+- [x] 建立考卷詳細頁面元件（ExamDetail.tsx）
+- [x] 顯示考卷基本資訊（標題、說明、時間限制、及格分數、總分）
+- [x] 顯示考卷題目列表（題號、題型、難度、題目內容、分數）
+- [x] 實作編輯題目功能（修改題目內容、分數、順序）
+- [x] 實作刪除題目功能（從考卷中移除題目）
+- [x] 新增後端API：exams.updateQuestion（更新題目資訊）
+- [x] 新增後端API：exams.reorderQuestions（調整題目順序）
+- [x] 在App.tsx中新增路由（/exams/:id）
+
+
+
+## 從題庫選題功能進度更新
+- [x] 建立題目選擇對話框元件（QuestionSelector.tsx）
+- [x] 實作題目列表顯示（題號、題型、難度、題目內容）
+- [x] 實作多選功能（checkbox選擇題目）
+- [x] 實作全選/取消全選功能
+- [x] 實作篩選功能（依題型、難度、分類）
+- [x] 實作搜尋功能（關鍵字搜尋題目內容）
+- [x] 顯示已選題目數量和預計總分
+- [x] 實作「加入考卷」按鈕（將選中的題目加入考卷）
+- [x] 整合到考卷詳細頁面
+
+
+
+## 考卷範本系統進度更新
+- [x] 建立資料表（examTemplates、examTemplateQuestions）
+- [x] 執行資料庫遷移
+- [x] 建立後端API（examTemplates router）
+- [x] 建立資料庫函數（getAllExamTemplates、createExamTemplate、createExamTemplateFromExam、updateExamTemplate、deleteExamTemplate、createExamFromTemplate、getExamTemplateQuestions）
+- [x] 建立範本管理頁面（ExamTemplates.tsx）
+- [x] 實作範本列表顯示
+- [x] 實作建立範本功能
+- [x] 實作編輯範本功能
+- [x] 實作刪除範本功能
+- [x] 實作從範本建立考卷功能
+- [x] 在考卷詳細頁面新增「另存為範本」按鈕
+- [x] 在側邊欄新增「考卷範本」選單項目
+- [x] 新增路由（/exam-templates）
+

@@ -22,6 +22,8 @@ import MyExams from "./pages/MyExams";
 import ExamResult from "./pages/ExamResult";
 import ExamStatistics from "./pages/ExamStatistics";
 import ManualGrading from "./pages/ManualGrading";
+import ExamDetail from "./pages/ExamDetail";
+import ExamTemplates from "./pages/ExamTemplates";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -40,6 +42,8 @@ function Router() {
       <Route path={"/tags"} component={TagManagement} />
       <Route path={"/analysis-history"} component={AnalysisHistory} />
       <Route path={"/exams"} component={ExamManagement} />
+      <Route path={"/exams/:id"} component={ExamDetail} />
+      <Route path={"/exam-templates"} component={ExamTemplates} />
       <Route path={"/my-exams"} component={MyExams} />
       <Route path={"/exam/:id/take"} component={ExamTake} />
       <Route path={"/exam/:assignmentId/result"} component={ExamResult} />

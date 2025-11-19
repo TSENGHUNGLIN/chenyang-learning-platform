@@ -1217,6 +1217,39 @@ ${file.extractedText || "無法提取文字內容"}`
         const { getExamQuestions } = await import("./db");
         return await getExamQuestions(input);
       }),
+    updateQuestion: protectedProcedure
+      .input(z.object({
+        examId: z.number(),
+        questionId: z.number(),
+        points: z.number().optional(),
+        questionOrder: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateExamQuestion } = await import("./db");
+        await updateExamQuestion(input);
+        return { success: true };
+      }),
+    reorderQuestions: protectedProcedure
+      .input(z.object({
+        examId: z.number(),
+        questionOrders: z.array(z.object({
+          questionId: z.number(),
+          questionOrder: z.number(),
+        })),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { reorderExamQuestions } = await import("./db");
+        await reorderExamQuestions(input.examId, input.questionOrders);
+        return { success: true };
+      }),
     deleteQuestion: protectedProcedure
       .input(z.object({
         examId: z.number(),
@@ -1716,6 +1749,124 @@ ${file.extractedText || "無法提取文字內容"}`
         const name = await generateQuestionBankName(questionData);
         
         return { name };
+      }),
+  }),
+
+  // Exam Templates router
+  examTemplates: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getAllExamTemplates } = await import("./db");
+      return await getAllExamTemplates();
+    }),
+    getById: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getExamTemplateById } = await import("./db");
+        return await getExamTemplateById(input);
+      }),
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        timeLimit: z.number().optional(),
+        passingScore: z.number(),
+        gradingMethod: z.enum(["auto", "manual", "mixed"]).optional().default("auto"),
+        questionIds: z.array(z.number()).optional(),
+        questionPoints: z.array(z.number()).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createExamTemplate } = await import("./db");
+        return await createExamTemplate({
+          name: input.name,
+          description: input.description,
+          timeLimit: input.timeLimit,
+          passingScore: input.passingScore,
+          gradingMethod: input.gradingMethod || "auto",
+          createdBy: ctx.user.id,
+          questionIds: input.questionIds || [],
+          questionPoints: input.questionPoints || [],
+        });
+      }),
+    createFromExam: protectedProcedure
+      .input(z.object({
+        examId: z.number(),
+        name: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createExamTemplateFromExam } = await import("./db");
+        return await createExamTemplateFromExam(input.examId, input.name, input.description, ctx.user.id);
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        timeLimit: z.number().optional(),
+        passingScore: z.number().optional(),
+        gradingMethod: z.enum(["auto", "manual", "mixed"]).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateExamTemplate } = await import("./db");
+        const { id, ...data } = input;
+        await updateExamTemplate(id, data);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { deleteExamTemplate } = await import("./db");
+        await deleteExamTemplate(input);
+        return { success: true };
+      }),
+    createExamFromTemplate: protectedProcedure
+      .input(z.object({
+        templateId: z.number(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        status: z.enum(["draft", "published", "archived"]).optional().default("draft"),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createExamFromTemplate } = await import("./db");
+        return await createExamFromTemplate(input.templateId, input.title, input.description, input.status || "draft", ctx.user.id);
+      }),
+    getQuestions: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getExamTemplateQuestions } = await import("./db");
+        return await getExamTemplateQuestions(input);
       }),
   }),
 });
