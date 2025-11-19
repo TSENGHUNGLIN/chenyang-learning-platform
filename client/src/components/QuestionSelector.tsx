@@ -270,7 +270,26 @@ export default function QuestionSelector({
                             {difficultyInfo.text}
                           </Badge>
                         </div>
-                        <p className="text-sm">{question.content}</p>
+                        <p className="text-sm font-medium">{question.question}</p>
+                        {question.options && (() => {
+                          try {
+                            const opts = JSON.parse(question.options);
+                            if (Array.isArray(opts)) {
+                              return (
+                                <div className="text-xs text-muted-foreground space-y-1 mt-2">
+                                  {opts.map((opt: string, idx: number) => (
+                                    <div key={idx}>
+                                      {String.fromCharCode(65 + idx)}. {opt}
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                          } catch (e) {
+                            // 如果解析失敗，不顯示選項
+                          }
+                          return null;
+                        })()}
                       </div>
                       <div className="text-sm text-muted-foreground">1 分</div>
                     </div>
