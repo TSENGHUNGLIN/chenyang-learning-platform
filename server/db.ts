@@ -1238,27 +1238,23 @@ export async function getExamAssignments(examId: number) {
 /**
  * 取得考試詳情和題目列表（考生端）
  */
-export async function getExamForTaking(examId: number, userId: number) {
+export async function getExamForTaking(assignmentId: number, userId: number) {
   const db = await getDb();
   if (!db) return null;
   const { exams, examQuestions, questions, examAssignments } = await import("../drizzle/schema");
-  const { and } = await import("drizzle-orm");
   
-  // 檢查考生是否被指派此考試
+  // 取得考試指派記錄
   const assignment = await db
     .select()
     .from(examAssignments)
-    .where(
-      and(
-        eq(examAssignments.examId, examId),
-        eq(examAssignments.userId, userId)
-      )
-    )
+    .where(eq(examAssignments.id, assignmentId))
     .limit(1);
   
-  if (assignment.length === 0) {
-    return null; // 考生未被指派此考試
+  if (assignment.length === 0 || assignment[0].userId !== userId) {
+    return null; // 找不到指派記錄或不屬於此使用者
   }
+  
+  const examId = assignment[0].examId;
   
   // 取得考試詳情
   const exam = await db
