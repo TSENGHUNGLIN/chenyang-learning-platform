@@ -480,7 +480,7 @@ export async function getDeletedQuestions() {
   const db = await getDb();
   if (!db) return [];
   const { questions, users } = await import("../drizzle/schema");
-  const { isNotNull } = await import("drizzle-orm");
+  const { isNotNull, sql } = await import("drizzle-orm");
   
   const result = await db
     .select({
