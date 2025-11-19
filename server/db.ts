@@ -1210,6 +1210,23 @@ export async function batchAssignExam(data: {
 }
 
 /**
+ * 查詢單一考試指派記錄
+ */
+export async function getExamAssignmentById(assignmentId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { examAssignments } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select()
+    .from(examAssignments)
+    .where(eq(examAssignments.id, assignmentId))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+/**
  * 查詢使用者的考試指派
  */
 export async function getUserExamAssignments(userId: number) {

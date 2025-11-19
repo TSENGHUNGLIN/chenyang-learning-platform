@@ -1415,6 +1415,12 @@ ${file.extractedText || "無法提取文字內容"}`
       const { getUserExamAssignments } = await import("./db");
       return await getUserExamAssignments(ctx.user.id);
     }),
+    getAssignment: protectedProcedure
+      .input(z.number())
+      .query(async ({ input }) => {
+        const { getExamAssignmentById } = await import("./db");
+        return await getExamAssignmentById(input);
+      }),
     // 考試作答相關API
     getForTaking: protectedProcedure
       .input(z.number())
