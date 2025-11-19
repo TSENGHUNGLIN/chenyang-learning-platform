@@ -1326,6 +1326,165 @@ ${file.extractedText || "無法提取文字內容"}`
         };
       }),
   }),
+
+  // Question banks router
+  questionBanks: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getAllQuestionBanks } = await import("./questionBanks");
+      return await getAllQuestionBanks();
+    }),
+    getById: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getQuestionBankById } = await import("./questionBanks");
+        return await getQuestionBankById(input);
+      }),
+    getQuestions: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getQuestionBankQuestions } = await import("./questionBanks");
+        return await getQuestionBankQuestions(input);
+      }),
+    create: protectedProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          description: z.string().optional(),
+          source: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createQuestionBank } = await import("./questionBanks");
+        return await createQuestionBank({
+          ...input,
+          createdBy: ctx.user.id,
+        });
+      }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          name: z.string().optional(),
+          description: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateQuestionBank } = await import("./questionBanks");
+        const { id, ...data } = input;
+        return await updateQuestionBank(id, data);
+      }),
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { deleteQuestionBank } = await import("./questionBanks");
+        return await deleteQuestionBank(input);
+      }),
+    addQuestion: protectedProcedure
+      .input(
+        z.object({
+          bankId: z.number(),
+          questionId: z.number(),
+          order: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { addQuestionToBank } = await import("./questionBanks");
+        return await addQuestionToBank(input.bankId, input.questionId, input.order);
+      }),
+    batchAddQuestions: protectedProcedure
+      .input(
+        z.object({
+          bankId: z.number(),
+          questionIds: z.array(z.number()),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchAddQuestionsToBank } = await import("./questionBanks");
+        return await batchAddQuestionsToBank(input.bankId, input.questionIds);
+      }),
+    removeQuestion: protectedProcedure
+      .input(
+        z.object({
+          bankId: z.number(),
+          questionId: z.number(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { removeQuestionFromBank } = await import("./questionBanks");
+        return await removeQuestionFromBank(input.bankId, input.questionId);
+      }),
+    generateName: protectedProcedure
+      .input(
+        z.object({
+          questionIds: z.array(z.number()),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        
+        // 取得題目資料
+        const { getDb } = await import("./db");
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        
+        const { questions } = await import("../drizzle/schema");
+        const { inArray } = await import("drizzle-orm");
+        
+        const questionData = await db
+          .select({
+            type: questions.type,
+            question: questions.question,
+            correctAnswer: questions.correctAnswer,
+          })
+          .from(questions)
+          .where(inArray(questions.id, input.questionIds));
+        
+        // 使用AI生成名稱
+        const { generateQuestionBankName } = await import("./questionBankNaming");
+        const name = await generateQuestionBankName(questionData);
+        
+        return { name };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

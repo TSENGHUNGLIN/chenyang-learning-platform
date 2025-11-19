@@ -1,0 +1,215 @@
+import { useAuth } from "@/_core/hooks/useAuth";
+import DashboardLayout from "@/components/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { trpc } from "@/lib/trpc";
+import { FileText, Plus, Trash2, Eye, Calendar, User } from "lucide-react";
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { toast } from "sonner";
+
+export default function QuestionBanks() {
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newBankName, setNewBankName] = useState("");
+  const [newBankDescription, setNewBankDescription] = useState("");
+
+  const { data: banks, isLoading, refetch } = trpc.questionBanks.list.useQuery();
+  const createBankMutation = trpc.questionBanks.create.useMutation();
+  const deleteBankMutation = trpc.questionBanks.delete.useMutation();
+
+  const handleCreateBank = async () => {
+    if (!newBankName.trim()) {
+      toast.error("請輸入題庫檔案名稱");
+      return;
+    }
+
+    try {
+      await createBankMutation.mutateAsync({
+        name: newBankName,
+        description: newBankDescription || undefined,
+      });
+      toast.success("題庫檔案建立成功");
+      setIsCreateDialogOpen(false);
+      setNewBankName("");
+      setNewBankDescription("");
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "建立失敗");
+    }
+  };
+
+  const handleDeleteBank = async (id: number, name: string) => {
+    if (!confirm(`確定要刪除題庫檔案「${name}」嗎？這將移除所有關聯，但不會刪除題目本身。`)) {
+      return;
+    }
+
+    try {
+      await deleteBankMutation.mutateAsync(id);
+      toast.success("題庫檔案已刪除");
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || "刪除失敗");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="container mx-auto py-8">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">載入中...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="container mx-auto py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">題庫檔案管理</h1>
+            <p className="text-muted-foreground mt-2">
+              組織和管理題目集合，快速派送到考試
+            </p>
+          </div>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            建立題庫檔案
+          </Button>
+        </div>
+
+        {!banks || banks.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium mb-2">尚無題庫檔案</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                建立題庫檔案來組織和管理題目集合
+              </p>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                建立第一個題庫檔案
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {banks.map((bank) => (
+              <Card key={bank.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="truncate">{bank.name}</span>
+                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                      {bank.questionCount} 題
+                    </span>
+                  </CardTitle>
+                  {bank.description && (
+                    <CardDescription className="line-clamp-2">
+                      {bank.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                    {bank.source && (
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        <span className="truncate">{bank.source}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      <span>
+                        {new Date(bank.createdAt).toLocaleDateString("zh-TW")}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setLocation(`/question-banks/${bank.id}`)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      查看
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteBank(bank.id, bank.name)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>建立題庫檔案</DialogTitle>
+              <DialogDescription>
+                建立一個新的題庫檔案來組織題目集合
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">檔案名稱 *</Label>
+                <Input
+                  id="name"
+                  placeholder="例如：JavaScript基礎測驗"
+                  value={newBankName}
+                  onChange={(e) => setNewBankName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">描述</Label>
+                <Textarea
+                  id="description"
+                  placeholder="選填：描述這個題庫檔案的內容和用途"
+                  value={newBankDescription}
+                  onChange={(e) => setNewBankDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsCreateDialogOpen(false)}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleCreateBank}
+                disabled={createBankMutation.isPending}
+              >
+                {createBankMutation.isPending ? "建立中..." : "建立"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </DashboardLayout>
+  );
+}
+

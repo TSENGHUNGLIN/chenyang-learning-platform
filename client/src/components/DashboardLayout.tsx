@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -42,6 +42,7 @@ const staffMenuItems: Array<{
   { icon: Sparkles, label: "AI 分析出題", path: "/ai-analysis" },
   { icon: FileText, label: "檔案管理", path: "/files" },
   { icon: BookOpen, label: "題庫管理", path: "/question-bank", editorOnly: true },
+  { icon: Database, label: "題庫檔案", path: "/question-banks", editorOnly: true },
   { icon: FolderTree, label: "分類管理", path: "/categories", editorOnly: true },
   { icon: Tag, label: "標籤管理", path: "/tags", editorOnly: true },
   { icon: ClipboardList, label: "考試園地", path: "/my-exams" },

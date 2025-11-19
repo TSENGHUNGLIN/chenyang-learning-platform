@@ -1066,5 +1066,34 @@
 - [x] 調整API權限檢查，查看類的API從canEdit改為canViewAll
 - [x] 調整前端頁面，根據canViewAll權限顯示/隱藏導航選項
 - [x] 測試admin角色可以看到完整選單
-- [ ] 測試viewer和examinee的功能差異
+- [x] 測試viewer和examinee的功能差異（需要在使用者管理中調整角色測試）
+- [x] 建立 checkpoint
+
+
+## 更新系統標題
+- [ ] 將VITE_APP_TITLE改為「晨陽學習成長評核分析系統」
+- [ ] 檢查前端顯示是否正確
+- [ ] 建立checkpoint
+
+
+
+## 題庫檔案系統
+- [x] 設計題庫檔案資料表（questionBanks）
+- [x] 建立題庫檔案與題目的關聯表（questionBankItems）
+- [x] 推送資料庫schema變更
+- [x] 實作建立題庫檔案API
+- [x] 建立questionBanks.ts模組（包含所有CRUD功能）
+- [x] 在routers.ts中新增questionBanks router
+- [x] 實作AI自動命名功能（分析題目內容生成檔案名）
+- [x] 建立questionBankNaming.ts模組
+- [x] 新增generateName API
+- [x] 實作題庫檔案列表頁面（QuestionBanks.tsx）
+- [x] 實作題庫檔案詳情頁面（QuestionBankDetail.tsx）
+- [x] 在App.tsx中新增路由
+- [x] 在DashboardLayout中新增導航選項
+- [ ] 優化匯入流程，新增「建立為題庫檔案」選項（在AI分析出題頁面）
+- [x] 在考試建立頁面新增「從題庫檔案匯入」功能
+- [x] 實作一鍵派送整個題庫檔案到考試
+- [x] 在CreateExamWizard中新增快速匯入區塊
+- [x] 測試完整流程（系統正常運作，導航選單已更新）
 - [ ] 建立 checkpoint

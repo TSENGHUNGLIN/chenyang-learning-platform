@@ -68,12 +68,22 @@ export default function CreateExamWizard({
   const [filterType, setFilterType] = useState<string>("all");
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [selectedQuestionBank, setSelectedQuestionBank] = useState<number | null>(null);
 
   // 查詢所有題目
   const { data: questions, isLoading: questionsLoading } = trpc.questions.list.useQuery();
   
   // 查詢所有分類
   const { data: categories } = trpc.questionCategories.list.useQuery();
+  
+  // 查詢所有題庫檔案
+  const { data: questionBanks } = trpc.questionBanks.list.useQuery();
+  
+  // 查詢題庫檔案中的題目
+  const { data: bankQuestions } = trpc.questionBanks.getQuestions.useQuery(
+    selectedQuestionBank || 0,
+    { enabled: !!selectedQuestionBank }
+  );
 
   // 建立考試mutation
   const createExamMutation = trpc.exams.create.useMutation({
@@ -370,6 +380,58 @@ export default function CreateExamWizard({
         {/* 步驟2：選擇題目 */}
         {currentStep === 2 && (
           <div className="space-y-4">
+            {/* 題庫檔案快速匯入 */}
+            {questionBanks && questionBanks.length > 0 && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                <Label className="text-sm font-medium text-blue-900 mb-2 block">
+                  🚀 快速匯入：從題庫檔案一鍵匯入
+                </Label>
+                <div className="flex gap-2">
+                  <Select
+                    value={selectedQuestionBank?.toString() || ""}
+                    onValueChange={(value) => setSelectedQuestionBank(value ? parseInt(value) : null)}
+                  >
+                    <SelectTrigger className="flex-1 bg-white">
+                      <SelectValue placeholder="選擇題庫檔案..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {questionBanks.map((bank) => (
+                        <SelectItem key={bank.id} value={bank.id.toString()}>
+                          {bank.name} ({bank.questionCount} 題)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedQuestionBank || !bankQuestions) {
+                        toast.error("請先選擇題庫檔案");
+                        return;
+                      }
+                      // 一鍵匯入所有題目
+                      const newQuestions = bankQuestions
+                        .filter((q) => !selectedQuestions.some((sq) => sq.id === q.id))
+                        .map((q, index) => ({
+                          id: q.id,
+                          question: q.question,
+                          type: q.type,
+                          difficulty: q.difficulty,
+                          points: 1,
+                          order: selectedQuestions.length + index + 1,
+                        }));
+                      setSelectedQuestions([...selectedQuestions, ...newQuestions]);
+                      toast.success(`已匯入 ${newQuestions.length} 題`);
+                      setSelectedQuestionBank(null);
+                    }}
+                    disabled={!selectedQuestionBank}
+                  >
+                    匯入所有題目
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* 搜尋和篩選 */}
             <div className="space-y-3">
               <div className="relative">

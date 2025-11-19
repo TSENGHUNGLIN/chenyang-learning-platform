@@ -170,6 +170,37 @@ export type Question = typeof questions.$inferSelect;
 export type InsertQuestion = typeof questions.$inferInsert;
 
 /**
+ * 題庫檔案表格（用於組織和管理題目集合）
+ */
+export const questionBanks = mysqlTable("questionBanks", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 200 }).notNull(), // 題庫檔案名稱
+  description: text("description"), // 描述
+  source: varchar("source", { length: 255 }), // 來源（匯入檔案名或手動建立）
+  questionCount: int("questionCount").default(0).notNull(), // 題目數量
+  createdBy: int("createdBy").notNull(), // 建立者用戶ID
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QuestionBank = typeof questionBanks.$inferSelect;
+export type InsertQuestionBank = typeof questionBanks.$inferInsert;
+
+/**
+ * 題庫檔案-題目關聯表（多對多）
+ */
+export const questionBankItems = mysqlTable("questionBankItems", {
+  id: int("id").autoincrement().primaryKey(),
+  bankId: int("bankId").notNull(), // 題庫檔案ID
+  questionId: int("questionId").notNull(), // 題目ID
+  order: int("order").default(0).notNull(), // 題目順序
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type QuestionBankItem = typeof questionBankItems.$inferSelect;
+export type InsertQuestionBankItem = typeof questionBankItems.$inferInsert;
+
+/**
  * AI分析歷史記錄表格（記錄每次AI分析的結果）
  */
 export const analysisHistory = mysqlTable("analysisHistory", {

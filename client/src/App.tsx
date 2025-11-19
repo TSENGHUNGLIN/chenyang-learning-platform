@@ -1,6 +1,8 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
+import QuestionBanks from "@/pages/QuestionBanks";
+import QuestionBankDetail from "@/pages/QuestionBankDetail";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -25,8 +27,10 @@ function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/manage"} component={Manage} />
+       <Route path={"/"} component={Home} />
+      <Route path={"/question-banks"} component={QuestionBanks} />
+      <Route path={"/question-banks/:id"} component={QuestionBankDetail} />
+      <Route path={"/404"} component={NotFound} />
       <Route path={"/users"} component={Users} />
       <Route path={"/files"} component={Files} />
       <Route path={"/calendar"} component={CalendarView} />
