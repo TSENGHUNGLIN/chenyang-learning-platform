@@ -22,8 +22,8 @@ export default function Home() {
   const features = [
     {
       icon: Calendar,
-      title: "日曆檢視",
-      description: "查看所有檔案的上傳日期，以日曆形式呈現",
+      title: "評核日曆",
+      description: "查看所有考試的截止日期，以日曆形式呈現",
       link: "/calendar",
       color: "from-blue-500 to-cyan-500",
     },
