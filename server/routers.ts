@@ -1343,6 +1343,15 @@ ${file.extractedText || "無法提取文字內容"}`
         if (!hasPermission(ctx.user.role as any, "canEdit")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
+        // 驗證考試是否有題目
+        const { getExamQuestions } = await import("./db");
+        const questions = await getExamQuestions(input.examId);
+        if (!questions || questions.length === 0) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "此考試尚未設定題目，無法指派考生。請先新增題目。" 
+          });
+        }
         const { assignExam } = await import("./db");
         const assignment = await assignExam(input);
         return assignment;
@@ -1357,6 +1366,15 @@ ${file.extractedText || "無法提取文字內容"}`
         const { hasPermission } = await import("@shared/permissions");
         if (!hasPermission(ctx.user.role as any, "canEdit")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        // 驗證考試是否有題目
+        const { getExamQuestions } = await import("./db");
+        const questions = await getExamQuestions(input.examId);
+        if (!questions || questions.length === 0) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "此考試尚未設定題目，無法批次指派考生。請先新增題目。" 
+          });
         }
         const { batchAssignExam } = await import("./db");
         const result = await batchAssignExam(input);

@@ -937,16 +937,33 @@ export async function createExam(data: {
 }
 
 /**
- * 查詢所有考試
+ * 查詢所有考試（包含題目數量）
  */
 export async function getAllExams() {
   const db = await getDb();
   if (!db) return [];
-  const { exams } = await import("../drizzle/schema");
+  const { exams, examQuestions } = await import("../drizzle/schema");
+  const { sql } = await import("drizzle-orm");
   
+  // 使用左連接查詢考試和題目數量
   const result = await db
-    .select()
+    .select({
+      id: exams.id,
+      title: exams.title,
+      description: exams.description,
+      timeLimit: exams.timeLimit,
+      passingScore: exams.passingScore,
+      totalScore: exams.totalScore,
+      gradingMethod: exams.gradingMethod,
+      status: exams.status,
+      createdBy: exams.createdBy,
+      createdAt: exams.createdAt,
+      updatedAt: exams.updatedAt,
+      questionCount: sql<number>`COALESCE(COUNT(DISTINCT ${examQuestions.questionId}), 0)`,
+    })
     .from(exams)
+    .leftJoin(examQuestions, eq(exams.id, examQuestions.examId))
+    .groupBy(exams.id)
     .orderBy(desc(exams.createdAt));
   
   return result;

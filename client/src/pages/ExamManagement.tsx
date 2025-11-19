@@ -281,6 +281,7 @@ export default function ExamManagement() {
                     <TableHead>狀態</TableHead>
                     <TableHead>時長</TableHead>
                     <TableHead>及格分數</TableHead>
+                    <TableHead>題目數量</TableHead>
                     <TableHead>建立時間</TableHead>
                     <TableHead className="text-right">操作</TableHead>
                   </TableRow>
@@ -304,6 +305,12 @@ export default function ExamManagement() {
                         </TableCell>
                         <TableCell>
                           <span className="text-sm">{exam.passingScore} 分</span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{exam.questionCount || 0} 題</span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
