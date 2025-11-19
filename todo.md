@@ -1227,3 +1227,43 @@
 - [ ] 顯示成功率、平均耗時、使用者滿意度等指標（可選功能）
 - [x] 測試評分系統（系統正常運作）
 
+
+
+## 修復「儲存為題庫檔案」API錯誤（再次出現）
+- [x] 檢查AIAnalysis.tsx中handleGenerateAIName函數的實作
+- [x] 確認資料格式轉換是否正確
+- [x] 檢查後端generateName API的schema定義
+- [x] 發現問題不在generateName，而在batchImport API
+- [x] 修復batchImport呼叫（直接傳送陣列而不是物件）
+- [ ] 測試修復後的功能
+
+
+
+## Bug修復 - 儲存為題庫檔案功能
+- [x] 修復「儲存為題庫檔案」功能的 API 錯誤（expected array, received object）
+- [x] 檢查前端傳送的資料格式是否正確
+- [x] 檢查後端 API 的 schema 驗證邏輯
+- [x] 修復後端 batchImport API，回傳 questionIds
+- [x] 實作 questionBanks.addQuestions API
+- [ ] 深入排查 batchImport API 收到 object 而非 array 的原因
+- [ ] 檢查 tRPC 傳送資料格式
+- [ ] 測試修復後的功能
+
+
+
+## Bug修復 - 儲存為題庫檔案功能
+- [x] 修復「儲存為題庫檔案」功能的 API 錯誤（expected array, received object）
+- [x] 檢查前端傳送的資料格式是否正確
+- [x] 檢查後端 API 的 schema 驗證邏輯
+- [x] 修復後端 batchImport API，回傳 questionIds
+- [x] 實作 questionBanks.addQuestions API
+- [x] 深入排查 batchImport API 收到 object 而非 array 的原因
+- [x] 檢查 tRPC 傳送資料格式
+- [x] 修復 tRPC 配置，將 httpBatchLink 改為 httpLink
+- [ ] 重寫「儲存為題庫檔案」功能（簡化資料流程）
+  - [ ] 分析現有功能流程
+  - [ ] 設計新的資料流程
+  - [ ] 重寫後端 API
+  - [ ] 重寫前端邏輯
+  - [ ] 測試功能
+

@@ -825,6 +825,9 @@ ${file.extractedText || "無法提取文字內容"}`
         source: z.string().optional(), // 新增考題出處
       })))
       .mutation(async ({ input, ctx }) => {
+        console.log('[batchImport API] 收到的 input:', JSON.stringify(input, null, 2));
+        console.log('[batchImport API] input 的類型:', typeof input);
+        console.log('[batchImport API] input 是否為陣列:', Array.isArray(input));
         const { hasPermission } = await import("@shared/permissions");
         if (!hasPermission(ctx.user.role as any, "canEdit")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
@@ -836,6 +839,7 @@ ${file.extractedText || "無法提取文字內容"}`
           success: 0,
           failed: 0,
           errors: [] as string[],
+          questionIds: [] as number[],
         };
 
         for (let i = 0; i < input.length; i++) {
@@ -846,11 +850,15 @@ ${file.extractedText || "無法提取文字內容"}`
               createdBy: ctx.user.id 
             });
             
-            // Set tags if provided
-            if (question.tagIds && question.tagIds.length > 0) {
-              const insertResult = result as any;
-              const questionId = insertResult.insertId || insertResult[0]?.insertId;
-              if (questionId) {
+            // Extract question ID
+            const insertResult = result as any;
+            const questionId = insertResult.insertId || insertResult[0]?.insertId;
+            
+            if (questionId) {
+              results.questionIds.push(questionId);
+              
+              // Set tags if provided
+              if (question.tagIds && question.tagIds.length > 0) {
                 await setQuestionTags(questionId, question.tagIds);
               }
             }
@@ -1469,6 +1477,22 @@ ${file.extractedText || "無法提取文字內容"}`
         const { batchAddQuestionsToBank } = await import("./questionBanks");
         return await batchAddQuestionsToBank(input.bankId, input.questionIds);
       }),
+    // Alias for batchAddQuestions (for backward compatibility)
+    addQuestions: protectedProcedure
+      .input(
+        z.object({
+          bankId: z.number(),
+          questionIds: z.array(z.number()),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchAddQuestionsToBank } = await import("./questionBanks");
+        return await batchAddQuestionsToBank(input.bankId, input.questionIds);
+      }),
     removeQuestion: protectedProcedure
       .input(
         z.object({
@@ -1484,6 +1508,85 @@ ${file.extractedText || "無法提取文字內容"}`
         const { removeQuestionFromBank } = await import("./questionBanks");
         return await removeQuestionFromBank(input.bankId, input.questionId);
       }),
+    createWithQuestions: protectedProcedure
+      .input(
+        z.object({
+          name: z.string(),
+          description: z.string().optional(),
+          questions: z.array(
+            z.object({
+              categoryId: z.number().optional(),
+              type: z.enum(["true_false", "multiple_choice", "short_answer"]),
+              difficulty: z.enum(["easy", "medium", "hard"]),
+              question: z.string(),
+              options: z.string().optional(),
+              correctAnswer: z.string(),
+              explanation: z.string().optional(),
+              tagIds: z.array(z.number()).optional(),
+              source: z.string().optional(),
+            })
+          ),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "資料庫連線失敗" });
+        }
+
+        // 1. 建立題庫檔案
+        const { createQuestionBank } = await import("./questionBanks");
+        const bank = await createQuestionBank({
+          name: input.name,
+          description: input.description,
+          createdBy: ctx.user.id,
+        });
+
+        // 2. 批次建立題目
+        const { questions: questionsTable } = await import("../drizzle/schema");
+        const questionIds: number[] = [];
+        const results = { success: 0, failed: 0, errors: [] as string[] };
+
+        for (const q of input.questions) {
+          try {
+            const result = await db.insert(questionsTable).values({
+              categoryId: q.categoryId,
+              type: q.type,
+              difficulty: q.difficulty,
+              question: q.question,
+              options: q.options,
+              correctAnswer: q.correctAnswer,
+              explanation: q.explanation,
+              source: q.source,
+              createdBy: ctx.user.id,
+            });
+            const questionId = Number(result.insertId);
+            questionIds.push(questionId);
+            results.success++;
+          } catch (error) {
+            results.failed++;
+            results.errors.push(`題目建立失敗: ${error}`);
+          }
+        }
+
+        // 3. 將題目加入題庫
+        if (questionIds.length > 0) {
+          const { batchAddQuestionsToBank } = await import("./questionBanks");
+          await batchAddQuestionsToBank(bank.id, questionIds);
+        }
+
+        return {
+          bankId: bank.id,
+          bankName: bank.name,
+          questionIds,
+          results,
+        };
+      }),
     generateName: protectedProcedure
       .input(
         z.object({
@@ -1498,6 +1601,10 @@ ${file.extractedText || "無法提取文字內容"}`
         })
       )
       .mutation(async ({ input, ctx }) => {
+        console.log('[generateName API] 收到的input:', JSON.stringify(input, null, 2));
+        console.log('[generateName API] input的類型:', typeof input);
+        console.log('[generateName API] input是否為陣列:', Array.isArray(input));
+        console.log('[generateName API] input.questions:', input.questions);
         const { hasPermission } = await import("@shared/permissions");
         if (!hasPermission(ctx.user.role as any, "canEdit")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });

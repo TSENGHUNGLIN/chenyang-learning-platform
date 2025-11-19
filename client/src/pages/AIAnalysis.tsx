@@ -253,8 +253,7 @@ export default function AIAnalysis() {
   
   // 題庫檔案相關mutation
   const generateNameMutation = trpc.questionBanks.generateName.useMutation();
-  const createBankMutation = trpc.questionBanks.create.useMutation();
-  const addQuestionsToBankMutation = trpc.questionBanks.addQuestions.useMutation();
+  const createWithQuestionsMutation = trpc.questionBanks.createWithQuestions.useMutation();
 
   // 匯入題庫功能
   const handleImportToQuestionBank = () => {
@@ -349,7 +348,16 @@ export default function AIAnalysis() {
     
     try {
       setIsGeneratingName(true);
+      console.log('[AI命名] analysisResult:', analysisResult);
       const questionsData = analysisResult.questionsWithAnswers;
+      console.log('[AI命名] questionsData:', questionsData);
+      console.log('[AI命名] questionsData是否為陣列:', Array.isArray(questionsData));
+      
+      if (!Array.isArray(questionsData)) {
+        toast.error("題目資料格式錯誤：不是陣列");
+        console.error('[AI命名] questionsData不是陣列:', typeof questionsData);
+        return;
+      }
       
       // 轉換為後端期望的格式（只保留必要欄位）
       const formattedQuestions = questionsData.map((q: any) => ({
@@ -357,6 +365,9 @@ export default function AIAnalysis() {
         question: q.question,
         correctAnswer: q.correctAnswer || q.answer || '',
       }));
+      
+      console.log('[AI命名] formattedQuestions:', formattedQuestions);
+      console.log('[AI命名] 傳送的資料:', { questions: formattedQuestions });
       
       const result = await generateNameMutation.mutateAsync({ questions: formattedQuestions });
       setBankName(result.name);
@@ -368,7 +379,7 @@ export default function AIAnalysis() {
     }
   };
   
-  // 儲存為題庫檔案
+  // 儲存為題庫檔案（重寫版本 - Plan B）
   const handleSaveAsQuestionBank = async () => {
     if (!analysisResult || analysisType !== 'generate_questions') {
       toast.error("只有「出考題」類型的分析結果可以儲存為題庫檔案");
@@ -383,46 +394,86 @@ export default function AIAnalysis() {
     try {
       setIsSavingBank(true);
       
-      // 1. 先匯入所有題目到題庫
+      // 從 AI 分析結果中提取題目資料
       const questionsData = analysisResult.questionsWithAnswers;
-      const parsedQuestions = questionsData.map((q: any) => {
-        let questionType: 'true_false' | 'multiple_choice' | 'short_answer' = 'short_answer';
+      
+      if (!Array.isArray(questionsData) || questionsData.length === 0) {
+        toast.error("未能從AI分析結果中找到題目資料");
+        return;
+      }
+      
+      // 轉換題目格式為後端期望的格式
+      const questions = questionsData.map((q: any) => {
+        // 轉換題型
+        let type: 'true_false' | 'multiple_choice' | 'short_answer' = 'short_answer';
         if (q.type === '是非題' || q.type === 'true_false') {
-          questionType = 'true_false';
+          type = 'true_false';
         } else if (q.type === '選擇題' || q.type === 'multiple_choice') {
-          questionType = 'multiple_choice';
+          type = 'multiple_choice';
+        }
+        
+        // 轉換選項為JSON字串
+        let options: string | undefined;
+        if (type === 'multiple_choice' && Array.isArray(q.options)) {
+          const optionsObj: Record<string, string> = {};
+          q.options.forEach((opt: string, idx: number) => {
+            const letter = String.fromCharCode(65 + idx); // A, B, C, D
+            optionsObj[letter] = opt;
+          });
+          options = JSON.stringify(optionsObj);
+        }
+        
+        // 推斷難度
+        const difficulty = type === 'true_false' ? 'easy' : type === 'short_answer' ? 'hard' : 'medium';
+        
+        // 使用使用者填寫或選擇的考題出處
+        let questionSource = "";
+        if (sourceMode === "manual") {
+          questionSource = manualSource.trim();
+        } else if (sourceMode === "ai" && aiSourceFile) {
+          // 從檔案列表中找到對應的檔案名稱
+          const sourceFile = files?.find((f: any) => f.id === aiSourceFile);
+          questionSource = sourceFile?.filename || aiSourceFile;
         }
         
         return {
+          type,
+          difficulty,
           question: q.question,
-          type: questionType,
-          options: q.options || [],
+          options,
           correctAnswer: q.correctAnswer || q.answer || '',
           explanation: q.explanation || '',
-          difficulty: 'medium' as const,
-          points: 1,
-          categoryId: null,
-          tags: [],
-          source: manualSource || '由AI分析生成',
+          source: questionSource || '由AI分析生成',
         };
       });
       
-      const importResult = await batchImportMutation.mutateAsync({ questions: parsedQuestions });
-      const questionIds = importResult.questionIds;
+      console.log('[儲存題庫] 轉換後的題目:', questions);
+      console.log('[儲存題庫] 題目數量:', questions.length);
       
-      // 2. 建立題庫檔案
-      const bank = await createBankMutation.mutateAsync({
+      // 呼叫新的 createWithQuestions API（一次完成所有操作）
+      const result = await createWithQuestionsMutation.mutateAsync({
         name: bankName,
-        description: bankDescription || `由AI分析生成，包含 ${questionIds.length} 道題目`,
+        description: bankDescription || `由AI分析生成，包含 ${questions.length} 道題目`,
+        questions,
       });
       
-      // 3. 將題目加入題庫檔案
-      await addQuestionsToBankMutation.mutateAsync({
-        bankId: bank.id,
-        questionIds,
-      });
+      console.log('[儲存題庫] API回應:', result);
       
-      toast.success(`已建立題庫檔案「${bankName}」，包含 ${questionIds.length} 道題目`);
+      // 顯示成功訊息
+      toast.success(
+        `已建立題庫檔案「${result.bankName}」`,
+        {
+          description: `成功匯入 ${result.results.success} 道題目${result.results.failed > 0 ? `，${result.results.failed} 道失敗` : ''}`,
+        }
+      );
+      
+      // 如果有錯誤，顯示錯誤訊息
+      if (result.results.errors.length > 0) {
+        console.error('[儲存題庫] 錯誤:', result.results.errors);
+        toast.warning("部分題目匯入失敗", {
+          description: result.results.errors.slice(0, 3).join('\n'),
+        });
+      }
       
       // 關閉對話框並重置狀態
       setShowSaveBankDialog(false);
@@ -430,7 +481,19 @@ export default function AIAnalysis() {
       setBankDescription("");
       setUseAIName(true);
     } catch (error: any) {
-      toast.error(`儲存失敗：${error.message}`);
+      console.error('[儲存題庫] 錯誤:', error);
+      
+      // 提取詳細錯誤訊息
+      let errorMessage = "儲存失敗，請稍後再試";
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.shape?.message) {
+        errorMessage = error.shape.message;
+      }
+      
+      toast.error(`儲存失敗：${errorMessage}`);
     } finally {
       setIsSavingBank(false);
     }
