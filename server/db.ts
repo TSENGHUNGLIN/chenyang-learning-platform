@@ -6,10 +6,27 @@ import { ENV } from './_core/env';
 let _db: ReturnType<typeof drizzle> | null = null;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
+// Optimized for high concurrency (100+ simultaneous users)
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const mysql = await import('mysql2/promise');
+      
+      // Create connection pool with optimized settings for 100+ concurrent users
+      const pool = mysql.createPool({
+        uri: process.env.DATABASE_URL,
+        connectionLimit: 150,        // Max connections (increased for 100+ users)
+        queueLimit: 50,              // Max queued connection requests
+        waitForConnections: true,    // Wait when no connections available
+        enableKeepAlive: true,       // Keep connections alive
+        keepAliveInitialDelay: 0,    // Send keep-alive immediately
+        maxIdle: 50,                 // Max idle connections
+        idleTimeout: 60000,          // Close idle connections after 60s
+        connectTimeout: 10000,       // Connection timeout: 10s
+      });
+      
+      _db = drizzle(pool);
+      console.log('[Database] Connection pool initialized with 150 max connections');
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
