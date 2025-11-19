@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus, Edit2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,7 @@ export default function Users() {
   const { data: users, isLoading } = trpc.users.list.useQuery();
   const updateRoleMutation = trpc.users.updateRole.useMutation();
   const deleteUserMutation = trpc.users.delete.useMutation();
+  const updateNameMutation = trpc.users.updateName.useMutation();
   const utils = trpc.useUtils();
   
   // 新增使用者對話框狀態
@@ -40,6 +41,11 @@ export default function Users() {
     email: "",
     role: "examinee" as "admin" | "editor" | "viewer" | "examinee"
   });
+  
+  // 編輯名稱對話框狀態
+  const [isEditNameDialogOpen, setIsEditNameDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editName, setEditName] = useState("");
 
   const handleRoleChange = async (openId: string, role: "admin" | "editor" | "viewer" | "examinee") => {
     try {
@@ -61,6 +67,32 @@ export default function Users() {
       utils.users.list.invalidate();
     } catch (error) {
       toast.error("刪除失敗");
+    }
+  };
+  
+  const handleEditName = (user: any) => {
+    setEditingUser(user);
+    setEditName(user.name || "");
+    setIsEditNameDialogOpen(true);
+  };
+  
+  const handleSaveName = async () => {
+    if (!editingUser || !editName.trim()) {
+      toast.error("請輸入名稱");
+      return;
+    }
+    try {
+      await updateNameMutation.mutateAsync({
+        openId: editingUser.openId,
+        name: editName.trim()
+      });
+      toast.success("名稱已更新");
+      utils.users.list.invalidate();
+      setIsEditNameDialogOpen(false);
+      setEditingUser(null);
+      setEditName("");
+    } catch (error) {
+      toast.error("更新失敗");
     }
   };
 
@@ -265,14 +297,23 @@ export default function Users() {
                           : "-"}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(user.openId)}
-                          disabled={user.openId === currentUser?.openId}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditName(user)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(user.openId)}
+                            disabled={user.openId === currentUser?.openId}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -282,6 +323,43 @@ export default function Users() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* 編輯名稱對話框 */}
+      <Dialog open={isEditNameDialogOpen} onOpenChange={setIsEditNameDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>編輯使用者名稱</DialogTitle>
+            <DialogDescription>
+              更新使用者的顯示名稱，此名稱將在系統中顯示
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">名稱</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="請輸入名稱"
+              />
+            </div>
+            {editingUser && (
+              <div className="text-sm text-muted-foreground">
+                <p>電子郵件：{editingUser.email || "-"}</p>
+                <p>登入方式：{editingUser.loginMethod || "-"}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditNameDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleSaveName}>
+              儲存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

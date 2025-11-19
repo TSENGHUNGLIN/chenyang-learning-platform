@@ -1997,3 +1997,37 @@ export async function getAllExamAssignments(userId: number, userRole: string) {
   return [];
 }
 
+
+
+export async function updateUserName(openId: string, name: string) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+  
+  await db.update(users)
+    .set({ name })
+    .where(eq(users.openId, openId));
+}
+
+
+
+export async function batchCreateEmployees(employeesData: Array<{ name: string; departmentId: number; email?: string | null }>) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+  
+  const results = [];
+  for (const empData of employeesData) {
+    const result = await db.insert(employees).values({
+      name: empData.name,
+      departmentId: empData.departmentId,
+      email: empData.email || null,
+    });
+    results.push(result);
+  }
+  
+  return { success: true, count: results.length };
+}
+

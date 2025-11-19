@@ -130,6 +130,22 @@ export const appRouter = router({
         const { getAssessmentRecordsByEmployee } = await import("./db");
         return await getAssessmentRecordsByEmployee(employeeId);
       }),
+    batchImport: protectedProcedure
+      .input(z.object({
+        employees: z.array(z.object({
+          name: z.string(),
+          departmentId: z.number(),
+          email: z.string().nullable().optional(),
+        }))
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchCreateEmployees } = await import("./db");
+        return await batchCreateEmployees(input.employees);
+      }),
   }),
 
   // File router
@@ -747,6 +763,17 @@ ${file.extractedText || "無法提取文字內容"}`
         }
         const { deleteUser } = await import("./db");
         await deleteUser(input);
+        return { success: true };
+      }),
+    updateName: protectedProcedure
+      .input(z.object({ openId: z.string(), name: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateUserName } = await import("./db");
+        await updateUserName(input.openId, input.name);
         return { success: true };
       }),
     // 編輯者權限管理 API

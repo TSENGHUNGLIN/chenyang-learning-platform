@@ -26,8 +26,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users, BarChart3 } from "lucide-react";
 import CreateExamWizard from "@/components/CreateExamWizard";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ExamManagement() {
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [showCreateWizard, setShowCreateWizard] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -48,8 +50,18 @@ export default function ExamManagement() {
   // 查詢考試列表
   const { data: exams, isLoading, refetch } = trpc.exams.list.useQuery();
   
-  // 查詢所有使用者（用於指派考生）
-  const { data: users } = trpc.users.list.useQuery();
+  // 查詢可訪問的使用者（編輯者只能看到負責的考生）
+  const { data: accessibleUsersData } = trpc.users.accessibleUsers.useQuery(
+    undefined,
+    { enabled: user?.role === "editor" }
+  );
+  const { data: allUsersData } = trpc.users.list.useQuery(
+    undefined,
+    { enabled: user?.role === "admin" }
+  );
+  
+  // 根據角色選擇使用者列表
+  const users = user?.role === "editor" ? accessibleUsersData : allUsersData;
   
   // 建立考試
   const createExamMutation = trpc.exams.create.useMutation({
