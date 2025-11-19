@@ -1286,10 +1286,13 @@ export async function getExamForTaking(examId: number, userId: number) {
     .where(eq(examQuestions.examId, examId))
     .orderBy(examQuestions.questionOrder);
   
+  // 過濾掉 null 的題目（避免 leftJoin 找不到對應的題目）
+  const validQuestions = examQuestionsData.filter(q => q.question !== null);
+  
   return {
     exam: exam[0],
     assignment: assignment[0],
-    questions: examQuestionsData,
+    questions: validQuestions,
   };
 }
 
