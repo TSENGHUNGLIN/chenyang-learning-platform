@@ -47,7 +47,7 @@ export default function QuestionSelector({
   const { data: allQuestions, isLoading } = trpc.questions.list.useQuery();
   
   // 查詢分類
-  const { data: categories } = trpc.categories.list.useQuery();
+  const { data: categories } = trpc.questionCategories.list.useQuery();
 
   // 批次加入題目
   const addQuestionsMutation = trpc.exams.batchAddExamQuestions.useMutation({
