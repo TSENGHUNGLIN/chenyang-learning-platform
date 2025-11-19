@@ -397,6 +397,8 @@ export async function getAllQuestions() {
   const { questions, users } = await import("../drizzle/schema");
   const { sql } = await import("drizzle-orm");
   
+  const { isNull } = await import("drizzle-orm");
+  
   const result = await db
     .select({
       id: questions.id,
@@ -411,9 +413,11 @@ export async function getAllQuestions() {
       createdAt: questions.createdAt,
       updatedAt: questions.updatedAt,
       creatorName: users.name,
+      source: questions.source,
     })
     .from(questions)
     .leftJoin(users, eq(questions.createdBy, users.id))
+    .where(isNull(questions.deletedAt)) // 過濾已刪除的題目
     .orderBy(questions.createdAt);
   
   return result;
@@ -457,6 +461,105 @@ export async function updateQuestion(id: number, data: any) {
   return { success: true };
 }
 
+// 軟刪除題目
+export async function softDeleteQuestion(id: number, deletedBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questions } = await import("../drizzle/schema");
+  await db.update(questions)
+    .set({ 
+      deletedAt: new Date(),
+      deletedBy: deletedBy 
+    })
+    .where(eq(questions.id, id));
+  return { success: true };
+}
+
+// 查詢已刪除的題目（回收站）
+export async function getDeletedQuestions() {
+  const db = await getDb();
+  if (!db) return [];
+  const { questions, users } = await import("../drizzle/schema");
+  const { isNotNull } = await import("drizzle-orm");
+  
+  const result = await db
+    .select({
+      id: questions.id,
+      categoryId: questions.categoryId,
+      type: questions.type,
+      difficulty: questions.difficulty,
+      question: questions.question,
+      options: questions.options,
+      correctAnswer: questions.correctAnswer,
+      explanation: questions.explanation,
+      source: questions.source,
+      createdBy: questions.createdBy,
+      createdAt: questions.createdAt,
+      updatedAt: questions.updatedAt,
+      deletedAt: questions.deletedAt,
+      deletedBy: questions.deletedBy,
+      creatorName: users.name,
+      deleterName: sql<string>`(SELECT name FROM users WHERE id = ${questions.deletedBy})`.as('deleterName'),
+    })
+    .from(questions)
+    .leftJoin(users, eq(questions.createdBy, users.id))
+    .where(isNotNull(questions.deletedAt))
+    .orderBy(questions.deletedAt);
+  
+  return result;
+}
+
+// 還原題目
+export async function restoreQuestion(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questions } = await import("../drizzle/schema");
+  await db.update(questions)
+    .set({ 
+      deletedAt: null,
+      deletedBy: null 
+    })
+    .where(eq(questions.id, id));
+  return { success: true };
+}
+
+// 永久刪除題目（真正從資料庫移除）
+export async function permanentDeleteQuestion(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questions } = await import("../drizzle/schema");
+  await db.delete(questions).where(eq(questions.id, id));
+  return { success: true };
+}
+
+// 清理30天前刪除的題目
+export async function cleanupOldDeletedQuestions() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { questions } = await import("../drizzle/schema");
+  const { isNotNull, lt } = await import("drizzle-orm");
+  const { sql } = await import("drizzle-orm");
+  
+  // 計算30天前的時間
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  
+  // 查詢符合條件的題目數量
+  const toDelete = await db
+    .select({ id: questions.id })
+    .from(questions)
+    .where(sql`${questions.deletedAt} IS NOT NULL AND ${questions.deletedAt} < ${thirtyDaysAgo}`);
+  
+  // 刪除這些題目
+  if (toDelete.length > 0) {
+    await db.delete(questions)
+      .where(sql`${questions.deletedAt} IS NOT NULL AND ${questions.deletedAt} < ${thirtyDaysAgo}`);
+  }
+  
+  return toDelete.length;
+}
+
+// 保留舊的 deleteQuestion 函數以便相容性（但建議使用 softDeleteQuestion）
 export async function deleteQuestion(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

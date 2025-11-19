@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -677,6 +677,10 @@ export default function QuestionBank() {
           <Button variant="outline" onClick={() => setShowImportDialog(true)}>
             <Upload className="h-4 w-4 mr-2" />
             批次匯入
+          </Button>
+          <Button variant="outline" onClick={() => window.location.href = '/recycle-bin'}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            回收站
           </Button>
           <Button variant="outline" onClick={() => window.location.href = '/'}>
             <Home className="h-4 w-4 mr-2" />

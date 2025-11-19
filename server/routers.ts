@@ -808,9 +808,76 @@ ${file.extractedText || "無法提取文字內容"}`
         if (!hasPermission(ctx.user.role as any, "canEdit")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
-        const { deleteQuestion } = await import("./db");
-        await deleteQuestion(input);
+        const { softDeleteQuestion } = await import("./db");
+        await softDeleteQuestion(input, ctx.user.id);
         return { success: true };
+      }),
+    // 回收站相關 API
+    listDeleted: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getDeletedQuestions } = await import("./db");
+      return await getDeletedQuestions();
+    }),
+    restore: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { restoreQuestion } = await import("./db");
+        await restoreQuestion(input);
+        return { success: true };
+      }),
+    permanentDelete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { permanentDeleteQuestion } = await import("./db");
+        await permanentDeleteQuestion(input);
+        return { success: true };
+      }),
+    batchRestore: protectedProcedure
+      .input(z.array(z.number()))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { restoreQuestion } = await import("./db");
+        for (const id of input) {
+          await restoreQuestion(id);
+        }
+        return { success: true };
+      }),
+    batchPermanentDelete: protectedProcedure
+      .input(z.array(z.number()))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { permanentDeleteQuestion } = await import("./db");
+        for (const id of input) {
+          await permanentDeleteQuestion(id);
+        }
+        return { success: true };
+      }),
+    cleanupOldDeleted: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "只有管理員可以執行此操作" });
+        }
+        const { cleanupOldDeletedQuestions } = await import("./db");
+        const count = await cleanupOldDeletedQuestions();
+        return { success: true, count };
       }),
     batchImport: protectedProcedure
       .input(z.array(z.object({

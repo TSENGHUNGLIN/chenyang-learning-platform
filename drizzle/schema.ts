@@ -159,11 +159,13 @@ export const questions = mysqlTable("questions", {
   options: text("options"), // JSON格式儲存選項（僅選擇題使用）
   correctAnswer: text("correctAnswer").notNull(),
   explanation: text("explanation"),
-  // tags 欄位已移除，改用 questionTags 關聯表
+  // tags 欄位已移除，改用 questionTags 關聯
   source: varchar("source", { length: 255 }), // 考題出處（檔案名稱或手動輸入）
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  deletedAt: timestamp("deletedAt"), // 軟刪除時間（null 表示未刪除）
+  deletedBy: int("deletedBy"), // 刪除者 ID
 });
 
 export type Question = typeof questions.$inferSelect;

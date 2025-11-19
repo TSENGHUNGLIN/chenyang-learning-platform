@@ -24,6 +24,7 @@ import ExamStatistics from "./pages/ExamStatistics";
 import ManualGrading from "./pages/ManualGrading";
 import ExamDetail from "./pages/ExamDetail";
 import ExamTemplates from "./pages/ExamTemplates";
+import QuestionRecycleBin from "./pages/QuestionRecycleBin";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -38,6 +39,7 @@ function Router() {
       <Route path={"/calendar"} component={CalendarView} />
       <Route path={"/ai-analysis"} component={AIAnalysis} />
       <Route path={"/question-bank"} component={QuestionBank} />
+      <Route path={"/recycle-bin"} component={QuestionRecycleBin} />
       <Route path={"/categories"} component={CategoryManagement} />
       <Route path={"/tags"} component={TagManagement} />
       <Route path={"/analysis-history"} component={AnalysisHistory} />
