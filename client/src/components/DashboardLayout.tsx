@@ -38,7 +38,7 @@ const staffMenuItems: Array<{
   editorOnly?: boolean;
 }> = [
   { icon: LayoutDashboard, label: "首頁", path: "/" },
-  { icon: Calendar, label: "日曆檢視", path: "/calendar" },
+  { icon: Calendar, label: "評核日曆", path: "/calendar" },
   { icon: Sparkles, label: "AI 分析出題", path: "/ai-analysis" },
   { icon: FileText, label: "檔案管理", path: "/files" },
   { icon: BookOpen, label: "題庫管理", path: "/question-bank", editorOnly: true },
