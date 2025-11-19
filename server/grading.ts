@@ -65,6 +65,28 @@ export async function gradeQuestion(
 }
 
 /**
+ * 標準化是非題答案（支援多種格式）
+ */
+function normalizeTrueFalseAnswer(answer: string): string {
+  const normalized = answer.trim().toLowerCase();
+  
+  // 「是」的等價答案
+  const trueAnswers = ['是', 'true', '正確', '對', 'yes', 'y', 't', '✓', '✔'];
+  // 「非」的等價答案
+  const falseAnswers = ['非', 'false', '錯誤', '不對', '否', 'no', 'n', 'f', '✗', '✘'];
+  
+  if (trueAnswers.includes(normalized)) {
+    return 'true';
+  }
+  if (falseAnswers.includes(normalized)) {
+    return 'false';
+  }
+  
+  // 如果不在以上列表中，返回原始值
+  return normalized;
+}
+
+/**
  * 評分是非題或選擇題（客觀題）
  */
 function gradeObjectiveQuestion(
@@ -73,8 +95,19 @@ function gradeObjectiveQuestion(
   maxScore: number
 ): GradingResult {
   // 標準化答案（去除空白、轉小寫）
-  const normalizedStudentAnswer = studentAnswer.trim().toLowerCase();
-  const normalizedCorrectAnswer = correctAnswer.trim().toLowerCase();
+  let normalizedStudentAnswer = studentAnswer.trim().toLowerCase();
+  let normalizedCorrectAnswer = correctAnswer.trim().toLowerCase();
+  
+  // 嘗試標準化是非題答案
+  const standardizedStudent = normalizeTrueFalseAnswer(studentAnswer);
+  const standardizedCorrect = normalizeTrueFalseAnswer(correctAnswer);
+  
+  // 如果兩邊都能標準化為 true/false，則使用標準化後的值比對
+  if ((standardizedStudent === 'true' || standardizedStudent === 'false') &&
+      (standardizedCorrect === 'true' || standardizedCorrect === 'false')) {
+    normalizedStudentAnswer = standardizedStudent;
+    normalizedCorrectAnswer = standardizedCorrect;
+  }
   
   const isCorrect = normalizedStudentAnswer === normalizedCorrectAnswer;
   

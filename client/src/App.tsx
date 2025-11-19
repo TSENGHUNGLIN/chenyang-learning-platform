@@ -51,6 +51,7 @@ function Router() {
       <Route path={"/exam/:assignmentId/result"} component={ExamResult} />
       <Route path={"/exam/:id/statistics"} component={ExamStatistics} />
       <Route path={"/exam/:assignmentId/grade"} component={ManualGrading} />
+      <Route path={"/manage"} component={Manage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
