@@ -33,6 +33,8 @@ export default function AIAnalysis() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStartTime, setAnalysisStartTime] = useState<number | null>(null);
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
   
@@ -131,6 +133,14 @@ export default function AIAnalysis() {
     }
 
     setIsAnalyzing(true);
+    setAnalysisStartTime(Date.now());
+    setShowTimeoutWarning(false);
+    
+    // 設定30秒後顯示提示
+    const timeoutWarning = setTimeout(() => {
+      setShowTimeoutWarning(true);
+    }, 30000);
+    
     try {
       // 準備考題出處
       let questionSource = "";
@@ -158,11 +168,30 @@ export default function AIAnalysis() {
       }
       
       toast.success("AI分析完成");
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI分析錯誤：", error);
-      toast.error("分析失敗，請稍後再試");
+      
+      // 提取詳細錯誤訊息
+      let errorMessage = "分析失敗，請稍後再試";
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.shape?.message) {
+        errorMessage = error.shape.message;
+      }
+      
+      // 顯示更詳細的錯誤訊息
+      toast.error(errorMessage, {
+        duration: 5000,
+        description: "如果問題持續，請嘗試：1) 減少選擇的檔案數量 2) 簡化提示詞 3) 稍後再試",
+      });
     } finally {
+      clearTimeout(timeoutWarning);
       setIsAnalyzing(false);
+      setAnalysisStartTime(null);
+      setShowTimeoutWarning(false);
     }
   };
 
@@ -717,6 +746,23 @@ export default function AIAnalysis() {
               </>
             )}
           </Button>
+          
+          {/* Timeout警告訊息 */}
+          {showTimeoutWarning && (
+            <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Loader2 className="h-5 w-5 text-amber-600 animate-spin mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    AI分析需要較長時間
+                  </p>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                    系統正在處理您的請求，請耐心等候。如果超過2分鐘仍未完成，建議重新嘗試並減少檔案數量或簡化提示詞。
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

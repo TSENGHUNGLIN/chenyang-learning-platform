@@ -372,6 +372,7 @@ ${file.extractedText || "無法提取文字內容"}`
         }
         const { getFileById } = await import("./db");
         const { invokeLLM } = await import("./_core/llm");
+        const { invokeLLMWithRetry, parseLLMResponse } = await import("./aiAnalysisHelper");
         
         // 獲取所有選擇的檔案
         const files = await Promise.all(
@@ -440,7 +441,7 @@ ${file.extractedText || "無法提取文字內容"}`
         // 根據分析類型決定返回格式
         if (input.analysisType === "generate_questions" || input.analysisType === "analyze_questions") {
           // 使用結構化輸出（JSON Schema）
-          const response = await invokeLLM({
+          const response = await invokeLLMWithRetry(invokeLLM, {
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: userPrompt },
@@ -542,9 +543,7 @@ ${file.extractedText || "無法提取文字內容"}`
             },
           });
           
-          const content = response.choices[0].message.content;
-          const resultText = typeof content === 'string' ? content : JSON.stringify(content);
-          const result = JSON.parse(resultText || "{}");
+          const result = parseLLMResponse(response);
           
           // 儲存考核記錄（如果有employeeId）
           if (input.fileIds && input.fileIds.length > 0) {
@@ -583,7 +582,7 @@ ${file.extractedText || "無法提取文字內容"}`
           return { result };
         } else {
           // 其他類型返回純文字
-          const response = await invokeLLM({
+          const response = await invokeLLMWithRetry(invokeLLM, {
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: userPrompt },
