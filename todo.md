@@ -1151,6 +1151,18 @@
 - [x] 支援點擊標籤徽章快速篩選
 - [x] 測試標籤功能（系統正常運作）
 
+## 修復「儲存為題庫檔案」API錯誤
+- [x] 診斷錯誤原因（expected array, received object）
+- [x] 檢查前端傳送的資料格式
+- [x] 檢查後端API的schema定義
+- [x] 修復資料格式不匹配問題（將questionsData轉換為後端期望的格式）
+- [x] 測試修復後的功能（系統正常運作）
+
+## 移除PDF匯出功能
+- [x] 從AIAnalysis頁面移除「匯出PDF」按鈕
+- [x] 保留「匯出Word」功能
+- [x] 測試修改後的介面（功能正常）
+
 ## 題庫檔案版本控制
 - [ ] 建立questionBankVersions資料表
 - [ ] 推送資料庫schema變更

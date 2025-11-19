@@ -269,7 +269,15 @@ export default function AIAnalysis() {
     try {
       setIsGeneratingName(true);
       const questionsData = analysisResult.questionsWithAnswers;
-      const result = await generateNameMutation.mutateAsync({ questions: questionsData });
+      
+      // 轉換為後端期望的格式（只保留必要欄位）
+      const formattedQuestions = questionsData.map((q: any) => ({
+        type: q.type,
+        question: q.question,
+        correctAnswer: q.correctAnswer || q.answer || '',
+      }));
+      
+      const result = await generateNameMutation.mutateAsync({ questions: formattedQuestions });
       setBankName(result.name);
       toast.success("已生成AI建議名稱");
     } catch (error: any) {
@@ -744,14 +752,6 @@ export default function AIAnalysis() {
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
                   儲存為題庫檔案
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleExport('pdf')}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  匯出 PDF
                 </Button>
                 <Button
                   variant="outline"
