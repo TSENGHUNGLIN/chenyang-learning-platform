@@ -41,6 +41,7 @@ export default function QuestionSelector({
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedTag, setSelectedTag] = useState<string>("all");
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
 
   // 查詢所有題目
@@ -48,6 +49,9 @@ export default function QuestionSelector({
   
   // 查詢分類
   const { data: categories } = trpc.questionCategories.list.useQuery();
+  
+  // 查詢標籤
+  const { data: tags } = trpc.tags.list.useQuery();
 
   // 批次加入題目
   const addQuestionsMutation = trpc.exams.batchAddExamQuestions.useMutation({
@@ -87,9 +91,18 @@ export default function QuestionSelector({
         return false;
       }
 
+      // 標籤過濾
+      if (selectedTag !== "all") {
+        const questionTags = q.tags || [];
+        const hasTag = questionTags.some((tag: any) => tag.id.toString() === selectedTag);
+        if (!hasTag) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [allQuestions, searchQuery, selectedType, selectedDifficulty, selectedCategory]);
+  }, [allQuestions, searchQuery, selectedType, selectedDifficulty, selectedCategory, selectedTag]);
 
   const handleToggleQuestion = (questionId: number) => {
     setSelectedQuestions((prev) =>
@@ -151,7 +164,7 @@ export default function QuestionSelector({
 
         <div className="space-y-4">
           {/* 篩選區域 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label htmlFor="search">搜尋題目</Label>
               <div className="relative">
@@ -207,6 +220,23 @@ export default function QuestionSelector({
                   {categories?.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id.toString()}>
                       {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="tag">標籤</Label>
+              <Select value={selectedTag} onValueChange={setSelectedTag}>
+                <SelectTrigger id="tag">
+                  <SelectValue placeholder="全部標籤" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部標籤</SelectItem>
+                  {tags?.map((tag) => (
+                    <SelectItem key={tag.id} value={tag.id.toString()}>
+                      {tag.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
