@@ -369,3 +369,51 @@ export const examScores = mysqlTable("examScores", {
 export type ExamScore = typeof examScores.$inferSelect;
 export type InsertExamScore = typeof examScores.$inferInsert;
 
+
+/**
+ * 編輯者-部門訪問權限表格
+ * 用於控制編輯者可以訪問哪些部門的考生資料
+ */
+export const editorDepartmentAccess = mysqlTable("editorDepartmentAccess", {
+  id: int("id").autoincrement().primaryKey(),
+  editorId: int("editorId").notNull(), // 編輯者的使用者ID
+  departmentId: int("departmentId").notNull(), // 可訪問的部門ID
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdBy: int("createdBy").notNull(), // 設定權限的管理員ID
+});
+
+export type EditorDepartmentAccess = typeof editorDepartmentAccess.$inferSelect;
+export type InsertEditorDepartmentAccess = typeof editorDepartmentAccess.$inferInsert;
+
+/**
+ * 編輯者-考生訪問權限表格
+ * 用於控制編輯者可以訪問哪些特定考生的資料
+ */
+export const editorUserAccess = mysqlTable("editorUserAccess", {
+  id: int("id").autoincrement().primaryKey(),
+  editorId: int("editorId").notNull(), // 編輯者的使用者ID
+  userId: int("userId").notNull(), // 可訪問的考生ID
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdBy: int("createdBy").notNull(), // 設定權限的管理員ID
+});
+
+export type EditorUserAccess = typeof editorUserAccess.$inferSelect;
+export type InsertEditorUserAccess = typeof editorUserAccess.$inferInsert;
+
+
+
+/**
+ * 考試提醒記錄表格
+ * 用於追蹤已發送的提醒，避免重複提醒
+ */
+export const examReminders = mysqlTable("examReminders", {
+  id: int("id").autoincrement().primaryKey(),
+  assignmentId: int("assignmentId").notNull(), // 關聯到examAssignments
+  reminderType: mysqlEnum("reminderType", ["3days", "1day", "today"]).notNull(), // 提醒類型
+  sentAt: timestamp("sentAt").defaultNow().notNull(), // 發送時間
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ExamReminder = typeof examReminders.$inferSelect;
+export type InsertExamReminder = typeof examReminders.$inferInsert;
+

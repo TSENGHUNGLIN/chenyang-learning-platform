@@ -8,6 +8,18 @@ import { TRPCError } from "@trpc/server";
 export const appRouter = router({
   system: systemRouter,
 
+  // 考試提醒系統
+  examReminders: router({
+    trigger: protectedProcedure.mutation(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { triggerReminderCheck } = await import("./examReminderTask");
+      return await triggerReminderCheck();
+    }),
+  }),
+
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -737,6 +749,47 @@ ${file.extractedText || "無法提取文字內容"}`
         await deleteUser(input);
         return { success: true };
       }),
+    // 編輯者權限管理 API
+    setDepartmentAccess: protectedProcedure
+      .input(z.object({ editorId: z.number(), departmentIds: z.array(z.number()) }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { setEditorDepartmentAccess } = await import("./db");
+        return await setEditorDepartmentAccess(input.editorId, input.departmentIds, ctx.user.id);
+      }),
+    setUserAccess: protectedProcedure
+      .input(z.object({ editorId: z.number(), userIds: z.array(z.number()) }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { setEditorUserAccess } = await import("./db");
+        return await setEditorUserAccess(input.editorId, input.userIds, ctx.user.id);
+      }),
+    getDepartmentAccess: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getEditorDepartmentAccess } = await import("./db");
+        return await getEditorDepartmentAccess(input);
+      }),
+    getUserAccess: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getEditorUserAccess } = await import("./db");
+        return await getEditorUserAccess(input);
+      }),
   }),
 
   // Question bank management router
@@ -1414,6 +1467,15 @@ ${file.extractedText || "無法提取文字內容"}`
     myAssignments: protectedProcedure.query(async ({ ctx }) => {
       const { getUserExamAssignments } = await import("./db");
       return await getUserExamAssignments(ctx.user.id);
+    }),
+    // 全域檢視（管理者/編輯者專用）
+    allAssignments: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getAllExamAssignments } = await import("./db");
+      return await getAllExamAssignments(ctx.user.id, ctx.user.role as string);
     }),
     getAssignment: protectedProcedure
       .input(z.number())

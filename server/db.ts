@@ -1789,3 +1789,211 @@ export async function getExamTemplateQuestions(templateId: number) {
   return result;
 }
 
+
+
+/**
+ * 編輯者權限控制相關函數
+ */
+
+/**
+ * 設定編輯者可訪問的部門
+ */
+export async function setEditorDepartmentAccess(editorId: number, departmentIds: number[], createdBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { editorDepartmentAccess } = await import("../drizzle/schema");
+  
+  // 先刪除該編輯者的所有部門權限
+  await db.delete(editorDepartmentAccess).where(eq(editorDepartmentAccess.editorId, editorId));
+  
+  // 新增新的部門權限
+  if (departmentIds.length > 0) {
+    const accessData = departmentIds.map(deptId => ({
+      editorId,
+      departmentId: deptId,
+      createdBy,
+    }));
+    await db.insert(editorDepartmentAccess).values(accessData);
+  }
+  
+  return { success: true };
+}
+
+/**
+ * 設定編輯者可訪問的考生
+ */
+export async function setEditorUserAccess(editorId: number, userIds: number[], createdBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const { editorUserAccess } = await import("../drizzle/schema");
+  
+  // 先刪除該編輯者的所有考生權限
+  await db.delete(editorUserAccess).where(eq(editorUserAccess.editorId, editorId));
+  
+  // 新增新的考生權限
+  if (userIds.length > 0) {
+    const accessData = userIds.map(userId => ({
+      editorId,
+      userId,
+      createdBy,
+    }));
+    await db.insert(editorUserAccess).values(accessData);
+  }
+  
+  return { success: true };
+}
+
+/**
+ * 查詢編輯者可訪問的部門列表
+ */
+export async function getEditorDepartmentAccess(editorId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { editorDepartmentAccess, departments } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select({
+      accessId: editorDepartmentAccess.id,
+      departmentId: editorDepartmentAccess.departmentId,
+      departmentName: departments.name,
+    })
+    .from(editorDepartmentAccess)
+    .leftJoin(departments, eq(editorDepartmentAccess.departmentId, departments.id))
+    .where(eq(editorDepartmentAccess.editorId, editorId));
+  
+  return result;
+}
+
+/**
+ * 查詢編輯者可訪問的考生列表
+ */
+export async function getEditorUserAccess(editorId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { editorUserAccess, users } = await import("../drizzle/schema");
+  
+  const result = await db
+    .select({
+      accessId: editorUserAccess.id,
+      userId: editorUserAccess.userId,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(editorUserAccess)
+    .leftJoin(users, eq(editorUserAccess.userId, users.id))
+    .where(eq(editorUserAccess.editorId, editorId));
+  
+  return result;
+}
+
+/**
+ * 查詢編輯者可訪問的所有考生ID列表（部門 + 特定考生）
+ */
+export async function getAccessibleUserIds(editorId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const { editorDepartmentAccess, editorUserAccess, employees, users } = await import("../drizzle/schema");
+  const { inArray } = await import("drizzle-orm");
+  
+  // 1. 查詢編輯者可訪問的部門ID
+  const deptAccess = await db
+    .select({ departmentId: editorDepartmentAccess.departmentId })
+    .from(editorDepartmentAccess)
+    .where(eq(editorDepartmentAccess.editorId, editorId));
+  
+  const departmentIds = deptAccess.map(d => d.departmentId);
+  
+  // 2. 查詢這些部門的所有人員
+  let userIdsFromDepts: number[] = [];
+  if (departmentIds.length > 0) {
+    const employeesInDepts = await db
+      .select({ id: employees.id, name: employees.name })
+      .from(employees)
+      .where(inArray(employees.departmentId, departmentIds));
+    
+    // 3. 根據人員姓名查詢對應的使用者ID（假設姓名匹配）
+    const employeeNames = employeesInDepts.map(e => e.name);
+    if (employeeNames.length > 0) {
+      const usersInDepts = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(inArray(users.name, employeeNames));
+      
+      userIdsFromDepts = usersInDepts.map(u => u.id);
+    }
+  }
+  
+  // 4. 查詢編輯者可訪問的特定考生ID
+  const userAccess = await db
+    .select({ userId: editorUserAccess.userId })
+    .from(editorUserAccess)
+    .where(eq(editorUserAccess.editorId, editorId));
+  
+  const specificUserIds = userAccess.map(u => u.userId);
+  
+  // 5. 合併並去重
+  const allUserIds = Array.from(new Set([...userIdsFromDepts, ...specificUserIds]));
+  
+  return allUserIds;
+}
+
+/**
+ * 檢查編輯者是否有權訪問特定考生
+ */
+export async function canEditorAccessUser(editorId: number, userId: number): Promise<boolean> {
+  const accessibleUserIds = await getAccessibleUserIds(editorId);
+  return accessibleUserIds.includes(userId);
+}
+
+/**
+ * 查詢所有考試指派（管理者/編輯者專用，含權限過濾）
+ */
+export async function getAllExamAssignments(userId: number, userRole: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examAssignments, exams, users } = await import("../drizzle/schema");
+  const { inArray } = await import("drizzle-orm");
+  
+  // 管理員可以看到所有考試指派
+  if (userRole === 'admin') {
+    const result = await db
+      .select({
+        assignment: examAssignments,
+        exam: exams,
+        user: users,
+      })
+      .from(examAssignments)
+      .leftJoin(exams, eq(examAssignments.examId, exams.id))
+      .leftJoin(users, eq(examAssignments.userId, users.id))
+      .orderBy(desc(examAssignments.assignedAt));
+    
+    return result;
+  }
+  
+  // 編輯者只能看到自己有權訪問的考生的考試指派
+  if (userRole === 'editor') {
+    const accessibleUserIds = await getAccessibleUserIds(userId);
+    
+    if (accessibleUserIds.length === 0) {
+      return [];
+    }
+    
+    const result = await db
+      .select({
+        assignment: examAssignments,
+        exam: exams,
+        user: users,
+      })
+      .from(examAssignments)
+      .leftJoin(exams, eq(examAssignments.examId, exams.id))
+      .leftJoin(users, eq(examAssignments.userId, users.id))
+      .where(inArray(examAssignments.userId, accessibleUserIds))
+      .orderBy(desc(examAssignments.assignedAt));
+    
+    return result;
+  }
+  
+  // 其他角色無權訪問
+  return [];
+}
+
