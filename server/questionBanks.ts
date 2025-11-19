@@ -10,7 +10,13 @@ export async function createQuestionBank(data: InsertQuestionBank) {
   if (!db) throw new Error("Database not available");
 
   const result = await db.insert(questionBanks).values(data);
-  return { id: Number(result.insertId), ...data };
+  const bankId = Number(result.insertId);
+  
+  if (isNaN(bankId) || bankId <= 0) {
+    throw new Error(`Failed to create question bank: invalid insertId ${result.insertId}`);
+  }
+  
+  return { id: bankId, name: data.name, description: data.description, createdBy: data.createdBy };
 }
 
 /**
