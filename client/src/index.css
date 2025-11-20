@@ -1,13 +1,26 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* 引入Inter字體（最接近SF Pro的開源字體） */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* macOS風格圓角 */
+  --radius-sm: 0.375rem;  /* 6px */
+  --radius-md: 0.5rem;    /* 8px */
+  --radius-lg: 0.75rem;   /* 12px */
+  --radius-xl: 1rem;      /* 16px */
+  
+  /* macOS風格陰影 */
+  --shadow-macos-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-macos: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-macos-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-macos-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-macos-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  /* 顏色映射 */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -42,84 +55,122 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* macOS淺色模式配色 */
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.235 0.015 65);
+  /* 蘋果藍作為主色 */
+  --primary: oklch(0.569 0.194 248.055);  /* #007AFF 蘋果藍 */
+  --primary-foreground: oklch(1 0 0);     /* 白色 */
+  
+  /* 側邊欄配色 */
+  --sidebar-primary: oklch(0.569 0.194 248.055);  /* 蘋果藍 */
+  --sidebar-primary-foreground: oklch(1 0 0);
+  
+  /* 圖表配色 */
+  --chart-1: oklch(0.7 0.15 248);
+  --chart-2: oklch(0.6 0.18 248);
+  --chart-3: oklch(0.569 0.194 248.055);
+  --chart-4: oklch(0.5 0.2 248);
+  --chart-5: oklch(0.4 0.22 248);
+  
+  /* 圓角大小 */
+  --radius: 0.75rem;  /* 12px - macOS標準圓角 */
+  
+  /* 背景和前景 */
+  --background: oklch(0.98 0 0);          /* #FAFAFA 淺灰白色 */
+  --foreground: oklch(0.25 0 0);          /* #262626 深灰色 */
+  
+  /* 卡片 */
+  --card: oklch(1 0 0);                   /* #FFFFFF 純白色 */
+  --card-foreground: oklch(0.25 0 0);
+  
+  /* 彈出層 */
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.235 0.015 65);
-  --secondary: oklch(0.98 0.001 286.375);
-  --secondary-foreground: oklch(0.4 0.015 65);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.141 0.005 285.823);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.623 0.214 259.815);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.235 0.015 65);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.623 0.214 259.815);
+  --popover-foreground: oklch(0.25 0 0);
+  
+  /* 次要色 */
+  --secondary: oklch(0.96 0 0);           /* #F5F5F5 淺灰色 */
+  --secondary-foreground: oklch(0.25 0 0);
+  
+  /* 靜音色 */
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.5 0 0);     /* #737373 中灰色 */
+  
+  /* 強調色 */
+  --accent: oklch(0.96 0 0);
+  --accent-foreground: oklch(0.25 0 0);
+  
+  /* 破壞性操作（蘋果紅） */
+  --destructive: oklch(0.628 0.257 27.325);  /* #FF3B30 蘋果紅 */
+  --destructive-foreground: oklch(1 0 0);
+  
+  /* 邊框和輸入框 */
+  --border: oklch(0.9 0 0);               /* #E5E5E5 淺灰色邊框 */
+  --input: oklch(0.9 0 0);
+  --ring: oklch(0.569 0.194 248.055);     /* 蘋果藍 focus ring */
+  
+  /* 側邊欄 */
+  --sidebar: oklch(0.985 0 0);            /* 接近白色的淺灰 */
+  --sidebar-foreground: oklch(0.25 0 0);
+  --sidebar-accent: oklch(0.96 0 0);
+  --sidebar-accent-foreground: oklch(0.25 0 0);
+  --sidebar-border: oklch(0.9 0 0);
+  --sidebar-ring: oklch(0.569 0.194 248.055);
+  
+  /* 輔助色 */
+  --success: oklch(0.534 0.162 154.503);  /* #34C759 蘋果綠 */
+  --warning: oklch(0.692 0.191 61.695);   /* #FF9500 蘋果橙 */
+  --info: oklch(0.569 0.194 248.055);     /* #007AFF 蘋果藍 */
 }
 
+/* macOS深色模式配色（保留原有深色模式） */
 .dark {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-500);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.85 0.005 65);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.85 0.005 65);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.85 0.005 65);
-  --secondary: oklch(0.24 0.006 286.033);
-  --secondary-foreground: oklch(0.7 0.005 65);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground:  oklch(0.92 0.005 65);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.569 0.194 248.055);
+  --primary-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(0.6 0.18 248);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --background: oklch(0.18 0 0);
+  --foreground: oklch(0.9 0 0);
+  --card: oklch(0.22 0 0);
+  --card-foreground: oklch(0.9 0 0);
+  --popover: oklch(0.22 0 0);
+  --popover-foreground: oklch(0.9 0 0);
+  --secondary: oklch(0.26 0 0);
+  --secondary-foreground: oklch(0.8 0 0);
+  --muted: oklch(0.3 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.3 0 0);
+  --accent-foreground: oklch(0.95 0 0);
+  --destructive: oklch(0.628 0.257 27.325);
+  --destructive-foreground: oklch(1 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.488 0.243 264.376);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.85 0.005 65);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground:  oklch(0.985 0 0);
+  --ring: oklch(0.569 0.194 248.055);
+  --chart-1: oklch(0.7 0.15 248);
+  --chart-2: oklch(0.6 0.18 248);
+  --chart-3: oklch(0.569 0.194 248.055);
+  --chart-4: oklch(0.5 0.2 248);
+  --chart-5: oklch(0.4 0.22 248);
+  --sidebar: oklch(0.22 0 0);
+  --sidebar-foreground: oklch(0.9 0 0);
+  --sidebar-accent: oklch(0.3 0 0);
+  --sidebar-accent-foreground: oklch(1 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.488 0.243 264.376);
+  --sidebar-ring: oklch(0.569 0.194 248.055);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+  
+  /* macOS風格的按鈕和互動元素 */
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [type="button"]:not(:disabled),
@@ -130,43 +181,80 @@
   input[type="checkbox"]:not(:disabled),
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* macOS風格的標題 */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  
+  /* macOS風格的輸入框 */
+  input, textarea, select {
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring);
   }
 }
 
 @layer components {
   /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
+   * macOS風格的容器
    */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
-    padding-right: 1rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
-      padding-right: 1.5rem;
+      padding-left: 2rem;
+      padding-right: 2rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1400px;
     }
   }
+  
+  /**
+   * macOS風格的毛玻璃效果
+   */
+  .glass {
+    backdrop-filter: blur(20px) saturate(180%);
+    background-color: rgba(255, 255, 255, 0.72);
+  }
+  
+  .dark .glass {
+    background-color: rgba(30, 30, 30, 0.72);
+  }
 }
+
+@layer utilities {
+  /**
+   * macOS風格的過渡動畫
+   */
+  .transition-macos {
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-macos-fast {
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-macos-slow {
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+

@@ -53,7 +53,7 @@
 - [x] 測試AI自動分類標籤功能（schema驗證通過）
 - [x] 測試考試監控儀表板（API建立完成）
 - [x] 測試權限預覽功能（7個測試全部通過）
-- [ ] 建立檢查點並交付
+- [x] 建立檢查點並交付（checkpoint: fe6512af）
 
 ---
 
@@ -193,3 +193,38 @@
 - [x] 搜尋功能（關鍵字高亮）
 - [x] 使用者管理
 
+
+
+
+## 新任務：macOS風格UI改造
+
+### 階段一：規劃macOS風格設計系統
+- [ ] 研究macOS設計語言（Big Sur/Ventura風格）
+- [ ] 定義配色方案（淺色系、毛玻璃效果）
+- [ ] 規劃字體系統（San Francisco風格）
+- [ ] 定義陰影和圓角規範
+
+### 階段二：更新全域CSS和主題配色
+- [x] 更新index.css，套用macOS配色
+- [x] 引入Inter字體（最接近SF Pro的開源字體）
+- [x] 定義CSS變數（顏色、陰影、圓角、間距）
+- [x] 新墝.glass、.shadow-macos、.card-macos、.btn-macos等utility classes
+
+### 階段三：優化核心組件樣式
+- [x] 更新Button組件（柔和陰影、圓角、active縮放）
+- [x] 更新Card組件（shadow-macos、hover效果）
+- [x] 更新Input組件（精緻邊框、focus效果、hover效果）
+- [x] 更新Dialog組件（backdrop-blur模糊背景、shadow-macos-2xl）
+- [ ] 更新Table組件（交替行顏色、hover效果）
+
+### 階段四：調整頁面佈局和間距
+- [x] 更新Sidebar組件（毛玻璃效果、半透明背景）
+- [x] 修正所有組件的shadow類別，使用CSS變數
+- [x] 確保iOS風格的視覺效果正常運作
+- [ ] 優化導航列和標題樣式
+- [ ] 新增流暢的過渡動畫
+
+### 階段五：測試並交付macOS風格UI
+- [x] 測試所有頁面的視覺效果
+- [x] 確保響應式設計正常運作
+- [ ] 儲存checkpoint並交付
