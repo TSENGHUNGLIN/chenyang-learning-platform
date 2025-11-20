@@ -1,0 +1,1 @@
+ALTER TABLE `examAssignments` ADD `isPractice` int DEFAULT 0 NOT NULL;

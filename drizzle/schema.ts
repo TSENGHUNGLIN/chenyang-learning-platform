@@ -327,6 +327,7 @@ export const examAssignments = mysqlTable("examAssignments", {
   endTime: timestamp("endTime"), // 考試結束時間（null表示未結束）
   deadline: timestamp("deadline"), // 截止時間（null表示不限期）
   status: mysqlEnum("status", ["pending", "in_progress", "submitted", "graded"]).notNull().default("pending"),
+  isPractice: int("isPractice").notNull().default(0), // 是否為模擬模式（1=模擬，0=正式）
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -353,6 +354,24 @@ export const examSubmissions = mysqlTable("examSubmissions", {
 
 export type ExamSubmission = typeof examSubmissions.$inferSelect;
 export type InsertExamSubmission = typeof examSubmissions.$inferInsert;
+
+/**
+ * 錯題本表格（自動收集考生答錯的題目）
+ */
+export const wrongQuestions = mysqlTable("wrongQuestions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // 考生 ID
+  questionId: int("questionId").notNull(), // 題目 ID
+  wrongCount: int("wrongCount").notNull().default(1), // 答錯次數
+  lastWrongAt: timestamp("lastWrongAt").defaultNow().notNull(), // 最後一次答錯時間
+  isReviewed: int("isReviewed").notNull().default(0), // 是否已複習（1=已複習，0=未複習）
+  reviewedAt: timestamp("reviewedAt"), // 複習時間
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WrongQuestion = typeof wrongQuestions.$inferSelect;
+export type InsertWrongQuestion = typeof wrongQuestions.$inferInsert;
 
 /**
  * 考試成績表格

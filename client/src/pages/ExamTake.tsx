@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Wifi, WifiOff, Save, Flag } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Wifi, WifiOff, Save, Flag, Target } from "lucide-react";
 import { toast } from "sonner";
 
 // 本地儲存鍵值
@@ -383,9 +384,19 @@ export default function ExamTake() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>{exam.title}</CardTitle>
+                <div className="flex items-center gap-3">
+                  <CardTitle>{exam.title}</CardTitle>
+                  {assignment.isPractice === 1 && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                      <Target className="h-3 w-3 mr-1" />
+                      模擬模式
+                    </Badge>
+                  )}
+                </div>
                 <CardDescription>
-                  {exam.description || "請仔細閱讀題目並作答"}
+                  {assignment.isPractice === 1 
+                    ? "此為模擬練習，不計入正式成績" 
+                    : (exam.description || "請仔細閱讀題目並作答")}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-4">

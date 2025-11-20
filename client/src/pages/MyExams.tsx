@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, CheckCircle2, AlertCircle, PlayCircle, FileText, Award } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, PlayCircle, FileText, Award, Target } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function MyExams() {
@@ -17,13 +17,19 @@ export default function MyExams() {
   // 查詢我的考試指派
   const { data: assignments, isLoading } = trpc.exams.myAssignments.useQuery();
 
-  // 篩選進行中和已完成的考試
+  // 篩選進行中和已完成的考試（區分正式和模擬）
   const ongoingExams = assignments?.filter((item: any) => 
-    item.assignment.status === "pending" || item.assignment.status === "in_progress"
+    (item.assignment.status === "pending" || item.assignment.status === "in_progress") &&
+    !item.assignment.isPractice
   ) || [];
   
   const completedExams = assignments?.filter((item: any) => 
-    item.assignment.status === "submitted" || item.assignment.status === "graded"
+    (item.assignment.status === "submitted" || item.assignment.status === "graded") &&
+    !item.assignment.isPractice
+  ) || [];
+  
+  const practiceExams = assignments?.filter((item: any) => 
+    item.assignment.isPractice
   ) || [];
 
   // 格式化日期
@@ -239,7 +245,7 @@ export default function MyExams() {
 
         {assignments && assignments.length > 0 && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="ongoing" className="flex items-center gap-2">
                 <PlayCircle className="h-4 w-4" />
                 進行中 ({ongoingExams.length})
@@ -247,6 +253,10 @@ export default function MyExams() {
               <TabsTrigger value="completed" className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
                 已完成 ({completedExams.length})
+              </TabsTrigger>
+              <TabsTrigger value="practice" className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                模擬練習 ({practiceExams.length})
               </TabsTrigger>
             </TabsList>
 
@@ -274,6 +284,20 @@ export default function MyExams() {
                 </CardHeader>
                 <CardContent>
                   {renderExamTable(completedExams, true)}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="practice" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>模擬練習</CardTitle>
+                  <CardDescription>
+                    共 {practiceExams.length} 個模擬練習，不計入正式成績
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {renderExamTable(practiceExams, true)}
                 </CardContent>
               </Card>
             </TabsContent>

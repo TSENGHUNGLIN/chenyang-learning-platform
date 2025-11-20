@@ -1695,6 +1695,35 @@ ${file.extractedText || "無法提取文字內容"}`
       const { getUserExamAssignments } = await import("./db");
       return await getUserExamAssignments(ctx.user.id);
     }),
+    // 開始模擬練習（考生自行開始）
+    startPractice: protectedProcedure
+      .input(z.number()) // examId
+      .mutation(async ({ input, ctx }) => {
+        // 驗證考試是否存在且有題目
+        const { getExamById, getExamQuestions } = await import("./db");
+        const exam = await getExamById(input);
+        if (!exam) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "找不到考試" });
+        }
+        
+        const questions = await getExamQuestions(input);
+        if (!questions || questions.length === 0) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "此考試尚未設定題目，無法開始模擬練習。" 
+          });
+        }
+        
+        // 建立模擬練習指派
+        const { assignExam } = await import("./db");
+        const assignment = await assignExam({
+          examId: input,
+          userId: ctx.user.id,
+          isPractice: true, // 標記為模擬模式
+        });
+        
+        return assignment;
+      }),
     // 全域檢視（管理者/編輯者專用）
     allAssignments: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
@@ -1760,6 +1789,12 @@ ${file.extractedText || "無法提取文字內容"}`
             // 發送成績公布通知
             const { notifyScorePublished } = await import("./notificationHelper");
             await notifyScorePublished(assignment[0].examId, input);
+            
+            // 收集錯題（只收集正式考試的錯題，模擬模式不收集）
+            if (!assignment[0].isPractice) {
+              const { collectWrongQuestions } = await import("./wrongQuestionBook");
+              await collectWrongQuestions(input, ctx.user.id);
+            }
           }
         }
         
@@ -2335,6 +2370,82 @@ ${file.extractedText || "無法提取文字內容"}`
         }
         const { getExamTemplateQuestions } = await import("./db");
         return await getExamTemplateQuestions(input);
+      }),
+  }),
+
+  // 錯題本
+  wrongQuestionBook: router({
+    // 獲取我的錯題列表
+    list: protectedProcedure
+      .input(z.object({
+        questionType: z.string().optional(),
+        isReviewed: z.boolean().optional(),
+        limit: z.number().optional(),
+        offset: z.number().optional(),
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { getUserWrongQuestions } = await import("./wrongQuestionBook");
+        return await getUserWrongQuestions(ctx.user.id, input || {});
+      }),
+    // 獲取錯題統計
+    stats: protectedProcedure.query(async ({ ctx }) => {
+      const { getWrongQuestionStats } = await import("./wrongQuestionBook");
+      return await getWrongQuestionStats(ctx.user.id);
+    }),
+    // 標記為已複習
+    markAsReviewed: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { markAsReviewed } = await import("./wrongQuestionBook");
+        return await markAsReviewed(input, ctx.user.id);
+      }),
+    // 批次標記為已複習
+    batchMarkAsReviewed: protectedProcedure
+      .input(z.array(z.number()))
+      .mutation(async ({ input, ctx }) => {
+        const { batchMarkAsReviewed } = await import("./wrongQuestionBook");
+        return await batchMarkAsReviewed(input, ctx.user.id);
+      }),
+    // 移除錯題記錄
+    remove: protectedProcedure
+      .input(z.number()) // questionId
+      .mutation(async ({ input, ctx }) => {
+        const { removeWrongQuestion } = await import("./wrongQuestionBook");
+        return await removeWrongQuestion(ctx.user.id, input);
+      }),
+  }),
+
+  // 成績趨勢分析
+  performanceTrend: router({
+    // 獲取成績趨勢資料
+    trend: protectedProcedure
+      .input(z.object({
+        days: z.number().optional(),
+        isPractice: z.boolean().optional(),
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { getUserPerformanceTrend } = await import("./performanceTrend");
+        return await getUserPerformanceTrend(ctx.user.id, input || {});
+      }),
+    // 獲取成績統計摘要
+    stats: protectedProcedure
+      .input(z.object({
+        days: z.number().optional(),
+        isPractice: z.boolean().optional(),
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { getUserPerformanceStats } = await import("./performanceTrend");
+        return await getUserPerformanceStats(ctx.user.id, input || {});
+      }),
+    // 獲取成績分布
+    distribution: protectedProcedure
+      .input(z.object({
+        days: z.number().optional(),
+        isPractice: z.boolean().optional(),
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { getUserScoreDistribution } = await import("./performanceTrend");
+        return await getUserScoreDistribution(ctx.user.id, input || {});
       }),
   }),
 });

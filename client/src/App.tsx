@@ -27,6 +27,8 @@ import ExamTemplates from "./pages/ExamTemplates";
 import QuestionRecycleBin from "./pages/QuestionRecycleBin";
 import ExamMonitoring from "./pages/ExamMonitoring";
 import ExamAnalytics from "./pages/ExamAnalytics";
+import WrongQuestionBook from "./pages/WrongQuestionBook";
+import PerformanceTrend from "./pages/PerformanceTrend";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -55,6 +57,8 @@ function Router() {
       <Route path={"/exam/:examId/analytics"} component={ExamAnalytics} />
       <Route path={"/exam/:assignmentId/grade"} component={ManualGrading} />
       <Route path={"/exam-monitoring"} component={ExamMonitoring} />
+      <Route path={"/wrong-questions"} component={WrongQuestionBook} />
+      <Route path={"/performance-trend"} component={PerformanceTrend} />
       <Route path={"/manage"} component={Manage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

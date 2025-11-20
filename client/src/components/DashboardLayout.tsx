@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity, BookX, TrendingUp } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -60,6 +60,8 @@ const examineeMenuItems: Array<{
   path: string;
 }> = [
   { icon: ClipboardList, label: "考試園地", path: "/my-exams" },
+  { icon: BookX, label: "錯題本", path: "/wrong-questions" },
+  { icon: TrendingUp, label: "成績趨勢", path: "/performance-trend" },
   { icon: Award, label: "我的成績", path: "/my-scores" },
 ];
 

@@ -1308,6 +1308,7 @@ export async function assignExam(data: {
   userId: number;
   employeeId?: number;
   deadline?: Date;
+  isPractice?: boolean;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1319,6 +1320,7 @@ export async function assignExam(data: {
     employeeId: data.employeeId || null,
     deadline: data.deadline || null,
     status: 'pending',
+    isPractice: data.isPractice ? 1 : 0,
   });
   
   // 回傳新建的 assignment ID
@@ -1334,6 +1336,7 @@ export async function batchAssignExam(data: {
   examId: number;
   userIds: number[];
   deadline?: Date;
+  isPractice?: boolean;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1346,6 +1349,7 @@ export async function batchAssignExam(data: {
     employeeId: null,
     deadline: data.deadline || null,
     status: 'pending' as const,
+    isPractice: data.isPractice ? 1 : 0,
   }));
   
   // 批次插入（分批處理，每批100筆）
