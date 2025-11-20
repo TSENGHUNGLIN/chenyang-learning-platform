@@ -178,41 +178,33 @@ export default function Manage() {
     return departments?.find((d) => d.id === deptId)?.name || "-";
   };
   
+  const parseCSVMutation = trpc.employees.parseCSV.useMutation();
+  
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     setImportFile(file);
     
-    // 讀取檔案並預覽
+    // 讀取檔案並傳送到後端解析
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      const lines = text.split('\n').filter(line => line.trim());
-      
-      if (lines.length < 2) {
-        toast.error("檔案格式不正確，至少需要標題行和一筆資料");
-        return;
+    reader.onload = async (event) => {
+      try {
+        const dataUrl = event.target?.result as string;
+        
+        // 傳送到後端解析
+        const result = await parseCSVMutation.mutateAsync({ csvContent: dataUrl });
+        setImportPreview(result.preview);
+        
+        const validCount = result.preview.filter((i: any) => i.valid).length;
+        toast.success(`檔案讀取成功，共 ${result.preview.length} 筆，有效 ${validCount} 筆`);
+      } catch (error: any) {
+        console.error('CSV解析錯誤:', error);
+        toast.error(error.message || "檔案讀取失敗，請確認檔案格式正確");
       }
-      
-      // 跳過標題行，解析資料
-      const preview = lines.slice(1).map((line, index) => {
-        const [name, departmentName, email] = line.split(',').map(s => s.trim());
-        const department = departments?.find(d => d.name === departmentName);
-        return {
-          index: index + 1,
-          name,
-          departmentName,
-          departmentId: department?.id,
-          email: email || null,
-          valid: !!name && !!department
-        };
-      });
-      
-      setImportPreview(preview);
     };
     
-    reader.readAsText(file);
+    reader.readAsDataURL(file);
   };
   
   const handleBatchImport = async () => {

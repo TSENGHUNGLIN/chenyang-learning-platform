@@ -130,6 +130,86 @@ export const appRouter = router({
         const { getAssessmentRecordsByEmployee } = await import("./db");
         return await getAssessmentRecordsByEmployee(employeeId);
       }),
+    parseCSV: protectedProcedure
+      .input(z.object({
+        csvContent: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        
+        const iconv = await import('iconv-lite');
+        const { getAllDepartments } = await import("./db");
+        const departments = await getAllDepartments();
+        
+        // 嘗試多種編碼解碼
+        let text = input.csvContent;
+        
+        // 如果是Base64編碼，先解碼
+        if (input.csvContent.startsWith('data:')) {
+          const base64Data = input.csvContent.split(',')[1];
+          const buffer = Buffer.from(base64Data, 'base64');
+          
+          // 先嘗試UTF-8編碼
+          try {
+            text = buffer.toString('utf-8');
+            // 移除 UTF-8 BOM
+            if (text.charCodeAt(0) === 0xFEFF) {
+              text = text.substring(1);
+            }
+          } catch (e) {
+            // 如果UTF-8失敗，嘗試BIG5
+            text = iconv.default.decode(buffer, 'big5');
+          }
+        }
+        
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length < 2) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "檔案格式不正確，至少需要標題行和一筆資料" 
+          });
+        }
+        
+        // 解析標題行
+        const headerLine = lines[0];
+        const headers = headerLine.split(',').map(h => h.trim().replace(/\s+/g, ''));
+        
+        // 找到部門、姓名、郵件欄位
+        const deptIndex = headers.findIndex(h => h.includes('部門') || h === 'department');
+        const nameIndex = headers.findIndex(h => h.includes('姓名') || h === 'name');
+        const emailIndex = headers.findIndex(h => h.includes('MAIL') || h.includes('mail') || h.includes('郵件'));
+        
+        if (deptIndex === -1 || nameIndex === -1) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "檔案格式不正確，需要包含「部門」和「姓名」欄位" 
+          });
+        }
+        
+        // 解析資料
+        const preview = lines.slice(1).map((line, index) => {
+          const columns = line.split(',').map(s => s.trim());
+          const departmentName = columns[deptIndex] || '';
+          const name = columns[nameIndex] || '';
+          const email = emailIndex !== -1 ? (columns[emailIndex] || null) : null;
+          
+          const department = departments.find(d => d.name === departmentName);
+          return {
+            index: index + 1,
+            name,
+            departmentName,
+            departmentId: department?.id,
+            email: email || null,
+            valid: !!name && !!department
+          };
+        });
+        
+        return { preview };
+      }),
     batchImport: protectedProcedure
       .input(z.object({
         employees: z.array(z.object({
