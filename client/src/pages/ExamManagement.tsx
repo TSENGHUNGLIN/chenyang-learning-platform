@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users, BarChart3 } from "lucide-react";
+import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users, BarChart3, TrendingUp } from "lucide-react";
 import CreateExamWizard from "@/components/CreateExamWizard";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -341,6 +341,14 @@ export default function ExamManagement() {
                             >
                               <BarChart3 className="h-4 w-4 mr-1" />
                               統計
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setLocation(`/exam/${exam.id}/analytics`)}
+                            >
+                              <TrendingUp className="h-4 w-4 mr-1" />
+                              分析
                             </Button>
                             <Button
                               variant="ghost"

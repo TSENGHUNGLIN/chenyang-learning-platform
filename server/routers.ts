@@ -1390,13 +1390,19 @@ ${file.extractedText || "無法提取文字內容"}`
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
         const { createExam } = await import("./db");
-        return await createExam({
+        const exam = await createExam({
           ...input,
           totalScore: input.totalScore || 100,
           gradingMethod: input.gradingMethod || "auto",
           status: input.status || "draft",
           createdBy: ctx.user.id,
         });
+        
+        // 發送考試建立通知
+        const { notifyExamCreated } = await import("./notificationHelper");
+        await notifyExamCreated(exam.id, input.title, ctx.user.name || "未知用戶");
+        
+        return exam;
       }),
     // 從題庫建立考卷（快速建立）
     createFromBank: protectedProcedure
@@ -1668,6 +1674,11 @@ ${file.extractedText || "無法提取文字內容"}`
         }
         const { batchAssignExam } = await import("./db");
         const result = await batchAssignExam(input);
+        
+        // 發送考試指派通知
+        const { notifyExamAssigned } = await import("./notificationHelper");
+        await notifyExamAssigned(input.examId, input.userIds);
+        
         return result;
       }),
     getAssignments: protectedProcedure
@@ -1730,9 +1741,29 @@ ${file.extractedText || "無法提取文字內容"}`
       }),
     submit: protectedProcedure
       .input(z.number())
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { submitExam } = await import("./db");
-        return await submitExam(input);
+        const result = await submitExam(input);
+        
+        // 獲取examId和assignmentId
+        const { getDb } = await import("./db");
+        const db = await getDb();
+        if (db) {
+          const { examAssignments } = await import("../drizzle/schema");
+          const assignment = await db
+            .select()
+            .from(examAssignments)
+            .where(eq(examAssignments.id, input))
+            .limit(1);
+          
+          if (assignment.length > 0) {
+            // 發送成績公布通知
+            const { notifyScorePublished } = await import("./notificationHelper");
+            await notifyScorePublished(assignment[0].examId, input);
+          }
+        }
+        
+        return result;
       }),
     getScore: protectedProcedure
       .input(z.number())
@@ -1843,11 +1874,32 @@ ${file.extractedText || "無法提取文字內容"}`
         const { exportExamStatisticsToExcel } = await import("./examExport");
         const result = await exportExamStatisticsToExcel(input);
         
-        // 返回base64編碼的檔案內容
+        // 返回back64編碼的檔案內容
         return {
           data: result.buffer.toString("base64"),
           filename: result.filename,
         };
+      }),
+    // 成績分析API
+    getAnalytics: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getExamAnalytics } = await import("./examAnalytics");
+        return await getExamAnalytics(input);
+      }),
+    getStudentRankings: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getStudentRankings } = await import("./examAnalytics");
+        return await getStudentRankings(input);
       }),
   }),
 

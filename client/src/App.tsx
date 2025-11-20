@@ -26,6 +26,7 @@ import ExamDetail from "./pages/ExamDetail";
 import ExamTemplates from "./pages/ExamTemplates";
 import QuestionRecycleBin from "./pages/QuestionRecycleBin";
 import ExamMonitoring from "./pages/ExamMonitoring";
+import ExamAnalytics from "./pages/ExamAnalytics";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -51,6 +52,7 @@ function Router() {
       <Route path={"/exam/:assignmentId/take"} component={ExamTake} />
       <Route path={"/exam/:assignmentId/result"} component={ExamResult} />
       <Route path={"/exam/:id/statistics"} component={ExamStatistics} />
+      <Route path={"/exam/:examId/analytics"} component={ExamAnalytics} />
       <Route path={"/exam/:assignmentId/grade"} component={ManualGrading} />
       <Route path={"/exam-monitoring"} component={ExamMonitoring} />
       <Route path={"/manage"} component={Manage} />

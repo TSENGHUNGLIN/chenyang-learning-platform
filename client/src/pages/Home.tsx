@@ -7,7 +7,7 @@ import { Calendar, FileText, Users, TrendingUp, Search, BookOpen, Settings, Clip
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { zhTW } from "date-fns/locale";
 
 export default function Home() {
@@ -159,8 +159,8 @@ export default function Home() {
         {/* 最近活動 */}
         <Card>
           <CardHeader>
-            <CardTitle>最近活動</CardTitle>
-            <CardDescription>系統中的最新動態</CardDescription>
+            <CardTitle>最新活動報告</CardTitle>
+            <CardDescription>系統中的最新動態與時間記錄</CardDescription>
           </CardHeader>
           <CardContent>
             {recentActivities && recentActivities.length > 0 ? (
@@ -176,12 +176,17 @@ export default function Home() {
                       <div className="flex-1 space-y-1">
                         <p className="text-sm font-medium">{activity.title}</p>
                         <p className="text-sm text-muted-foreground">{activity.description}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(activity.timestamp), {
-                            addSuffix: true,
-                            locale: zhTW,
-                          })}
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="font-medium">
+                            {format(new Date(activity.timestamp), "yyyy-MM-dd HH:mm:ss", { locale: zhTW })}
+                          </span>
+                          <span className="text-muted-foreground/70">
+                            ({formatDistanceToNow(new Date(activity.timestamp), {
+                              addSuffix: true,
+                              locale: zhTW,
+                            })})
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );

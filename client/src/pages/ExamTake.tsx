@@ -9,7 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Wifi, WifiOff, Save } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, ChevronLeft, ChevronRight, Wifi, WifiOff, Save, Flag } from "lucide-react";
 import { toast } from "sonner";
 
 // 本地儲存鍵值
@@ -24,6 +24,7 @@ export default function ExamTake() {
   // 狀態管理
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
@@ -250,7 +251,7 @@ export default function ExamTake() {
             console.error('Auto-save failed:', err);
           });
         }
-      }, 5000); // 5秒後自動儲存
+      }, 30000); // 30秒後自動儲存
     }
 
     // 總是儲存到本地（即使離線也能保存）
@@ -268,6 +269,19 @@ export default function ExamTake() {
   // 處理答案改變
   const handleAnswerChange = (questionId: number, answer: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
+  };
+
+  // 切換標記待檢查
+  const toggleMarkForReview = (questionId: number) => {
+    setMarkedForReview(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(questionId)) {
+        newSet.delete(questionId);
+      } else {
+        newSet.add(questionId);
+      }
+      return newSet;
+    });
   };
 
   // 處理提交考試
@@ -406,9 +420,13 @@ export default function ExamTake() {
 
                 {/* 倒數計時器 */}
                 {timeRemaining !== null && (
-                  <div className="flex items-center gap-2 text-lg font-semibold">
-                    <Clock className={`h-5 w-5 ${timeRemaining < 300 ? 'text-red-500' : 'text-primary'}`} />
-                    <span className={timeRemaining < 300 ? 'text-red-500' : ''}>
+                  <div className="flex items-center gap-2">
+                    <Clock className={`h-6 w-6 ${timeRemaining < 300 ? 'text-red-500 animate-pulse' : timeRemaining < 600 ? 'text-orange-500' : 'text-primary'}`} />
+                    <span className={`text-3xl font-bold tabular-nums ${
+                      timeRemaining < 300 ? 'text-red-500' : 
+                      timeRemaining < 600 ? 'text-orange-500' : 
+                      'text-primary'
+                    }`}>
                       {formatTime(timeRemaining)}
                     </span>
                   </div>
@@ -426,17 +444,28 @@ export default function ExamTake() {
                 <Progress value={progress} />
               </div>
               <div className="flex gap-2 flex-wrap">
-                {questions.map((q: any, index: number) => (
-                  <Button
-                    key={q.questionId}
-                    variant={index === currentQuestionIndex ? "default" : answers[q.questionId] ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentQuestionIndex(index)}
-                    className="w-10 h-10 p-0"
-                  >
-                    {index + 1}
-                  </Button>
-                ))}
+                {questions.map((q: any, index: number) => {
+                  const isAnswered = !!answers[q.questionId];
+                  const isMarked = markedForReview.has(q.questionId);
+                  const isCurrent = index === currentQuestionIndex;
+                  
+                  return (
+                    <Button
+                      key={q.questionId}
+                      variant={isCurrent ? "default" : isAnswered ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentQuestionIndex(index)}
+                      className={`w-10 h-10 p-0 relative ${
+                        isMarked ? 'ring-2 ring-orange-500' : ''
+                      }`}
+                    >
+                      {index + 1}
+                      {isMarked && (
+                        <Flag className="h-3 w-3 absolute -top-1 -right-1 text-orange-500 fill-orange-500" />
+                      )}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           </CardContent>
@@ -446,12 +475,26 @@ export default function ExamTake() {
         {currentQuestion && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span>第 {currentQuestionIndex + 1} 題</span>
-                {answers[currentQuestion.questionId] && (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                )}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <span>第 {currentQuestionIndex + 1} 題</span>
+                  {answers[currentQuestion.questionId] && (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  )}
+                  {markedForReview.has(currentQuestion.questionId) && (
+                    <Flag className="h-5 w-5 text-orange-500 fill-orange-500" />
+                  )}
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleMarkForReview(currentQuestion.questionId)}
+                  className={markedForReview.has(currentQuestion.questionId) ? 'border-orange-500 text-orange-500' : ''}
+                >
+                  <Flag className={`h-4 w-4 mr-2 ${markedForReview.has(currentQuestion.questionId) ? 'fill-orange-500' : ''}`} />
+                  {markedForReview.has(currentQuestion.questionId) ? '取消標記' : '標記待檢查'}
+                </Button>
+              </div>
               <CardDescription>
                 {currentQuestion.question.type === 'true_false' && '是非題'}
                 {currentQuestion.question.type === 'multiple_choice' && '選擇題'}
@@ -554,6 +597,9 @@ export default function ExamTake() {
                     <p>總題數：{questions.length} 題</p>
                     <p>已作答：{answeredCount} 題</p>
                     <p>未作答：{questions.length - answeredCount} 題</p>
+                    {markedForReview.size > 0 && (
+                      <p className="text-orange-600">標記待檢查：{markedForReview.size} 題</p>
+                    )}
                     {Object.keys(pendingAnswers).length > 0 && (
                       <p className="text-orange-600">待儲存答案：{Object.keys(pendingAnswers).length} 題</p>
                     )}
