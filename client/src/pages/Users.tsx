@@ -53,6 +53,7 @@ export default function Users() {
   const [permissionUser, setPermissionUser] = useState<any>(null);
   const [selectedDepartments, setSelectedDepartments] = useState<number[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
   
   // 查詢部門和使用者列表
   const { data: departments } = trpc.departments.list.useQuery();
@@ -485,15 +486,63 @@ export default function Users() {
             
             {/* 考生權限 */}
             <div className="space-y-3">
-              <Label className="text-base font-semibold flex items-center gap-2">
-                <UsersIcon className="h-4 w-4" />
-                考生訪問權限
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <UsersIcon className="h-4 w-4" />
+                  考生訪問權限
+                </Label>
+                {allUsers && allUsers.filter(u => u.role === 'examinee').length > 0 && (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const examinees = allUsers.filter(u => u.role === 'examinee');
+                        setSelectedUsers(examinees.map(e => e.id));
+                      }}
+                    >
+                      全選
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedUsers([])}
+                    >
+                      清除
+                    </Button>
+                  </div>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">
                 選擇特定考生，編輯者將只能看到這些考生的資料
               </p>
+              
+              {/* 搜尋框 */}
+              {allUsers && allUsers.filter(u => u.role === 'examinee').length > 5 && (
+                <div className="relative">
+                  <Input
+                    placeholder="搜尋考生姓名或郵件..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                  <UsersIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-3 p-4 border rounded-md max-h-64 overflow-y-auto">
-                {allUsers?.filter(u => u.role === 'examinee').map((examinee) => (
+                {allUsers?.filter(u => u.role === 'examinee')
+                  .filter(u => {
+                    if (!userSearchQuery) return true;
+                    const query = userSearchQuery.toLowerCase();
+                    return (
+                      (u.name && u.name.toLowerCase().includes(query)) ||
+                      (u.email && u.email.toLowerCase().includes(query))
+                    );
+                  })
+                  .map((examinee) => (
                   <div key={examinee.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`user-${examinee.id}`}
@@ -508,16 +557,39 @@ export default function Users() {
                     />
                     <Label
                       htmlFor={`user-${examinee.id}`}
-                      className="text-sm font-normal cursor-pointer"
+                      className="text-sm font-normal cursor-pointer flex-1"
                     >
-                      {examinee.name || examinee.email || `使用者 ${examinee.id}`}
+                      <div className="flex flex-col">
+                        <span>{examinee.name || examinee.email || `使用者 ${examinee.id}`}</span>
+                        {examinee.email && examinee.name && (
+                          <span className="text-xs text-muted-foreground">{examinee.email}</span>
+                        )}
+                      </div>
                     </Label>
                   </div>
                 ))}
                 {(!allUsers || allUsers.filter(u => u.role === 'examinee').length === 0) && (
                   <p className="text-sm text-muted-foreground col-span-2">沒有可用的考生</p>
                 )}
+                {allUsers && allUsers.filter(u => u.role === 'examinee').length > 0 && 
+                 allUsers.filter(u => u.role === 'examinee').filter(u => {
+                   if (!userSearchQuery) return true;
+                   const query = userSearchQuery.toLowerCase();
+                   return (
+                     (u.name && u.name.toLowerCase().includes(query)) ||
+                     (u.email && u.email.toLowerCase().includes(query))
+                   );
+                 }).length === 0 && (
+                  <p className="text-sm text-muted-foreground col-span-2">沒有符合搜尋條件的考生</p>
+                )}
               </div>
+              
+              {/* 已選擇計數 */}
+              {selectedUsers.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  已選擇 {selectedUsers.length} 位考生
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -526,6 +598,7 @@ export default function Users() {
               setPermissionUser(null);
               setSelectedDepartments([]);
               setSelectedUsers([]);
+              setUserSearchQuery("");
             }}>
               取消
             </Button>
