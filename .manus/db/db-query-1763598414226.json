@@ -1,0 +1,19 @@
+{
+  "query": "SELECT * FROM tags WHERE name = 'AI生成';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute SELECT * FROM tags WHERE name = 'AI生成';",
+  "rows": [
+    {
+      "id": "30036",
+      "name": "AI生成",
+      "color": "#6b7280",
+      "createdAt": "2025-11-19 18:58:54",
+      "updatedAt": "2025-11-19 18:58:54",
+      "category": "",
+      "description": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\tcolor\tcreatedAt\tupdatedAt\tcategory\tdescription\n30036\tAI生成\t#6b7280\t2025-11-19 18:58:54\t2025-11-19 18:58:54\t\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 1619
+}

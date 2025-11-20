@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Trash2, UserPlus, Edit2, Settings, Building2, Users as UsersIcon } from "lucide-react";
+import { Trash2, UserPlus, Edit2, Settings, Building2, Users as UsersIcon, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,6 +67,17 @@ export default function Users() {
   const { data: userAccess } = trpc.users.getUserAccess.useQuery(
     permissionUser?.id || 0,
     { enabled: !!permissionUser }
+  );
+  
+  // 權限預覽查詢（即時顯示可訪問的考生清單）
+  const { data: accessPreview, isLoading: isPreviewLoading } = trpc.users.previewAccess.useQuery(
+    {
+      departmentIds: selectedDepartments,
+      userIds: selectedUsers,
+    },
+    {
+      enabled: isPermissionDialogOpen && (selectedDepartments.length > 0 || selectedUsers.length > 0),
+    }
   );
 
   const handleRoleChange = async (openId: string, role: "admin" | "editor" | "viewer" | "examinee") => {
@@ -591,6 +602,61 @@ export default function Users() {
                 </p>
               )}
             </div>
+            
+            {/* 權限預覽區塊 */}
+            {(selectedDepartments.length > 0 || selectedUsers.length > 0) && (
+              <div className="space-y-3 mt-6 pt-6 border-t">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  權限預覽
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  根據目前選擇，此編輯者將可以訪問以下考生：
+                </p>
+                
+                {isPreviewLoading ? (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
+                ) : accessPreview && accessPreview.length > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-3 py-2 bg-blue-50 rounded-md">
+                      <span className="text-sm font-medium text-blue-900">
+                        總計可訪問 {accessPreview.length} 位考生
+                      </span>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto border rounded-md">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="px-3 py-2 text-left font-medium">姓名</th>
+                            <th className="px-3 py-2 text-left font-medium">郵件</th>
+                            <th className="px-3 py-2 text-left font-medium">來源</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {accessPreview.map((examinee: any) => (
+                            <tr key={examinee.id} className="hover:bg-gray-50">
+                              <td className="px-3 py-2">{examinee.name}</td>
+                              <td className="px-3 py-2 text-muted-foreground">{examinee.email || '-'}</td>
+                              <td className="px-3 py-2">
+                                <span className="text-xs px-2 py-1 bg-gray-100 rounded">
+                                  {examinee.source}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>沒有可訪問的考生</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {

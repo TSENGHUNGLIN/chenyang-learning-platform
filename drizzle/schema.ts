@@ -125,7 +125,9 @@ export type InsertQuestionCategory = typeof questionCategories.$inferInsert;
  */
 export const tags = mysqlTable("tags", {
   id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  category: varchar("category", { length: 50 }).notNull(), // 標籤分類（例如：難度、職位、業界分類等）
+  description: text("description"), // 標籤說明
   color: varchar("color", { length: 20 }), // 標籤顏色（例如：#3b82f6）
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -161,6 +163,9 @@ export const questions = mysqlTable("questions", {
   explanation: text("explanation"),
   // tags 欄位已移除，改用 questionTags 關聯
   source: varchar("source", { length: 255 }), // 考題出處（檔案名稱或手動輸入）
+  isAiGenerated: int("isAiGenerated").default(0).notNull(), // 是否為AI生成（0=手動建立, 1=AI生成）
+  suggestedCategoryId: int("suggestedCategoryId"), // AI建議的分類（供使用者參考）
+  suggestedTagIds: text("suggestedTagIds"), // AI建議的標籤ID（JSON陣列格式，供使用者參考）
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

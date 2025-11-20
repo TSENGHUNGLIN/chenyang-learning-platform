@@ -479,7 +479,18 @@ ${file.extractedText || "無法提取文字內容"}`
               }).join('\n')}`
             : "";
           
-          systemPrompt = `你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目（根據分類和標籤篩選），如果題庫中沒有適合的題目，再根據檔案內容生成新題目。請先提供「題目整理」（僅列出題目，不含答案），再提供「題目與答案」（每個題目搭配完整答案）。${modeInstruction}`;
+          // 建立可用分類和標籤清單
+          const categoryList = categories.map((c: any) => c.name).join('、');
+          const tagList = tags.map((t: any) => `${t.name}(${t.category})`).join('、');
+          
+          systemPrompt = `你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目（根據分類和標籤篩選），如果題庫中沒有適合的題目，再根據檔案內容生成新題目。
+
+對於每個題目，請提供：
+1. source：考題出處（檔案名稱、頁碼或段落）
+2. suggestedCategory：建議的分類（從以下分類中選擇：${categoryList}）
+3. suggestedTags：建議的標籤（從以下標籤中選擇，可多選：${tagList}）
+
+請先提供「題目整理」（僅列出題目，不含答案），再提供「題目與答案」（每個題目搭配完整答案、出處和建議標籤）。${modeInstruction}`;
           userPrompt = `請根據以下檔案內容和題庫，${input.customPrompt}${questionBankInfo}\n\n檔案內容：\n${fileContents}`;
         } else if (input.analysisType === "analyze_questions") {
           systemPrompt = `你是一個專業的學習題庫分析助手。你的任務是分析考核檔案，提供全面的分析和建議。${modeInstruction}`;
@@ -563,6 +574,9 @@ ${file.extractedText || "無法提取文字內容"}`
                           question: { type: "string", description: "題目" },
                           type: { type: "string", enum: ["是非題", "選擇題", "問答題"], description: "題型" },
                           options: { type: "array", items: { type: "string" }, description: "選項（僅選擇題）" },
+                          source: { type: "string", description: "考題出處（檔案名稱、頁碼等）" },
+                          suggestedCategory: { type: "string", description: "AI建議的分類" },
+                          suggestedTags: { type: "array", items: { type: "string" }, description: "AI建議的標籤" },
                         },
                         required: ["number", "question", "type"],
                         additionalProperties: false,
@@ -580,6 +594,9 @@ ${file.extractedText || "無法提取文字內容"}`
                           options: { type: "array", items: { type: "string" }, description: "選項（僅選擇題）" },
                           answer: { type: "string", description: "答案" },
                           explanation: { type: "string", description: "解釋" },
+                          source: { type: "string", description: "考題出處（檔案名稱、頁碼等）" },
+                          suggestedCategory: { type: "string", description: "AI建議的分類" },
+                          suggestedTags: { type: "array", items: { type: "string" }, description: "AI建議的標籤" },
                         },
                         required: ["number", "question", "type", "answer"],
                         additionalProperties: false,
@@ -817,6 +834,19 @@ ${file.extractedText || "無法提取文字內容"}`
         const { getEditorUserAccess } = await import("./db");
         return await getEditorUserAccess(input);
       }),
+    // 權限預覽 API
+    previewAccess: protectedProcedure
+      .input(z.object({
+        departmentIds: z.array(z.number()),
+        userIds: z.array(z.number()),
+      }))
+      .query(async ({ input, ctx }) => {
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "只有管理員可以管理權限" });
+        }
+        const { previewAccessibleExaminees } = await import("./permissionPreviewHelper");
+        return await previewAccessibleExaminees(input.departmentIds, input.userIds);
+      }),
   }),
 
   // Question bank management router
@@ -969,7 +999,10 @@ ${file.extractedText || "無法提取文字內容"}`
         correctAnswer: z.string(),
         explanation: z.string().optional(),
         tagIds: z.array(z.number()).optional(),
-        source: z.string().optional(), // 新增考題出處
+        source: z.string().optional(), // 考題出處
+        isAiGenerated: z.number().optional(), // 是否為AI生成（0=手動, 1=AI）
+        suggestedCategoryId: z.number().optional(), // AI建議的分類ID
+        suggestedTagIds: z.string().optional(), // AI建議的標籤ID（JSON格式）
       })))
       .mutation(async ({ input, ctx }) => {
         console.log('[batchImport API] 收到的 input:', JSON.stringify(input, null, 2));
@@ -989,6 +1022,11 @@ ${file.extractedText || "無法提取文字內容"}`
           questionIds: [] as number[],
         };
 
+        // 獲取所有標籤，找出AI生成標籤的ID
+        const { getAllTags } = await import("./db");
+        const allTags = await getAllTags();
+        const aiGeneratedTag = allTags.find((t: any) => t.name === "AI生成" && t.category === "題目來源");
+        
         for (let i = 0; i < input.length; i++) {
           try {
             const question = input[i];
@@ -1004,9 +1042,17 @@ ${file.extractedText || "無法提取文字內容"}`
             if (questionId) {
               results.questionIds.push(questionId);
               
+              // 處理標籤
+              let finalTagIds = question.tagIds ? [...question.tagIds] : [];
+              
+              // 如果是AI生成的題目，自動加上AI生成標籤
+              if (question.isAiGenerated === 1 && aiGeneratedTag && !finalTagIds.includes(aiGeneratedTag.id)) {
+                finalTagIds.push(aiGeneratedTag.id);
+              }
+              
               // Set tags if provided
-              if (question.tagIds && question.tagIds.length > 0) {
-                await setQuestionTags(questionId, question.tagIds);
+              if (finalTagIds.length > 0) {
+                await setQuestionTags(questionId, finalTagIds);
               }
             }
             
@@ -1174,6 +1220,21 @@ ${file.extractedText || "無法提取文字內容"}`
       }
       const { getAllExams } = await import("./db");
       return await getAllExams();
+    }),
+    // 考試監控相關API
+    listOngoing: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "只有管理員可以訪問考試監控" });
+      }
+      const { getOngoingExams } = await import("./examMonitoring");
+      return await getOngoingExams();
+    }),
+    getMonitoringStats: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "只有管理員可以訪問考試監控" });
+      }
+      const { getMonitoringStats } = await import("./examMonitoring");
+      return await getMonitoringStats();
     }),
     getById: protectedProcedure
       .input(z.number())
