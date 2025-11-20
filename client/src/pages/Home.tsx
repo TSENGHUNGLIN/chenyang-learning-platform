@@ -156,47 +156,49 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* 最近活動 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>最新活動報告</CardTitle>
-            <CardDescription>系統中的最新動態與時間記錄</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentActivities && recentActivities.length > 0 ? (
-              <div className="space-y-4">
-                {recentActivities.map((activity, index) => {
-                  const Icon = getActivityIcon(activity.type);
-                  const colorClass = getActivityColor(activity.type);
-                  return (
-                    <div key={index} className="flex items-start gap-4">
-                      <div className={`mt-1 ${colorClass}`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium">{activity.title}</p>
-                        <p className="text-sm text-muted-foreground">{activity.description}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span className="font-medium">
-                            {format(new Date(activity.timestamp), "yyyy-MM-dd HH:mm:ss", { locale: zhTW })}
-                          </span>
-                          <span className="text-muted-foreground/70">
-                            ({formatDistanceToNow(new Date(activity.timestamp), {
-                              addSuffix: true,
-                              locale: zhTW,
-                            })})
-                          </span>
+        {/* 最新活動報告 - 只對管理員和編輯者顯示 */}
+        {(user?.role === "admin" || user?.role === "editor") && (
+          <Card>
+            <CardHeader>
+              <CardTitle>最新活動報告</CardTitle>
+              <CardDescription>系統中的最新動態與時間記錄</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recentActivities && recentActivities.length > 0 ? (
+                <div className="space-y-4">
+                  {recentActivities.map((activity, index) => {
+                    const Icon = getActivityIcon(activity.type);
+                    const colorClass = getActivityColor(activity.type);
+                    return (
+                      <div key={index} className="flex items-start gap-4">
+                        <div className={`mt-1 ${colorClass}`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <p className="text-sm font-medium">{activity.title}</p>
+                          <p className="text-sm text-muted-foreground">{activity.description}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="font-medium">
+                              {format(new Date(activity.timestamp), "yyyy-MM-dd HH:mm:ss", { locale: zhTW })}
+                            </span>
+                            <span className="text-muted-foreground/70">
+                              ({formatDistanceToNow(new Date(activity.timestamp), {
+                                addSuffix: true,
+                                locale: zhTW,
+                              })})
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">尚無最近活動</p>
-            )}
-          </CardContent>
-        </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">尚無最近活動</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* 快速搜尋 */}
         <Card>
