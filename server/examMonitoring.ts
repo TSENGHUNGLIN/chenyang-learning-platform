@@ -19,17 +19,30 @@ export async function getOngoingExams() {
 
   const now = new Date();
 
-  // 查詢進行中的考試（狀態為published且在時間範圍內）
-  const ongoingExamsList = await db
+  // 查詢所有已發布的考試
+  const publishedExams = await db
     .select()
     .from(exams)
-    .where(
-      and(
-        eq(exams.status, "published"),
-        lte(exams.startTime, now),
-        gte(exams.endTime, now)
-      )
-    );
+    .where(eq(exams.status, "published"));
+
+  // 篩選出有進行中指派的考試
+  const ongoingExamsList = [];
+  for (const exam of publishedExams) {
+    // 查詢該考試是否有進行中的指派（status = 'in_progress' 或 'pending' 且在 deadline 之前）
+    const activeAssignments = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(examAssignments)
+      .where(
+        and(
+          eq(examAssignments.examId, exam.id),
+          sql`${examAssignments.status} IN ('pending', 'in_progress')`
+        )
+      );
+    
+    if (Number(activeAssignments[0]?.count || 0) > 0) {
+      ongoingExamsList.push(exam);
+    }
+  }
 
   // 為每個考試載入考生資訊和進度
   const examsWithDetails = await Promise.all(
@@ -40,8 +53,8 @@ export async function getOngoingExams() {
           id: examAssignments.id,
           userId: examAssignments.userId,
           status: examAssignments.status,
-          startedAt: examAssignments.startedAt,
-          completedAt: examAssignments.completedAt,
+          startTime: examAssignments.startTime,
+          endTime: examAssignments.endTime,
           userName: users.name,
           userEmail: users.email,
         })
@@ -75,8 +88,8 @@ export async function getOngoingExams() {
             progress,
             answeredCount,
             totalQuestions,
-            startedAt: assignment.startedAt,
-            completedAt: assignment.completedAt,
+            startTime: assignment.startTime,
+            endTime: assignment.endTime,
           };
         })
       );
@@ -91,8 +104,6 @@ export async function getOngoingExams() {
         title: exam.title,
         description: exam.description,
         status: exam.status,
-        startTime: exam.startTime,
-        endTime: exam.endTime,
         totalExaminees,
         completedCount,
         completionRate,
@@ -116,35 +127,35 @@ export async function getMonitoringStats() {
 
   const now = new Date();
 
-  // 查詢進行中的考試數量
-  const ongoingExamsResult = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(exams)
-    .where(
-      and(
-        eq(exams.status, "published"),
-        lte(exams.startTime, now),
-        gte(exams.endTime, now)
-      )
-    );
-
-  const ongoingCount = Number(ongoingExamsResult[0]?.count || 0);
-
-  // 查詢進行中考試的所有指派記錄
-  const ongoingExamIds = await db
+  // 查詢所有已發布的考試
+  const publishedExams = await db
     .select({ id: exams.id })
     .from(exams)
-    .where(
-      and(
-        eq(exams.status, "published"),
-        lte(exams.startTime, now),
-        gte(exams.endTime, now)
-      )
-    );
+    .where(eq(exams.status, "published"));
 
-  const examIds = ongoingExamIds.map((e) => e.id);
+  const examIds = publishedExams.map((e) => e.id);
 
-  if (examIds.length === 0) {
+  // 篩選出有進行中指派的考試
+  const ongoingExamIds = [];
+  for (const examId of examIds) {
+    const activeAssignments = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(examAssignments)
+      .where(
+        and(
+          eq(examAssignments.examId, examId),
+          sql`${examAssignments.status} IN ('pending', 'in_progress')`
+        )
+      );
+    
+    if (Number(activeAssignments[0]?.count || 0) > 0) {
+      ongoingExamIds.push(examId);
+    }
+  }
+
+  const ongoingCount = ongoingExamIds.length;
+
+  if (ongoingExamIds.length === 0) {
     return {
       ongoingCount: 0,
       totalExaminees: 0,
@@ -154,11 +165,11 @@ export async function getMonitoringStats() {
     };
   }
 
-  // 查詢應考人數（所有指派記錄）
+  // 查詢應考人數（進行中考試的指派記錄）
   const totalExamineesResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(examAssignments)
-    .where(sql`${examAssignments.examId} IN (${sql.join(examIds.map((id) => sql`${id}`), sql`, `)})`);
+    .where(sql`${examAssignments.examId} IN (${sql.join(ongoingExamIds.map((id) => sql`${id}`), sql`, `)})`);
 
   const totalExaminees = Number(totalExamineesResult[0]?.count || 0);
 
@@ -168,7 +179,7 @@ export async function getMonitoringStats() {
     .from(examAssignments)
     .where(
       and(
-        sql`${examAssignments.examId} IN (${sql.join(examIds.map((id) => sql`${id}`), sql`, `)})`,
+        sql`${examAssignments.examId} IN (${sql.join(ongoingExamIds.map((id) => sql`${id}`), sql`, `)})`,
         eq(examAssignments.status, "completed")
       )
     );

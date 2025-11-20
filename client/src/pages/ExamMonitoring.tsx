@@ -298,15 +298,15 @@ export default function ExamMonitoring() {
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-muted-foreground">API回應時間</p>
-              <p className="text-2xl font-bold">
+              <div className="text-2xl font-bold">
                 {statsLoading ? <Skeleton className="h-8 w-16" /> : `${examStats?.avgResponseTime || 0}ms`}
-              </p>
+              </div>
             </div>
             <div className="p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-muted-foreground">同時在線人數</p>
-              <p className="text-2xl font-bold">
+              <div className="text-2xl font-bold">
                 {statsLoading ? <Skeleton className="h-8 w-16" /> : examStats?.totalExaminees || 0}
-              </p>
+              </div>
             </div>
           </div>
         </CardContent>
