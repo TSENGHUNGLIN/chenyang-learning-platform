@@ -407,6 +407,135 @@ export async function getFileWithReadInfo(fileId: number, userId: number) {
 }
 
 
+// Dashboard statistics and recent activities
+export async function getDashboardStats(role: string, userId: number) {
+  const db = await getDb();
+  if (!db) return { totalQuestions: 0, totalExams: 0, averageScore: 0, totalExaminees: 0 };
+  
+  const { questions, exams, examSubmissions, users } = await import("../drizzle/schema");
+  const { sql, isNull, eq } = await import("drizzle-orm");
+  
+  // 總題數（未刪除）
+  const totalQuestionsResult = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(questions)
+    .where(isNull(questions.deletedAt));
+  const totalQuestions = totalQuestionsResult[0]?.count || 0;
+  
+  // 總考試數
+  const totalExamsResult = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(exams);
+  const totalExams = totalExamsResult[0]?.count || 0;
+  
+  // 平均分數（已評分的考試）
+  const avgScoreResult = await db
+    .select({ avg: sql<number>`AVG(${examSubmissions.score})` })
+    .from(examSubmissions)
+    .where(sql`${examSubmissions.score} IS NOT NULL`);
+  const averageScore = Math.round(avgScoreResult[0]?.avg || 0);
+  
+  // 總考生數（role = examinee）
+  const totalExamineesResult = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(users)
+    .where(eq(users.role, 'examinee'));
+  const totalExaminees = totalExamineesResult[0]?.count || 0;
+  
+  return {
+    totalQuestions,
+    totalExams,
+    averageScore,
+    totalExaminees,
+  };
+}
+
+export async function getRecentActivities(role: string, userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const { files, exams, examSubmissions, examAssignments, users } = await import("../drizzle/schema");
+  const { sql, desc } = await import("drizzle-orm");
+  
+  const activities: Array<{
+    type: 'file_upload' | 'exam_created' | 'exam_submitted';
+    title: string;
+    description: string;
+    timestamp: Date;
+  }> = [];
+  
+  // 最近上傳檔案（取3筆）
+  const recentFiles = await db
+    .select({
+      filename: files.filename,
+      uploaderName: users.name,
+      createdAt: files.createdAt,
+    })
+    .from(files)
+    .leftJoin(users, eq(files.uploadedBy, users.id))
+    .orderBy(desc(files.createdAt))
+    .limit(3);
+  
+  recentFiles.forEach((file) => {
+    activities.push({
+      type: 'file_upload',
+      title: '檔案上傳',
+      description: `${file.uploaderName || '未知使用者'} 上傳了「${file.filename}」`,
+      timestamp: file.createdAt,
+    });
+  });
+  
+  // 最近建立考試（取3筆）
+  const recentExams = await db
+    .select({
+      title: exams.title,
+      creatorName: users.name,
+      createdAt: exams.createdAt,
+    })
+    .from(exams)
+    .leftJoin(users, eq(exams.createdBy, users.id))
+    .orderBy(desc(exams.createdAt))
+    .limit(3);
+  
+  recentExams.forEach((exam) => {
+    activities.push({
+      type: 'exam_created',
+      title: '考試建立',
+      description: `${exam.creatorName || '未知使用者'} 建立了考試「${exam.title}」`,
+      timestamp: exam.createdAt,
+    });
+  });
+  
+  // 最近提交考試（取3筆）
+  // examSubmissions -> examAssignments -> exams, users
+  const recentSubmissions = await db
+    .select({
+      examTitle: exams.title,
+      examineeName: users.name,
+      submittedAt: examSubmissions.submittedAt,
+    })
+    .from(examSubmissions)
+    .leftJoin(examAssignments, eq(examSubmissions.assignmentId, examAssignments.id))
+    .leftJoin(exams, eq(examAssignments.examId, exams.id))
+    .leftJoin(users, eq(examAssignments.userId, users.id))
+    .where(sql`${examSubmissions.submittedAt} IS NOT NULL`)
+    .orderBy(desc(examSubmissions.submittedAt))
+    .limit(3);
+  
+  recentSubmissions.forEach((submission) => {
+    activities.push({
+      type: 'exam_submitted',
+      title: '考試提交',
+      description: `${submission.examineeName || '未知考生'} 提交了「${submission.examTitle}」`,
+      timestamp: submission.submittedAt!,
+    });
+  });
+  
+  // 按時間排序，取10筆
+  activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  return activities.slice(0, 10);
+}
+
 // Question bank queries
 export async function getAllQuestions() {
   const db = await getDb();
@@ -431,6 +560,9 @@ export async function getAllQuestions() {
       updatedAt: questions.updatedAt,
       creatorName: users.name,
       source: questions.source,
+      isAiGenerated: questions.isAiGenerated,
+      suggestedCategoryId: questions.suggestedCategoryId,
+      suggestedTagIds: questions.suggestedTagIds,
     })
     .from(questions)
     .leftJoin(users, eq(questions.createdBy, users.id))

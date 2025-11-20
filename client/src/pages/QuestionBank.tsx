@@ -29,7 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home, Download, Upload, Loader2, ClipboardList, AlertTriangle } from "lucide-react";
+import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home, Download, Upload, Loader2, ClipboardList, AlertTriangle, Sparkles, Check } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -85,6 +85,7 @@ export default function QuestionBank() {
   const deleteMutation = trpc.questions.delete.useMutation();
   const setTagsMutation = trpc.questionTags.setTags.useMutation();
   const batchImportMutation = trpc.questions.batchImport.useMutation();
+  const applyAiSuggestionsMutation = trpc.questions.applyAiSuggestions.useMutation();
 
   const filteredQuestions = questions
     ?.filter((q: any) => {
@@ -830,7 +831,58 @@ export default function QuestionBank() {
                         {index + 1}
                       </TableCell>
                       <TableCell className="font-medium">
-                        <div className="line-clamp-2">{question.question}</div>
+                        <div className="flex items-start gap-2">
+                          <div className="line-clamp-2 flex-1">{question.question}</div>
+                          {question.isAiGenerated === 1 && (
+                            <Badge variant="secondary" className="shrink-0">
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              AI生成
+                            </Badge>
+                          )}
+                        </div>
+                        {question.isAiGenerated === 1 && (question.suggestedCategoryId || question.suggestedTagIds) && (
+                          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                            <Sparkles className="h-3 w-3" />
+                            <span>AI建議：</span>
+                            {question.suggestedCategoryId && (
+                              <Badge variant="outline" className="text-xs">
+                                {categories?.find((c: any) => c.id === question.suggestedCategoryId)?.name || `分類 ID: ${question.suggestedCategoryId}`}
+                              </Badge>
+                            )}
+                            {question.suggestedTagIds && (() => {
+                              try {
+                                const tagIds = JSON.parse(question.suggestedTagIds);
+                                return tagIds.map((tagId: number) => {
+                                  const tag = tags?.find((t: any) => t.id === tagId);
+                                  return tag ? (
+                                    <Badge key={tagId} variant="outline" className="text-xs">
+                                      {tag.name}
+                                    </Badge>
+                                  ) : null;
+                                });
+                              } catch (e) {
+                                return null;
+                              }
+                            })()}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-xs"
+                              onClick={async () => {
+                                try {
+                                  await applyAiSuggestionsMutation.mutateAsync(question.id);
+                                  toast.success("已採用AI建議");
+                                  refetchQuestions();
+                                } catch (error: any) {
+                                  toast.error(error.message || "採用失敗");
+                                }
+                              }}
+                            >
+                              <Check className="h-3 w-3 mr-1" />
+                              採用
+                            </Button>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{getTypeLabel(question.type)}</Badge>

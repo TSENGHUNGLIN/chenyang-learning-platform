@@ -849,6 +849,18 @@ ${file.extractedText || "無法提取文字內容"}`
       }),
   }),
 
+  // Dashboard statistics and recent activities
+  dashboard: router({
+    stats: protectedProcedure.query(async ({ ctx }) => {
+      const { getDashboardStats } = await import("./db");
+      return await getDashboardStats(ctx.user.role as any, ctx.user.id);
+    }),
+    recentActivities: protectedProcedure.query(async ({ ctx }) => {
+      const { getRecentActivities } = await import("./db");
+      return await getRecentActivities(ctx.user.role as any, ctx.user.id);
+    }),
+  }),
+
   // Question bank management router
   questions: router({
     list: protectedProcedure.query(async ({ ctx }) => {
@@ -909,6 +921,42 @@ ${file.extractedText || "無法提取文字內容"}`
         const { updateQuestion } = await import("./db");
         const { id, ...data } = input;
         await updateQuestion(id, data);
+        return { success: true };
+      }),
+    applyAiSuggestions: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getQuestionById, updateQuestion } = await import("./db");
+        const question = await getQuestionById(input);
+        if (!question) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "題目不存在" });
+        }
+        
+        // 採用AI建議：將suggestedCategoryId和suggestedTagIds複製到categoryId和tagIds
+        const updates: any = {};
+        if (question.suggestedCategoryId) {
+          updates.categoryId = question.suggestedCategoryId;
+        }
+        
+        await updateQuestion(input, updates);
+        
+        // 如果有建議標籤，也要更新questionTags表
+        if (question.suggestedTagIds) {
+          try {
+            const tagIds = JSON.parse(question.suggestedTagIds);
+            if (Array.isArray(tagIds) && tagIds.length > 0) {
+              const { setQuestionTags } = await import("./db");
+              await setQuestionTags(input, tagIds);
+            }
+          } catch (e) {
+            console.error('解析AI建議標籤失敗:', e);
+          }
+        }
+        
         return { success: true };
       }),
     delete: protectedProcedure

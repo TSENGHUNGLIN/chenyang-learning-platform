@@ -3,9 +3,12 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar, FileText, Users, TrendingUp, Search, BookOpen, Settings, ClipboardList } from "lucide-react";
+import { Calendar, FileText, Users, TrendingUp, Search, BookOpen, Settings, ClipboardList, Activity, Award, BarChart3, Upload, CheckCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { formatDistanceToNow } from "date-fns";
+import { zhTW } from "date-fns/locale";
 
 export default function Home() {
   const { user } = useAuth();
@@ -72,6 +75,35 @@ export default function Home() {
       : []),
   ];
 
+  const { data: stats } = trpc.dashboard.stats.useQuery();
+  const { data: recentActivities } = trpc.dashboard.recentActivities.useQuery();
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'file_upload':
+        return Upload;
+      case 'exam_created':
+        return ClipboardList;
+      case 'exam_submitted':
+        return CheckCircle;
+      default:
+        return Activity;
+    }
+  };
+
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'file_upload':
+        return 'text-blue-500';
+      case 'exam_created':
+        return 'text-green-500';
+      case 'exam_submitted':
+        return 'text-purple-500';
+      default:
+        return 'text-gray-500';
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -79,6 +111,87 @@ export default function Home() {
           <h1 className="text-3xl font-bold tracking-tight">歡迎回來，{user?.name || "使用者"}</h1>
           <p className="text-muted-foreground mt-2">晨陽學習成長評核分析</p>
         </div>
+
+        {/* 統計卡片 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">總題數</CardTitle>
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.totalQuestions || 0}</div>
+              <p className="text-xs text-muted-foreground">題庫中的題目總數</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">總考試數</CardTitle>
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.totalExams || 0}</div>
+              <p className="text-xs text-muted-foreground">已建立的考試總數</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">平均分數</CardTitle>
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.averageScore || 0}</div>
+              <p className="text-xs text-muted-foreground">所有考試的平均分數</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">總考生數</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.totalExaminees || 0}</div>
+              <p className="text-xs text-muted-foreground">系統中的考生總數</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 最近活動 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>最近活動</CardTitle>
+            <CardDescription>系統中的最新動態</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentActivities && recentActivities.length > 0 ? (
+              <div className="space-y-4">
+                {recentActivities.map((activity, index) => {
+                  const Icon = getActivityIcon(activity.type);
+                  const colorClass = getActivityColor(activity.type);
+                  return (
+                    <div key={index} className="flex items-start gap-4">
+                      <div className={`mt-1 ${colorClass}`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm font-medium">{activity.title}</p>
+                        <p className="text-sm text-muted-foreground">{activity.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(activity.timestamp), {
+                            addSuffix: true,
+                            locale: zhTW,
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">尚無最近活動</p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* 快速搜尋 */}
         <Card>
