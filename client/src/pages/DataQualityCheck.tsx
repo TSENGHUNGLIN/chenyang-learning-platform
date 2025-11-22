@@ -58,7 +58,7 @@ export default function DataQualityCheck() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       <PageHeader
-        title="資料品質檢查"
+        title="考題品質檢查"
         description="自動掃描並修復題目資料格式問題"
         icon={Settings}
         iconColor="text-purple-600"
