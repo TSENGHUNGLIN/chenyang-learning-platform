@@ -61,13 +61,17 @@ export default function FileUpload() {
     const excludedWords = [
       'Eva', '專課程', '報價', '薪酬', '細節', '考核', '履歷',
       '初階', '中階', '進階', '高階', '資料', '文件', '報告',
-      '計劃', '方案', '提案', '簡報', '細節', '說明'
+      '計劃', '方案', '提案', '簡報', '細節', '說明', '考試',
+      '測驗', '問答', '作業', '練習', '筆記', '心得', '總結',
+      '分析', '檢討', '評估', '回饋', '轉正', '薪資', '證明',
+      '申請', '表格', '名單', '清單', '統計', '汇总', '概述'
     ];
     
     // 非姓名後綴詞（常接在姓名後面）- 擴充清單
     const nameSuffixes = [
       '測', '測驗', '考試', '考核', '報告', '履歷', '轉正', '回饋', '評估',
-      '問答', '作業', '練習', '筆記', '心得', '總結', '分析', '檢討'
+      '問答', '作業', '練習', '筆記', '心得', '總結', '分析', '檢討',
+      '記錄', '表單', '資料', '文件', '說明', '細節'
     ];
     
     // 優先匹配常見的檔名格式：
@@ -110,19 +114,24 @@ export default function FileUpload() {
     }
     
     // 3. 備用：匹配任何 2-4 個中文字（但排除常見詞彙和後綴詞）
-    const fallbackPattern = /([\u4e00-\u9fa5]{2,4})/;
-    match = nameWithoutExt.match(fallbackPattern);
-    if (match) {
-      let name = match[1];
-      // 移除後綴詞
-      for (const suffix of nameSuffixes) {
-        if (name.endsWith(suffix)) {
-          name = name.slice(0, -suffix.length);
+    // 注意：這個模式可能導致誤判，建議手動選擇人員而非依賴自動識別
+    const fallbackPattern = /([\u4e00-\u9fa5]{2,4})/g;
+    const allFallbackMatches = Array.from(nameWithoutExt.matchAll(fallbackPattern))
+      .map(m => {
+        let name = m[1];
+        // 移除後綴詞
+        for (const suffix of nameSuffixes) {
+          if (name.endsWith(suffix)) {
+            name = name.slice(0, -suffix.length);
+          }
         }
-      }
-      if (name.length >= 2 && !excludedWords.includes(name)) {
         return name;
-      }
+      })
+      .filter(name => name.length >= 2 && !excludedWords.includes(name));
+    
+    // 優先選擇最後一個匹配（通常是人名）
+    if (allFallbackMatches.length > 0) {
+      return allFallbackMatches[allFallbackMatches.length - 1];
     }
     
     return null;
@@ -199,15 +208,33 @@ export default function FileUpload() {
       const createdEmployeeIds: Record<string, string> = {};
       if (autoDetectNewEmployee && detectedNames.length > 0) {
         for (const name of detectedNames) {
-          try {
-            const newEmployee = await createEmployeeMutation.mutateAsync({
-              name,
-              departmentId: parseInt(selectedDepartment),
-            });
-            createdEmployeeIds[name] = newEmployee.id.toString();
-            toast.success(`已自動新增人員：${name}`);
-          } catch (error) {
-            toast.error(`新增人員 ${name} 失敗`);
+          // 先檢查是否已存在於該部門
+          const existingEmployee = filteredEmployees?.find(emp => emp.name === name);
+          if (existingEmployee) {
+            // 如果已存在，直接使用現有 ID
+            createdEmployeeIds[name] = existingEmployee.id.toString();
+            toast.info(`人員 ${name} 已存在，將使用現有資料`);
+          } else {
+            // 不存在才建立新人員
+            try {
+              const newEmployee = await createEmployeeMutation.mutateAsync({
+                name,
+                departmentId: parseInt(selectedDepartment),
+              });
+              createdEmployeeIds[name] = newEmployee.id.toString();
+              toast.success(`已自動新增人員：${name}`);
+            } catch (error) {
+              // 建立失敗時，再次檢查是否已存在（可能是並發建立導致）
+              await utils.employees.list.invalidate();
+              const updatedEmployees = await utils.employees.list.fetch();
+              const retryEmployee = updatedEmployees?.find(emp => emp.name === name && emp.departmentId === parseInt(selectedDepartment));
+              if (retryEmployee) {
+                createdEmployeeIds[name] = retryEmployee.id.toString();
+                toast.info(`人員 ${name} 已存在，將使用現有資料`);
+              } else {
+                toast.error(`新增人員 ${name} 失敗`);
+              }
+            }
           }
         }
         await utils.employees.list.invalidate();
