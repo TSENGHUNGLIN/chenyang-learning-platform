@@ -201,6 +201,17 @@ export default function AIAnalysis() {
       setCurrentAnalysisId(response.cacheId || null);
       setHasRated(false); // 重置評分狀態
       
+      // 自動填入檔案名稱作為題庫名稱（移除副檔名）
+      if (analysisType === "generate_questions" && selectedFiles.length > 0) {
+        const firstFile = files?.find(f => f.id === selectedFiles[0]);
+        if (firstFile) {
+          // 移除副檔名
+          const nameWithoutExt = firstFile.filename.replace(/\.(pdf|docx|csv|txt|doc|xlsx|xls)$/i, '');
+          setBankName(nameWithoutExt);
+          setBankDescription(`根據檔案「${firstFile.filename}」生成的題庫，包含 ${response.result.questionsWithAnswers?.length || 0} 道題目`);
+        }
+      }
+      
       // 完成
       setAnalysisStage("分析完成！");
       setAnalysisProgress(100);
@@ -1150,9 +1161,12 @@ export default function AIAnalysis() {
               <Sparkles className="h-5 w-5 text-purple-500" />
               儲存為題庫檔案
             </DialogTitle>
+            <p className="text-sm text-muted-foreground mt-2">
+              題庫名稱已自動從檔案名稱填入，您可以直接儲存或修改名稱
+            </p>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 bg-muted/50 p-3 rounded-lg">
               <Checkbox
                 id="useAIName"
                 checked={useAIName}
@@ -1163,19 +1177,24 @@ export default function AIAnalysis() {
                   }
                 }}
               />
-              <Label htmlFor="useAIName" className="text-sm font-medium cursor-pointer">
-                使用 AI 自動命名
-              </Label>
+              <div className="flex-1">
+                <Label htmlFor="useAIName" className="text-sm font-medium cursor-pointer">
+                  使用 AI 重新命名
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  勾選後可讓 AI 根據題目內容生成新的名稱
+                </p>
+              </div>
             </div>
             
             <div>
-              <Label htmlFor="bankName">檔案名稱 *</Label>
+              <Label htmlFor="bankName">題庫名稱 *</Label>
               <div className="flex gap-2 mt-1">
                 <Input
                   id="bankName"
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  placeholder="例如：新人培訓題庫"
+                  placeholder="例如：業管部 彭睛婕 第1課 新進業工務設計師訓練課程"
                   disabled={useAIName && isGeneratingName}
                 />
                 {useAIName && (
@@ -1185,6 +1204,7 @@ export default function AIAnalysis() {
                     size="sm"
                     onClick={handleGenerateAIName}
                     disabled={isGeneratingName}
+                    title="讓 AI 根據題目內容重新生成名稱"
                   >
                     {isGeneratingName ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -1194,6 +1214,9 @@ export default function AIAnalysis() {
                   </Button>
                 )}
               </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                💡 提示：如需修改題庫名稱，請在上傳檔案前修改檔案名稱
+              </p>
             </div>
             
             <div>
