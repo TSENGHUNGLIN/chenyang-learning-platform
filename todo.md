@@ -427,3 +427,13 @@
 - [x] 在 ExamMonitoring.tsx 頁面標題旁新增返回首頁按鈕
 - [x] 測試按鈕功能正常運作
 
+
+
+
+## 在成績分析、錯題本和成績趋勢頁面新增返回首頁按鈕（2025-01-22）
+
+- [x] 在 ExamAnalytics.tsx（成績分析頁面）新增返回首頁按鈕
+- [x] 在 WrongQuestionBook.tsx（錯題本頁面）新增返回首頁按鈕
+- [x] 在 PerformanceTrend.tsx（成績趋勢頁面）新增返回首頁按鈕
+- [x] 測試三個頁面的按鈕功能正常運作
+

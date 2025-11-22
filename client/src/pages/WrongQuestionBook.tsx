@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookX, CheckCircle2, AlertCircle, Trash2, RefreshCw, TrendingUp } from "lucide-react";
+import { BookX, CheckCircle2, AlertCircle, Trash2, RefreshCw, TrendingUp, Home } from "lucide-react";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -219,14 +219,24 @@ export default function WrongQuestionBook() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* 標題 */}
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <BookX className="h-8 w-8" />
-            錯題本
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            自動收集答錯的題目，幫助您針對性複習
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <BookX className="h-8 w-8" />
+              錯題本
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              自動收集答錯的題目，幫助您針對性複習
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.href = '/'}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            返回首頁
+          </Button>
         </div>
 
         {/* 統計卡片 */}

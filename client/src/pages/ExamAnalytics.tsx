@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Download, TrendingUp, TrendingDown, Users, Award, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, Download, TrendingUp, TrendingDown, Users, Award, Clock, AlertCircle, Home } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 
@@ -93,10 +93,20 @@ export default function ExamAnalytics() {
               <p className="text-muted-foreground">成績分析報表</p>
             </div>
           </div>
-          <Button onClick={handleExport} disabled={exportMutation.isPending}>
-            <Download className="h-4 w-4 mr-2" />
-            {exportMutation.isPending ? "匯出中..." : "匯出報告"}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.href = '/'}
+            >
+              <Home className="h-4 w-4 mr-2" />
+              返回首頁
+            </Button>
+            <Button onClick={handleExport} disabled={exportMutation.isPending}>
+              <Download className="h-4 w-4 mr-2" />
+              {exportMutation.isPending ? "匯出中..." : "匯出報告"}
+            </Button>
+          </div>
         </div>
 
         {/* 統計卡片 */}

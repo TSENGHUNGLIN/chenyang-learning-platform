@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { TrendingUp, TrendingDown, Award, Target, BarChart3, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, Award, Target, BarChart3, AlertCircle, Home } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import DashboardLayout from "@/components/DashboardLayout";
 
@@ -72,14 +73,24 @@ export default function PerformanceTrend() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* 標題 */}
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <TrendingUp className="h-8 w-8" />
-            成績趨勢分析
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            追蹤您的學習進步曲線，了解成績變化趨勢
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <TrendingUp className="h-8 w-8" />
+              成績趋勢分析
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              追蹤您的學習進步曲線，了解成績變化趋勢
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.href = '/'}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            返回首頁
+          </Button>
         </div>
 
         {/* 篩選器 */}
