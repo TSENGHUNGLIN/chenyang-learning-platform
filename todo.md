@@ -262,3 +262,17 @@
 - [x] 使用後端 API 載入 CSV（避免 CORS 問題）
 - [x] 儲存檢查點
 
+
+
+
+## 修復 Files.tsx 中的 tRPC query 錯誤（2025-01-22）
+
+- [x] 診斷錯誤原因（hooks[lastArg] is not a function）
+- [x] 將 useEffect 中的 trpc.files.previewCSV.query() 改為使用 useQuery hook
+- [x] 使用 enabled 選項控制 query 的觸發時機
+- [x] 修復 csvLoading 變數的使用（改用 csvQuery.isLoading）
+- [x] 測試修復後的 CSV 預視功能（發現新錯誤）
+- [x] 修復 csvPreview.ts 中的 iconv.decode 錯誤（encodingDetector.ts 中使用 iconv.default.decode）
+- [x] 再次測試 CSV 預視功能（成功！）
+- [ ] 儲存檢查點
+

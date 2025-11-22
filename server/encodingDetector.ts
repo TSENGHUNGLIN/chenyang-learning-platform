@@ -73,7 +73,7 @@ export function detectEncoding(buffer: Buffer): EncodingDetectionResult {
   if (bomEncoding) {
     // 移除 BOM 後解碼
     const contentBuffer = buffer.slice(3);
-    const content = iconv.decode(contentBuffer, bomEncoding);
+    const content = iconv.default.decode(contentBuffer, bomEncoding);
     return {
       encoding: bomEncoding,
       confidence: 100,
@@ -90,7 +90,7 @@ export function detectEncoding(buffer: Buffer): EncodingDetectionResult {
 
   for (const encoding of SUPPORTED_ENCODINGS) {
     try {
-      const content = iconv.decode(buffer, encoding);
+      const content = iconv.default.decode(buffer, encoding);
       const score = calculateQualityScore(content);
       results.push({ encoding, content, score });
     } catch (error) {

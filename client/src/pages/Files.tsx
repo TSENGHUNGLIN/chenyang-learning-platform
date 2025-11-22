@@ -73,35 +73,45 @@ export default function Files() {
   const [batchUpdateEmployee, setBatchUpdateEmployee] = useState<string>("");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [csvData, setCsvData] = useState<CSVData | null>(null);
-  const [csvLoading, setCsvLoading] = useState(false);
   const [csvError, setCsvError] = useState<string | null>(null);
 
-  // 載入 CSV 資料
-  useEffect(() => {
-    if (showPreviewDialog && previewFile?.filename.toLowerCase().endsWith('.csv')) {
-      setCsvLoading(true);
-      setCsvError(null);
-      setCsvData(null);
-      
-      // 使用後端 API 載入 CSV
-      trpc.files.previewCSV.query({ fileUrl: previewFile.fileUrl, maxRows: 1000 })
-        .then((result) => {
-          // 轉換為前端 CSVData 格式
-          const data: CSVData = {
-            headers: result.headers,
-            rows: result.rows,
-            totalRows: result.totalRows,
-          };
-          setCsvData(data);
-          setCsvLoading(false);
-        })
-        .catch((error) => {
-          console.error('[CSV Preview] 載入失敗:', error);
-          setCsvError('無法載入 CSV 檔案，請檢查檔案格式或下載後查看');
-          setCsvLoading(false);
-        });
+  // 使用 useQuery 載入 CSV 資料
+  const shouldLoadCSV = showPreviewDialog && previewFile?.filename.toLowerCase().endsWith('.csv');
+  const csvQuery = trpc.files.previewCSV.useQuery(
+    { 
+      fileUrl: previewFile?.fileUrl || '', 
+      maxRows: 1000 
+    },
+    {
+      enabled: shouldLoadCSV && !!previewFile?.fileUrl,
+      retry: false,
+      onError: (error) => {
+        console.error('[CSV Preview] 載入失敗:', error);
+        setCsvError('無法載入 CSV 檔案，請檢查檔案格式或下載後查看');
+      },
     }
-  }, [showPreviewDialog, previewFile]);
+  );
+
+  // 當 query 成功時，轉換為 CSVData 格式
+  useEffect(() => {
+    if (csvQuery.data) {
+      const data: CSVData = {
+        headers: csvQuery.data.headers,
+        rows: csvQuery.data.rows,
+        totalRows: csvQuery.data.totalRows,
+      };
+      setCsvData(data);
+      setCsvError(null);
+    }
+  }, [csvQuery.data]);
+
+  // 當對話框關閉時，清除 CSV 資料
+  useEffect(() => {
+    if (!showPreviewDialog) {
+      setCsvData(null);
+      setCsvError(null);
+    }
+  }, [showPreviewDialog]);
 
 
   // 載入搜尋歷史記錄（從 localStorage 讀取）
@@ -696,7 +706,7 @@ export default function Files() {
                 {/* CSV 檔案預視 */}
                 {previewFile.filename.toLowerCase().endsWith('.csv') && (
                   <div className="p-4">
-                    {csvLoading && (
+                    {csvQuery.isLoading && (
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         <span className="ml-3 text-muted-foreground">正在載入 CSV 檔案...</span>
@@ -713,7 +723,7 @@ export default function Files() {
                         </Button>
                       </div>
                     )}
-                    {csvData && !csvLoading && !csvError && (
+                    {csvData && !csvQuery.isLoading && !csvError && (
                       <CSVTableView data={csvData} pageSize={20} />
                     )}
                   </div>
