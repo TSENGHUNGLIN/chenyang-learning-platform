@@ -412,3 +412,10 @@
 - [x] 修復 ExamTake.tsx 的 ReferenceError: assignment is not defined
 - [x] 測試考試答題頁面功能正常運作
 
+
+## 修復考試答題頁面 eq is not defined 錯誤（2025-01-22）
+
+- [x] 找出缺少 eq import 的後端 API（db.ts 的 getExamForTaking 函數）
+- [x] 新增 eq 函數的 import 語句
+- [x] 測試考試答題頁面正常運作
+
