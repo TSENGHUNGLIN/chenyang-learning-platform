@@ -293,7 +293,7 @@ export default function Files() {
           <CardHeader>
             <CardTitle className="text-teal-900 dark:text-teal-100">進階篩選</CardTitle>
             <CardDescription className="text-teal-700 dark:text-teal-300">
-              使用多條件組合篩選檔案
+              使用多條件組合篩選檔案（支援 DOCX、CSV 格式）
               {hasActiveFilters && (
                 <Button
                   variant="link"

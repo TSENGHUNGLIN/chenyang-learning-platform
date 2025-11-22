@@ -29,7 +29,7 @@ export default function Home() {
     {
       icon: FileText,
       title: "檔案管理",
-      description: "管理所有上傳的考核問答檔案，支援搜尋與篩選",
+      description: "管理所有上傳的考核問答檔案，支援搜尋與篩選（支援 DOCX、CSV 格式）",
       link: "/files",
       color: "from-purple-500 to-pink-500",
     },
