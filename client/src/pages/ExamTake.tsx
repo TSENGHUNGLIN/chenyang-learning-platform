@@ -535,21 +535,31 @@ export default function ExamTake() {
               )}
 
               {/* 選擇題 */}
-              {currentQuestion.question.type === 'multiple_choice' && currentQuestion.question.options && (
-                <RadioGroup
-                  value={answers[currentQuestion.questionId] || ''}
-                  onValueChange={(value) => handleAnswerChange(currentQuestion.questionId, value)}
-                >
-                  {JSON.parse(currentQuestion.question.options).map((option: any) => (
-                    <div key={option.label} className="flex items-center space-x-2">
-                      <RadioGroupItem value={option.label} id={option.label} />
-                      <Label htmlFor={option.label} className="cursor-pointer">
-                        {option.label}. {option.value}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              )}
+              {currentQuestion.question.type === 'multiple_choice' && currentQuestion.question.options && (() => {
+                try {
+                  const parsedOptions = JSON.parse(currentQuestion.question.options);
+                  const optionsArray = Array.isArray(parsedOptions) ? parsedOptions : Object.values(parsedOptions);
+                  
+                  return (
+                    <RadioGroup
+                      value={answers[currentQuestion.questionId] || ''}
+                      onValueChange={(value) => handleAnswerChange(currentQuestion.questionId, value)}
+                    >
+                      {optionsArray.map((option: any) => (
+                        <div key={option.label} className="flex items-center space-x-2">
+                          <RadioGroupItem value={option.label} id={option.label} />
+                          <Label htmlFor={option.label} className="cursor-pointer">
+                            {option.label}. {option.value}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  );
+                } catch (error) {
+                  console.error('解析選項時發生錯誤:', error);
+                  return <p className="text-red-500">選項格式錯誤，請聯繫管理員</p>;
+                }
+              })()}
 
               {/* 問答題 */}
               {currentQuestion.question.type === 'short_answer' && (

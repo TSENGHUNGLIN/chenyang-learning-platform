@@ -159,5 +159,16 @@
 - [x] 優化選單項目的卡片式視覺效果
 - [x] 加入 hover 和 active 狀態的動畫效果
 - [x] 測試側邊欄在展開和收合狀態下的顯示效果
-- [ ] 儲存檢查點
+- [x] 儲存檢查點
+
+
+
+
+## 緊急錯誤修復：考試答題頁面 JSON.parse 錯誤（2025-01-22）
+
+- [x] 診斷錯誤原因（JSON.parse(...).map is not a function）
+- [x] 修復 ExamTake.tsx 第543行的選項解析邏輯
+- [x] 新增錯誤處理機制（try-catch + Array.isArray 檢查）
+- [x] 測試修復結果
+- [x] 儲存檢查點
 
