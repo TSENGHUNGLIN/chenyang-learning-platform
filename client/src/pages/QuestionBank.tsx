@@ -340,6 +340,44 @@ export default function QuestionBank() {
       return;
     }
 
+    // 驗證選項格式（僅選擇題）
+    if (formData.type === 'multiple_choice' && formData.options) {
+      try {
+        const parsedOptions = JSON.parse(formData.options);
+        
+        // 檢查是否為陣列
+        if (!Array.isArray(parsedOptions)) {
+          toast.error("選項必須為陣列格式，例如：[\"A\", \"B\", \"C\", \"D\"]");
+          return;
+        }
+        
+        // 檢查陣列是否為空
+        if (parsedOptions.length === 0) {
+          toast.error("選項不能為空");
+          return;
+        }
+        
+        // 檢查每個選項是否有內容
+        const hasEmptyOption = parsedOptions.some((opt: any) => {
+          if (typeof opt === 'string') {
+            return !opt.trim();
+          }
+          if (typeof opt === 'object' && opt !== null) {
+            return !opt.label || !opt.value;
+          }
+          return true;
+        });
+        
+        if (hasEmptyOption) {
+          toast.error("選項內容不能為空");
+          return;
+        }
+      } catch (error) {
+        toast.error("選項格式錯誤，請使用正確的 JSON 陣列格式");
+        return;
+      }
+    }
+
     try {
       const result = await createMutation.mutateAsync(formData);
       // Set tags for the new question
@@ -361,6 +399,44 @@ export default function QuestionBank() {
 
   const handleEdit = async () => {
     if (!editingQuestion) return;
+
+    // 驗證選項格式（僅選擇題）
+    if (formData.type === 'multiple_choice' && formData.options) {
+      try {
+        const parsedOptions = JSON.parse(formData.options);
+        
+        // 檢查是否為陣列
+        if (!Array.isArray(parsedOptions)) {
+          toast.error("選項必須為陣列格式，例如：[\"A\", \"B\", \"C\", \"D\"]");
+          return;
+        }
+        
+        // 檢查陣列是否為空
+        if (parsedOptions.length === 0) {
+          toast.error("選項不能為空");
+          return;
+        }
+        
+        // 檢查每個選項是否有內容
+        const hasEmptyOption = parsedOptions.some((opt: any) => {
+          if (typeof opt === 'string') {
+            return !opt.trim();
+          }
+          if (typeof opt === 'object' && opt !== null) {
+            return !opt.label || !opt.value;
+          }
+          return true;
+        });
+        
+        if (hasEmptyOption) {
+          toast.error("選項內容不能為空");
+          return;
+        }
+      } catch (error) {
+        toast.error("選項格式錯誤，請使用正確的 JSON 陣列格式");
+        return;
+      }
+    }
 
     try {
       await updateMutation.mutateAsync({

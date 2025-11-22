@@ -2608,6 +2608,26 @@ ${file.extractedText || "無法提取文字內容"}`
       return await sendMakeupExamReminders();
     }),
   }),
+
+  // 資料品質檢查
+  dataQuality: router({
+    checkQuestions: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { checkQuestionsQuality } = await import("./dataQualityCheck");
+      return await checkQuestionsQuality();
+    }),
+    fixOptionsFormat: protectedProcedure.mutation(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { fixOptionsFormat } = await import("./dataQualityCheck");
+      return await fixOptionsFormat();
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
