@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle, RefreshCw, Loader2, Settings } from "lucide-react";
+import { AlertTriangle, CheckCircle, RefreshCw, Loader2, Settings, Home } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 
@@ -68,6 +68,18 @@ export default function DataQualityCheck() {
       />
 
       <div className="container py-8 space-y-6">
+        {/* 返回首頁按鈕 */}
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.location.href = '/'}
+          >
+            <Home className="h-4 w-4 mr-2" />
+            返回首頁
+          </Button>
+        </div>
+
         {/* 統計卡片 */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-purple-200 dark:border-purple-800">
