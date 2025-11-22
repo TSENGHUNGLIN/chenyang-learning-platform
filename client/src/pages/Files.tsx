@@ -38,7 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { debounce } from "lodash";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import { Loader2 } from "lucide-react";
-import CSVPreviewDialog from "@/components/CSVPreviewDialog";
+
 
 export default function Files() {
   const { user } = useAuth();
@@ -70,8 +70,7 @@ export default function Files() {
   const [showBatchUpdateDialog, setShowBatchUpdateDialog] = useState(false);
   const [batchUpdateEmployee, setBatchUpdateEmployee] = useState<string>("");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [showCSVPreview, setShowCSVPreview] = useState(false);
-  const [csvPreviewFile, setCSVPreviewFile] = useState<{ url: string; name: string } | null>(null);
+
 
   // 載入搜尋歷史記錄（從 localStorage 讀取）
   useEffect(() => {
@@ -507,19 +506,6 @@ export default function Files() {
                                 <Eye className="h-4 w-4 mr-1" />
                                 預視
                               </Button>
-                              {file.filename.toLowerCase().endsWith('.csv') && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setCSVPreviewFile({ url: file.fileUrl, name: file.filename });
-                                    setShowCSVPreview(true);
-                                  }}
-                                >
-                                  <TableIcon className="h-4 w-4 mr-1" />
-                                  CSV 預覽
-                                </Button>
-                              )}
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -679,18 +665,9 @@ export default function Files() {
                 {previewFile.filename.toLowerCase().endsWith('.csv') && (
                   <div className="p-4">
                     <p className="text-sm text-muted-foreground mb-4">
-                      CSV 檔案建議使用專用的「CSV 預覽」功能以獲得更好的表格顯示效果。
+                      正在載入 CSV 檔案預覽...
                     </p>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => {
-                          setShowPreviewDialog(false);
-                          setCSVPreviewFile({ url: previewFile.fileUrl, name: previewFile.filename });
-                          setShowCSVPreview(true);
-                        }}
-                      >
-                        開啟 CSV 預覽
-                      </Button>
+                    <div className="flex justify-center py-8">
                       <Button
                         variant="outline"
                         onClick={() => window.open(previewFile.fileUrl, '_blank')}
@@ -759,15 +736,7 @@ export default function Files() {
         </DialogContent>
       </Dialog>
 
-      {/* CSV 預覽對話框 */}
-      {csvPreviewFile && (
-        <CSVPreviewDialog
-          open={showCSVPreview}
-          onOpenChange={setShowCSVPreview}
-          fileUrl={csvPreviewFile.url}
-          fileName={csvPreviewFile.name}
-        />
-      )}
+
     </DashboardLayout>
   );
 }
