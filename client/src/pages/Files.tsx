@@ -38,6 +38,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { debounce } from "lodash";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import { Loader2 } from "lucide-react";
+import CSVTableView from "@/components/CSVTableView";
+import { type CSVData } from "@/lib/csvParser";
 
 
 export default function Files() {
@@ -70,6 +72,36 @@ export default function Files() {
   const [showBatchUpdateDialog, setShowBatchUpdateDialog] = useState(false);
   const [batchUpdateEmployee, setBatchUpdateEmployee] = useState<string>("");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [csvData, setCsvData] = useState<CSVData | null>(null);
+  const [csvLoading, setCsvLoading] = useState(false);
+  const [csvError, setCsvError] = useState<string | null>(null);
+
+  // 載入 CSV 資料
+  useEffect(() => {
+    if (showPreviewDialog && previewFile?.filename.toLowerCase().endsWith('.csv')) {
+      setCsvLoading(true);
+      setCsvError(null);
+      setCsvData(null);
+      
+      // 使用後端 API 載入 CSV
+      trpc.files.previewCSV.query({ fileUrl: previewFile.fileUrl, maxRows: 1000 })
+        .then((result) => {
+          // 轉換為前端 CSVData 格式
+          const data: CSVData = {
+            headers: result.headers,
+            rows: result.rows,
+            totalRows: result.totalRows,
+          };
+          setCsvData(data);
+          setCsvLoading(false);
+        })
+        .catch((error) => {
+          console.error('[CSV Preview] 載入失敗:', error);
+          setCsvError('無法載入 CSV 檔案，請檢查檔案格式或下載後查看');
+          setCsvLoading(false);
+        });
+    }
+  }, [showPreviewDialog, previewFile]);
 
 
   // 載入搜尋歷史記錄（從 localStorage 讀取）
@@ -664,17 +696,26 @@ export default function Files() {
                 {/* CSV 檔案預視 */}
                 {previewFile.filename.toLowerCase().endsWith('.csv') && (
                   <div className="p-4">
-                    <p className="text-sm text-muted-foreground mb-4">
-                      正在載入 CSV 檔案預覽...
-                    </p>
-                    <div className="flex justify-center py-8">
-                      <Button
-                        variant="outline"
-                        onClick={() => window.open(previewFile.fileUrl, '_blank')}
-                      >
-                        下載檔案
-                      </Button>
-                    </div>
+                    {csvLoading && (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <span className="ml-3 text-muted-foreground">正在載入 CSV 檔案...</span>
+                      </div>
+                    )}
+                    {csvError && (
+                      <div className="text-center py-8">
+                        <p className="text-red-500 mb-4">{csvError}</p>
+                        <Button
+                          variant="outline"
+                          onClick={() => window.open(previewFile.fileUrl, '_blank')}
+                        >
+                          下載檔案
+                        </Button>
+                      </div>
+                    )}
+                    {csvData && !csvLoading && !csvError && (
+                      <CSVTableView data={csvData} pageSize={20} />
+                    )}
                   </div>
                 )}
                 
