@@ -24,8 +24,11 @@ import {
   FileText,
   Copy,
   Eye,
+  Upload,
+  Table as TableIcon,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
+import LocalCSVPreviewDialog from "@/components/LocalCSVPreviewDialog";
 
 export default function ExamTemplates() {
   const [, setLocation] = useLocation();
@@ -39,6 +42,12 @@ export default function ExamTemplates() {
     timeLimit: 60,
     passingScore: 60,
   });
+  
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [csvFile, setCSVFile] = useState<File | null>(null);
+  const [csvPreviewUrl, setCSVPreviewUrl] = useState<string | null>(null);
+  const [showCSVPreview, setShowCSVPreview] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // 查詢範本列表
   const { data: templates, isLoading, refetch } = trpc.examTemplates.list.useQuery();
@@ -166,6 +175,32 @@ export default function ExamTemplates() {
       status: "draft",
     });
   };
+  
+  // 處理 CSV 檔案選擇
+  const handleCSVFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      toast.error("請選擇 CSV 檔案");
+      return;
+    }
+    
+    setCSVFile(file);
+    
+    // 創建本地 URL 以便預覽
+    try {
+      setIsUploading(true);
+      const url = URL.createObjectURL(file);
+      setCSVPreviewUrl(url);
+      toast.success("檔案已載入，可以預覽");
+    } catch (error) {
+      console.error('載入錯誤:', error);
+      toast.error("檔案載入失敗");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -200,10 +235,16 @@ export default function ExamTemplates() {
               </p>
             </div>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            建立範本
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              CSV 匯入
+            </Button>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              建立範本
+            </Button>
+          </div>
         </div>
 
         {/* 範本列表 */}
@@ -451,6 +492,85 @@ export default function ExamTemplates() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* CSV 匯入對話框 */}
+        <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>CSV 匯入考試範本</DialogTitle>
+              <DialogDescription>
+                上傳 CSV 檔案以批次建立考試範本。CSV 格式：範本名稱、範本說明、考試時長、及格分數
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="csv-file">選擇 CSV 檔案</Label>
+                <Input
+                  id="csv-file"
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCSVFileChange}
+                  disabled={isUploading}
+                />
+                {csvFile && (
+                  <p className="text-sm text-muted-foreground">
+                    已選擇：{csvFile.name}
+                  </p>
+                )}
+              </div>
+              
+              {csvPreviewUrl && csvFile && (
+                <div className="flex justify-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCSVPreview(true)}
+                  >
+                    <TableIcon className="h-4 w-4 mr-2" />
+                    預覽 CSV 檔案
+                  </Button>
+                </div>
+              )}
+              
+              <div className="bg-muted p-4 rounded-lg">
+                <p className="text-sm font-semibold mb-2">CSV 格式說明：</p>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li>• 第一行：標題行（範本名稱、範本說明、考試時長、及格分數）</li>
+                  <li>• 從第二行開始：每行一個範本</li>
+                  <li>• 考試時長單位：分鐘</li>
+                  <li>• 及格分數範圍：0-100</li>
+                </ul>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowImportDialog(false);
+                  setCSVFile(null);
+                  setCSVPreviewUrl(null);
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                disabled={!csvFile || isUploading}
+                onClick={() => {
+                  // TODO: 實作 CSV 匯入邏輯
+                  toast.info("此功能尚在開發中");
+                }}
+              >
+                {isUploading ? "載入中..." : "開始匯入"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* CSV 預覽對話框 */}
+        <LocalCSVPreviewDialog
+          open={showCSVPreview}
+          onOpenChange={setShowCSVPreview}
+          file={csvFile}
+        />
       </div>
     </DashboardLayout>
   );

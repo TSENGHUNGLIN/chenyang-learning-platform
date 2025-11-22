@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearch } from "wouter";
-import { Search, FileText, Sparkles, Trash2, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Search, FileText, Sparkles, Trash2, ChevronLeft, ChevronRight, Eye, Table as TableIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import FileUpload from "@/components/FileUpload";
 import { toast } from "sonner";
@@ -38,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { debounce } from "lodash";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import { Loader2 } from "lucide-react";
+import CSVPreviewDialog from "@/components/CSVPreviewDialog";
 
 export default function Files() {
   const { user } = useAuth();
@@ -69,6 +70,8 @@ export default function Files() {
   const [showBatchUpdateDialog, setShowBatchUpdateDialog] = useState(false);
   const [batchUpdateEmployee, setBatchUpdateEmployee] = useState<string>("");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [showCSVPreview, setShowCSVPreview] = useState(false);
+  const [csvPreviewFile, setCSVPreviewFile] = useState<{ url: string; name: string } | null>(null);
 
   // 載入搜尋歷史記錄（從 localStorage 讀取）
   useEffect(() => {
@@ -504,6 +507,19 @@ export default function Files() {
                                 <Eye className="h-4 w-4 mr-1" />
                                 預視
                               </Button>
+                              {file.filename.toLowerCase().endsWith('.csv') && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setCSVPreviewFile({ url: file.fileUrl, name: file.filename });
+                                    setShowCSVPreview(true);
+                                  }}
+                                >
+                                  <TableIcon className="h-4 w-4 mr-1" />
+                                  CSV 預覽
+                                </Button>
+                              )}
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -716,6 +732,16 @@ export default function Files() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* CSV 預覽對話框 */}
+      {csvPreviewFile && (
+        <CSVPreviewDialog
+          open={showCSVPreview}
+          onOpenChange={setShowCSVPreview}
+          fileUrl={csvPreviewFile.url}
+          fileName={csvPreviewFile.name}
+        />
+      )}
     </DashboardLayout>
   );
 }

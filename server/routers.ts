@@ -337,6 +337,44 @@ export const appRouter = router({
         const { getFileWithReadInfo } = await import("./db");
         return await getFileWithReadInfo(fileId, ctx.user.id);
       }),
+    previewCSV: protectedProcedure
+      .input(z.object({
+        fileUrl: z.string(),
+        maxRows: z.number().optional().default(100),
+      }))
+      .query(async ({ input }) => {
+        const { parseCSVForPreview } = await import("./csvPreview");
+        
+        // 從 S3 下載檔案
+        const response = await fetch(input.fileUrl);
+        if (!response.ok) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "檔案不存在" });
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        return await parseCSVForPreview(buffer, input.maxRows);
+      }),
+    validateCSV: protectedProcedure
+      .input(z.object({
+        fileUrl: z.string(),
+        requiredHeaders: z.array(z.string()).optional(),
+      }))
+      .query(async ({ input }) => {
+        const { validateCSV } = await import("./csvPreview");
+        
+        // 從 S3 下載檔案
+        const response = await fetch(input.fileUrl);
+        if (!response.ok) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "檔案不存在" });
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        return await validateCSV(buffer, input.requiredHeaders);
+      }),
   }),
 
   // Analysis router
