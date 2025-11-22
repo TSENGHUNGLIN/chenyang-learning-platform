@@ -36,7 +36,7 @@
 - [x] 測試所有預視功能
 - [x] 優化預視對話框的響應式設計
 - [x] 整合預視功能到各個頁面（題庫管理、考試管理、考卷範本）
-- [ ] 儲存檢查點
+- [x] 儲存檢查點
 
 ---
 
@@ -613,4 +613,13 @@
 - [x] 檢查其他頁面的搜尋高亮功能
 - [x] 恢復黃色高亮顯示樣式
 - [x] 測試搜尋高亮功能
+
+
+
+
+## 錯誤修復（2025-11-22）
+
+- [x] 修復 ExamStatistics 頁面的 perfLoading 未定義錯誤
+- [x] 修復 ExamStatistics 頁面的 setLocation 未定義錯誤
+- [x] 修復 CSVPreviewDialog 的 HTML 巢狀錯誤（DialogDescription 內不能包含 div）
 

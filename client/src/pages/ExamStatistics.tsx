@@ -87,7 +87,7 @@ export default function ExamStatistics() {
     }
   }, [user, authLoading, navigate]);
 
-  if (authLoading || statsLoading || wrongLoading || perfLoading) {
+  if (authLoading || statsLoading || wrongLoading || performanceLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -133,7 +133,7 @@ export default function ExamStatistics() {
             <p className="text-muted-foreground mt-2">考試統計分析</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setLocation("/exams")}>
+            <Button variant="outline" onClick={() => navigate("/exams")}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               返回考試管理
             </Button>
@@ -396,7 +396,7 @@ export default function ExamStatistics() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setLocation(`/exam/${item.assignmentId}/grade`)}
+                              onClick={() => navigate(`/exam/${item.assignmentId}/grade`)}
                             >
                               <Edit className="mr-1 h-3 w-3" />
                               評分

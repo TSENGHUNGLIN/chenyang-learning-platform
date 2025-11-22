@@ -72,26 +72,26 @@ export default function CSVPreviewDialog({
               下載檔案
             </Button>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="space-y-2">
             {previewData && (
-              <div className="space-y-2">
-                <span>
+              <>
+                <span className="block">
                   共 {previewData.totalRows} 行資料，{previewData.totalColumns} 個欄位
                   {previewData.hasMore && " （僅顯示前 100 行）"}
                 </span>
                 {previewData.hasMore && (
-                  <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <span className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                     <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-amber-800 dark:text-amber-200">
+                    <span className="text-sm text-amber-800 dark:text-amber-200">
                       <p className="font-semibold">資料量較大</p>
                       <p className="mt-1">
                         此 CSV 檔案包含超過 100 行資料，為了提升載入速度，目前僅顯示前 100 行。
                         如需查看完整資料，請下載檔案後使用 Excel 或其他工具開啟。
                       </p>
-                    </div>
-                  </div>
+                    </span>
+                  </span>
                 )}
-              </div>
+              </>
             )}
           </DialogDescription>
         </DialogHeader>
