@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import LocalCSVPreviewDialog from "@/components/LocalCSVPreviewDialog";
+import ExamTemplatePreviewDialog from "@/components/ExamTemplatePreviewDialog";
 
 export default function ExamTemplates() {
   const [, setLocation] = useLocation();
@@ -48,6 +49,8 @@ export default function ExamTemplates() {
   const [csvPreviewUrl, setCSVPreviewUrl] = useState<string | null>(null);
   const [showCSVPreview, setShowCSVPreview] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewTemplateId, setPreviewTemplateId] = useState<number>(0);
 
   // 查詢範本列表
   const { data: templates, isLoading, refetch } = trpc.examTemplates.list.useQuery();
@@ -317,7 +320,11 @@ export default function ExamTemplates() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => toast.info("功能開發中")}
+                      onClick={() => {
+                        setPreviewTemplateId(template.id);
+                        setShowPreviewDialog(true);
+                      }}
+                      title="預覽範本"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -570,6 +577,22 @@ export default function ExamTemplates() {
           open={showCSVPreview}
           onOpenChange={setShowCSVPreview}
           file={csvFile}
+        />
+        
+        {/* 範本預覽對話框 */}
+        <ExamTemplatePreviewDialog
+          open={showPreviewDialog}
+          onOpenChange={setShowPreviewDialog}
+          templateId={previewTemplateId}
+          onCreateExam={() => {
+            setShowPreviewDialog(false);
+            if (previewTemplateId > 0) {
+              const template = templates?.find(t => t.id === previewTemplateId);
+              if (template) {
+                handleCreateExam(template.id, template.name);
+              }
+            }
+          }}
         />
       </div>
     </DashboardLayout>

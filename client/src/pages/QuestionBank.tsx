@@ -29,7 +29,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home, Download, Upload, Loader2, ClipboardList, AlertTriangle, Sparkles, Check } from "lucide-react";
+import { BookOpen, Plus, Pencil, Trash2, Search, Filter, Home, Download, Upload, Loader2, ClipboardList, AlertTriangle, Sparkles, Check, Eye } from "lucide-react";
+import QuestionPreviewDialog from "@/components/QuestionPreviewDialog";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -48,6 +49,23 @@ export default function QuestionBank() {
   const [filterType, setFilterType] = useState<string>("all");
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
   const [filterSource, setFilterSource] = useState<string>("all");
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewQuestionId, setPreviewQuestionId] = useState<number>(0);
+  
+  // 搜尋關鍵字高亮顯示函數
+  const highlightText = (text: string, keyword: string) => {
+    if (!keyword) return text;
+    const parts = text.split(new RegExp(`(${keyword})`, "gi"));
+    return parts.map((part, i) =>
+      part.toLowerCase() === keyword.toLowerCase() ? (
+        <mark key={i} className="bg-yellow-200 dark:bg-yellow-900 px-1 rounded">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  };
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
   const [showExportConfirmDialog, setShowExportConfirmDialog] = useState(false);
   const [exportAction, setExportAction] = useState<'download' | 'create_exam'>('download');
@@ -832,7 +850,7 @@ export default function QuestionBank() {
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-start gap-2">
-                          <div className="line-clamp-2 flex-1">{question.question}</div>
+                          <div className="line-clamp-2 flex-1">{highlightText(question.question, searchKeyword)}</div>
                           {question.isAiGenerated === 1 && (
                             <Badge variant="secondary" className="shrink-0">
                               <Sparkles className="h-3 w-3 mr-1" />
@@ -903,7 +921,18 @@ export default function QuestionBank() {
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                               <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setPreviewQuestionId(question.id);
+                              setShowPreviewDialog(true);
+                            }}
+                            title="預覽題目"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1501,6 +1530,13 @@ export default function QuestionBank() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* 題目預覽對話框 */}
+      <QuestionPreviewDialog
+        open={showPreviewDialog}
+        onOpenChange={setShowPreviewDialog}
+        questionId={previewQuestionId}
+      />
     </div>
   );
 }

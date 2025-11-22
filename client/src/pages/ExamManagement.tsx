@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users, BarChart3, TrendingUp } from "lucide-react";
 import CreateExamWizard from "@/components/CreateExamWizard";
+import ExamPreviewDialog from "@/components/ExamPreviewDialog";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ExamManagement() {
@@ -37,6 +38,8 @@ export default function ExamManagement() {
   const [selectedExam, setSelectedExam] = useState<any | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewExamId, setPreviewExamId] = useState<number>(0);
   
   // 表單狀態
   const [formData, setFormData] = useState({
@@ -353,10 +356,22 @@ export default function ExamManagement() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setLocation(`/exams/${exam.id}`)}
+                              onClick={() => {
+                                setPreviewExamId(exam.id);
+                                setShowPreviewDialog(true);
+                              }}
+                              title="預覽考試"
                             >
                               <Eye className="h-4 w-4 mr-1" />
-                              查看
+                              預覽
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setLocation(`/exams/${exam.id}`)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              編輯
                             </Button>
                             <Button
                               variant="ghost"
@@ -562,6 +577,13 @@ export default function ExamManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* 考試預覽對話框 */}
+        <ExamPreviewDialog
+          open={showPreviewDialog}
+          onOpenChange={setShowPreviewDialog}
+          examId={previewExamId}
+        />
       </div>
     </div>
   );

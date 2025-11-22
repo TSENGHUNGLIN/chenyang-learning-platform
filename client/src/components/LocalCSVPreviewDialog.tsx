@@ -15,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Download, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface LocalCSVPreviewDialogProps {
@@ -38,6 +38,7 @@ export default function LocalCSVPreviewDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedColumns, setExpandedColumns] = useState<Set<number>>(new Set());
   const rowsPerPage = 20;
 
   // 解析 CSV 檔案
@@ -184,7 +185,28 @@ export default function LocalCSVPreviewDialog({
                       <TableHead className="w-12 bg-muted">#</TableHead>
                       {csvData.headers.map((header, index) => (
                         <TableHead key={index} className="bg-muted font-semibold">
-                          {header || `欄位 ${index + 1}`}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate">{header || `欄位 ${index + 1}`}</span>
+                            <button
+                              onClick={() => {
+                                const newExpanded = new Set(expandedColumns);
+                                if (newExpanded.has(index)) {
+                                  newExpanded.delete(index);
+                                } else {
+                                  newExpanded.add(index);
+                                }
+                                setExpandedColumns(newExpanded);
+                              }}
+                              className="p-1 hover:bg-muted-foreground/10 rounded transition-colors"
+                              title={expandedColumns.has(index) ? "縮小欄位" : "展開欄位"}
+                            >
+                              {expandedColumns.has(index) ? (
+                                <Minimize2 className="w-3 h-3" />
+                              ) : (
+                                <Maximize2 className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
                         </TableHead>
                       ))}
                     </TableRow>
@@ -196,7 +218,11 @@ export default function LocalCSVPreviewDialog({
                           {startIndex + rowIndex + 1}
                         </TableCell>
                         {row.map((cell, cellIndex) => (
-                          <TableCell key={cellIndex} className="max-w-xs truncate">
+                          <TableCell 
+                            key={cellIndex} 
+                            className={expandedColumns.has(cellIndex) ? "max-w-2xl" : "max-w-xs truncate"}
+                            title={cell}
+                          >
                             {cell || <span className="text-muted-foreground italic">空白</span>}
                           </TableCell>
                         ))}

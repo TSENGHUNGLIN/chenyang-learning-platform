@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Download, ChevronLeft, ChevronRight, AlertCircle, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface CSVPreviewDialogProps {
@@ -33,6 +33,7 @@ export default function CSVPreviewDialog({
   fileName,
 }: CSVPreviewDialogProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedColumns, setExpandedColumns] = useState<Set<number>>(new Set());
   const rowsPerPage = 20;
 
   // 查詢 CSV 預覽資料
@@ -73,10 +74,24 @@ export default function CSVPreviewDialog({
           </DialogTitle>
           <DialogDescription>
             {previewData && (
-              <span>
-                共 {previewData.totalRows} 行資料，{previewData.totalColumns} 個欄位
-                {previewData.hasMore && " （僅顯示前 100 行）"}
-              </span>
+              <div className="space-y-2">
+                <span>
+                  共 {previewData.totalRows} 行資料，{previewData.totalColumns} 個欄位
+                  {previewData.hasMore && " （僅顯示前 100 行）"}
+                </span>
+                {previewData.hasMore && (
+                  <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-amber-800 dark:text-amber-200">
+                      <p className="font-semibold">資料量較大</p>
+                      <p className="mt-1">
+                        此 CSV 檔案包含超過 100 行資料，為了提升載入速度，目前僅顯示前 100 行。
+                        如需查看完整資料，請下載檔案後使用 Excel 或其他工具開啟。
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </DialogDescription>
         </DialogHeader>
@@ -105,7 +120,28 @@ export default function CSVPreviewDialog({
                       <TableHead className="w-12 bg-muted">#</TableHead>
                       {previewData.headers.map((header, index) => (
                         <TableHead key={index} className="bg-muted font-semibold">
-                          {header || `欄位 ${index + 1}`}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate">{header || `欄位 ${index + 1}`}</span>
+                            <button
+                              onClick={() => {
+                                const newExpanded = new Set(expandedColumns);
+                                if (newExpanded.has(index)) {
+                                  newExpanded.delete(index);
+                                } else {
+                                  newExpanded.add(index);
+                                }
+                                setExpandedColumns(newExpanded);
+                              }}
+                              className="p-1 hover:bg-muted-foreground/10 rounded transition-colors"
+                              title={expandedColumns.has(index) ? "縮小欄位" : "展開欄位"}
+                            >
+                              {expandedColumns.has(index) ? (
+                                <Minimize2 className="w-3 h-3" />
+                              ) : (
+                                <Maximize2 className="w-3 h-3" />
+                              )}
+                            </button>
+                          </div>
                         </TableHead>
                       ))}
                     </TableRow>
@@ -117,7 +153,11 @@ export default function CSVPreviewDialog({
                           {startIndex + rowIndex + 1}
                         </TableCell>
                         {row.map((cell, cellIndex) => (
-                          <TableCell key={cellIndex} className="max-w-xs truncate">
+                          <TableCell 
+                            key={cellIndex} 
+                            className={expandedColumns.has(cellIndex) ? "max-w-2xl" : "max-w-xs truncate"}
+                            title={cell}
+                          >
                             {cell || <span className="text-muted-foreground italic">空白</span>}
                           </TableCell>
                         ))}
