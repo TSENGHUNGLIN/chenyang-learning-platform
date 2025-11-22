@@ -40,6 +40,7 @@ export default function ExamManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewExamId, setPreviewExamId] = useState<number>(0);
+  const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
   
   // 表單狀態
   const [formData, setFormData] = useState({
@@ -320,6 +321,7 @@ export default function ExamManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">選擇</TableHead>
                     <TableHead>考試名稱</TableHead>
                     <TableHead>狀態</TableHead>
                     <TableHead>時長</TableHead>
@@ -332,8 +334,21 @@ export default function ExamManagement() {
                 <TableBody>
                   {exams.map((exam: any) => {
                     const statusInfo = getExamStatus(exam);
+                    const isSelected = selectedExamId === exam.id;
                     return (
-                      <TableRow key={exam.id}>
+                      <TableRow 
+                        key={exam.id}
+                        className={isSelected ? "bg-blue-50 dark:bg-blue-950" : ""}
+                      >
+                        <TableCell>
+                          <input
+                            type="radio"
+                            name="exam-selection"
+                            checked={isSelected}
+                            onChange={() => setSelectedExamId(exam.id)}
+                            className="h-4 w-4 cursor-pointer"
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{exam.title}</TableCell>
                         <TableCell>
                           <Badge variant={statusInfo.variant}>
@@ -365,93 +380,101 @@ export default function ExamManagement() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            {/* 預覽按鈕 - 所有狀態都可用 */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setPreviewExamId(exam.id);
-                                setShowPreviewDialog(true);
-                              }}
-                              title="預覽考試"
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              預覽
-                            </Button>
-                            
-                            {/* 統計按鈕 - 已發布的考試才顯示 */}
-                            {exam.status !== 'draft' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setLocation(`/exam/${exam.id}/statistics`)}
-                              >
-                                <BarChart3 className="h-4 w-4 mr-1" />
-                                統計
-                              </Button>
+                            {/* 只有選中的考試才顯示操作按鈕 */}
+                            {isSelected && (
+                              <>
+                                {/* 預覽按鈕 - 所有狀態都可用 */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setPreviewExamId(exam.id);
+                                    setShowPreviewDialog(true);
+                                  }}
+                                  title="預覽考試"
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  預覽
+                                </Button>
+                                
+                                {/* 統計按鈕 - 已發布的考試才顯示 */}
+                                {exam.status !== 'draft' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setLocation(`/exam/${exam.id}/statistics`)}
+                                  >
+                                    <BarChart3 className="h-4 w-4 mr-1" />
+                                    統計
+                                  </Button>
+                                )}
+                                
+                                {/* 分析按鈕 - 已發布的考試才顯示 */}
+                                {exam.status !== 'draft' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setLocation(`/exam/${exam.id}/analytics`)}
+                                  >
+                                    <TrendingUp className="h-4 w-4 mr-1" />
+                                    分析
+                                  </Button>
+                                )}
+                                
+                                {/* 審查編輯按鈕 - 已發布的考試使用，進入完整編輯頁面 */}
+                                {exam.status !== 'draft' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setLocation(`/exams/${exam.id}`)}
+                                    className="text-blue-600 hover:text-blue-700"
+                                    title="進入完整編輯頁面進行審查和調整"
+                                  >
+                                    <FileEdit className="h-4 w-4 mr-1" />
+                                    審查編輯
+                                  </Button>
+                                )}
+                                
+                                {/* 快速編輯按鈕 - 草稿狀態使用，開啟對話框快速修改 */}
+                                {exam.status === 'draft' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEdit(exam)}
+                                    className="text-green-600 hover:text-green-700"
+                                    title="快速修改基本資訊"
+                                  >
+                                    <Zap className="h-4 w-4 mr-1" />
+                                    快速編輯
+                                  </Button>
+                                )}
+                                
+                                {/* 指派考生按鈕 - 所有狀態都可用 */}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAssign(exam)}
+                                >
+                                  <Users className="h-4 w-4 mr-1" />
+                                  指派考生
+                                </Button>
+                                
+                                {/* 刪除按鈕 - 草稿狀態才可刪除 */}
+                                {exam.status === 'draft' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDelete(exam.id)}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    刪除
+                                  </Button>
+                                )}
+                              </>
                             )}
-                            
-                            {/* 分析按鈕 - 已發布的考試才顯示 */}
-                            {exam.status !== 'draft' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setLocation(`/exam/${exam.id}/analytics`)}
-                              >
-                                <TrendingUp className="h-4 w-4 mr-1" />
-                                分析
-                              </Button>
-                            )}
-                            
-                            {/* 審查編輯按鈕 - 已發布的考試使用，進入完整編輯頁面 */}
-                            {exam.status !== 'draft' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setLocation(`/exams/${exam.id}`)}
-                                className="text-blue-600 hover:text-blue-700"
-                                title="進入完整編輯頁面進行審查和調整"
-                              >
-                                <FileEdit className="h-4 w-4 mr-1" />
-                                審查編輯
-                              </Button>
-                            )}
-                            
-                            {/* 快速編輯按鈕 - 草稿狀態使用，開啟對話框快速修改 */}
-                            {exam.status === 'draft' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(exam)}
-                                className="text-green-600 hover:text-green-700"
-                                title="快速修改基本資訊"
-                              >
-                                <Zap className="h-4 w-4 mr-1" />
-                                快速編輯
-                              </Button>
-                            )}
-                            
-                            {/* 指派考生按鈕 - 所有狀態都可用 */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleAssign(exam)}
-                            >
-                              <Users className="h-4 w-4 mr-1" />
-                              指派考生
-                            </Button>
-                            
-                            {/* 刪除按鈕 - 草稿狀態才可刪除 */}
-                            {exam.status === 'draft' && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(exam.id)}
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                刪除
-                              </Button>
+                            {!isSelected && (
+                              <span className="text-sm text-muted-foreground">請先選擇考試</span>
                             )}
                           </div>
                         </TableCell>
