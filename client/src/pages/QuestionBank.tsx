@@ -691,12 +691,12 @@ export default function QuestionBank() {
       </div>
 
       {/* 篩選與搜尋區域 */}
-      <Card className="mb-6">
+      <Card className="mb-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>題目列表</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-purple-900 dark:text-purple-100">題目列表</CardTitle>
+              <CardDescription className="text-purple-700 dark:text-purple-300">
                 共 {filteredQuestions?.length || 0} 個題目
                 {selectedQuestions.length > 0 && (
                   <span className="ml-4 text-primary font-semibold">

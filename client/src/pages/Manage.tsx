@@ -256,15 +256,15 @@ export default function Manage() {
         </div>
 
         {/* 部門管理 */}
-        <Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 border-orange-200 dark:border-orange-800">
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">
                   <Building2 className="h-5 w-5" />
                   部門管理
                 </CardTitle>
-                <CardDescription>管理所有部門資料</CardDescription>
+                <CardDescription className="text-orange-700 dark:text-orange-300">管理所有部門資料</CardDescription>
               </div>
               <Dialog open={isDeptDialogOpen} onOpenChange={(open) => {
                 setIsDeptDialogOpen(open);
@@ -361,15 +361,15 @@ export default function Manage() {
         </Card>
 
         {/* 人員管理 */}
-        <Card>
+        <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 border-indigo-200 dark:border-indigo-800">
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
                   <UserPlus className="h-5 w-5" />
                   人員管理
                 </CardTitle>
-                <CardDescription>管理所有人員資料</CardDescription>
+                <CardDescription className="text-indigo-700 dark:text-indigo-300">管理所有人員資料</CardDescription>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => setIsBatchImportDialogOpen(true)}>

@@ -289,10 +289,10 @@ export default function Files() {
           </div>
         </div>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950 border-teal-200 dark:border-teal-800">
           <CardHeader>
-            <CardTitle>進階篩選</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-teal-900 dark:text-teal-100">進階篩選</CardTitle>
+            <CardDescription className="text-teal-700 dark:text-teal-300">
               使用多條件組合篩選檔案
               {hasActiveFilters && (
                 <Button
@@ -406,12 +406,12 @@ export default function Files() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>檔案列表</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-blue-900 dark:text-blue-100">檔案列表</CardTitle>
+                <CardDescription className="text-blue-700 dark:text-blue-300">
                   共 {total} 個檔案
                   {hasActiveFilters && " (已篩選)"}
                 </CardDescription>

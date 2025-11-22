@@ -265,7 +265,7 @@ export default function ExamManagement() {
 
         {/* 考試列表 */}
         {!exams || exams.length === 0 ? (
-          <Card>
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <FileText className="h-16 w-16 text-muted-foreground mb-4" />
               <p className="text-lg font-medium text-muted-foreground">尚無考試</p>
@@ -280,10 +280,10 @@ export default function ExamManagement() {
             </CardContent>
           </Card>
         ) : (
-          <Card>
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
             <CardHeader>
-              <CardTitle>考試列表</CardTitle>
-              <CardDescription>共 {exams.length} 個考試</CardDescription>
+              <CardTitle className="text-green-900 dark:text-green-100">考試列表</CardTitle>
+              <CardDescription className="text-green-700 dark:text-green-300">共 {exams.length} 個考試</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>

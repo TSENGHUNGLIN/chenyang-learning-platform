@@ -637,10 +637,10 @@ export default function AIAnalysis() {
       </div>
 
       {/* 篩選條件區域 */}
-      <Card className="mb-6">
+      <Card className="mb-6 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950 border-teal-200 dark:border-teal-800">
         <CardHeader>
-          <CardTitle>篩選條件</CardTitle>
-          <CardDescription>使用多條件組合篩選檔案</CardDescription>
+          <CardTitle className="text-teal-900 dark:text-teal-100">篩選條件</CardTitle>
+          <CardDescription className="text-teal-700 dark:text-teal-300">使用多條件組合篩選檔案</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -689,12 +689,12 @@ export default function AIAnalysis() {
       </Card>
 
       {/* 檔案選擇區域 */}
-      <Card className="mb-6">
+      <Card className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>選擇檔案</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-blue-900 dark:text-blue-100">選擇檔案</CardTitle>
+              <CardDescription className="text-blue-700 dark:text-blue-300">
                 已選擇 {selectedFiles.length} / {filteredFiles.length} 個檔案
               </CardDescription>
             </div>
@@ -754,10 +754,10 @@ export default function AIAnalysis() {
       </Card>
 
       {/* AI分析區域 */}
-      <Card className="mb-6">
+      <Card className="mb-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800">
         <CardHeader>
-          <CardTitle>AI 分析設定</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-purple-900 dark:text-purple-100">AI 分析設定</CardTitle>
+          <CardDescription className="text-purple-700 dark:text-purple-300">
             輸入自訂提示詞，例如：「從題庫選擇10個是非、10個選擇、4個問答」
           </CardDescription>
         </CardHeader>
@@ -969,12 +969,12 @@ export default function AIAnalysis() {
 
       {/* 分析結果區域 */}
       {analysisResult && (
-        <Card>
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>分析結果</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-green-900 dark:text-green-100">分析結果</CardTitle>
+                <CardDescription className="text-green-700 dark:text-green-300">
                   基於 {selectedFiles.length} 個檔案的 AI 分析結果
                 </CardDescription>
               </div>

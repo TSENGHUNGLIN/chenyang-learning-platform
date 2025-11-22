@@ -411,6 +411,17 @@ export default function FileUpload() {
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* 支援的檔案格式說明 */}
+          <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">📝 支援的檔案格式</p>
+            <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+              <p>• <strong>DOCX</strong> - Microsoft Word 文件</p>
+              <p>• <strong>CSV</strong> - 逗號分隔值檔案</p>
+            </div>
+            <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+              注意：系統已不再支援 PDF 檔案上傳，請將 PDF 轉換為 DOCX 格式後再上傳。
+            </p>
+          </div>
           {/* 部門選擇 */}
           <div className="space-y-2">
             <Label htmlFor="department">部門</Label>

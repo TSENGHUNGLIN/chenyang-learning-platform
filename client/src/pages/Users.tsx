@@ -204,10 +204,10 @@ export default function Users() {
   if (currentUser?.role !== "admin") {
     return (
       <DashboardLayout>
-        <Card>
+        <Card className="bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-950 dark:to-pink-950 border-red-200 dark:border-red-800">
           <CardHeader>
-            <CardTitle>無權限</CardTitle>
-            <CardDescription>您沒有權限存取此頁面</CardDescription>
+            <CardTitle className="text-red-900 dark:text-red-100">無權限</CardTitle>
+            <CardDescription className="text-red-700 dark:text-red-300">您沒有權限存取此頁面</CardDescription>
           </CardHeader>
         </Card>
       </DashboardLayout>
@@ -222,11 +222,11 @@ export default function Users() {
           <p className="text-muted-foreground mt-2">管理系統使用者與權限設定</p>
         </div>
 
-        <Card>
+        <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-950 dark:to-blue-950 border-cyan-200 dark:border-cyan-800">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>使用者列表</CardTitle>
+                <CardTitle className="text-cyan-900 dark:text-cyan-100">使用者列表</CardTitle>
               </div>
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
@@ -314,7 +314,7 @@ export default function Users() {
                 </DialogContent>
               </Dialog>
             </div>
-            <CardDescription>
+            <CardDescription className="text-cyan-700 dark:text-cyan-300">
               共 {users?.length || 0} 位使用者
               {users?.filter((u) => u.role === "examinee").length ? (
                 <Badge variant="secondary" className="ml-2">

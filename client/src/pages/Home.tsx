@@ -1,26 +1,15 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Calendar, FileText, Users, TrendingUp, Search, BookOpen, Settings, ClipboardList, Activity, Award, BarChart3, Upload, CheckCircle } from "lucide-react";
-import { Link, useLocation } from "wouter";
-import { useState } from "react";
+
+import { Calendar, FileText, Users, TrendingUp, BookOpen, Settings, ClipboardList, Activity, Award, BarChart3, Upload, CheckCircle } from "lucide-react";
+import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow, format } from "date-fns";
 import { zhTW } from "date-fns/locale";
 
 export default function Home() {
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setLocation(`/files?search=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
 
   const features = [
     {
@@ -200,46 +189,7 @@ export default function Home() {
           </Card>
         )}
 
-        {/* 快速搜尋 */}
-        <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-teal-950 dark:to-cyan-950 border-teal-200 dark:border-teal-800">
-          <CardHeader>
-            <CardTitle className="text-teal-900 dark:text-teal-100">快速搜尋</CardTitle>
-            <CardDescription className="text-teal-700 dark:text-teal-300">搜尋檔案內容、人員或部門</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSearch} className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-teal-600 dark:text-teal-400" />
-                <Input
-                  placeholder="輸入關鍵字搜尋..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-white dark:bg-gray-900"
-                />
-              </div>
-              <Button type="submit" className="bg-teal-600 hover:bg-teal-700 text-white">搜尋</Button>
-            </form>
-          </CardContent>
-        </Card>
 
-        {/* 系統說明 */}
-        <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-          <CardHeader>
-            <CardTitle className="text-blue-900 dark:text-blue-100">📝 支援的檔案格式</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              系統目前支援以下檔案格式的上傳和分析：
-            </p>
-            <ul className="mt-2 space-y-1 text-sm text-blue-700 dark:text-blue-300">
-              <li>• <strong>DOCX</strong> - Microsoft Word 文件</li>
-              <li>• <strong>CSV</strong> - 逗號分隔值檔案</li>
-            </ul>
-            <p className="mt-3 text-xs text-blue-600 dark:text-blue-400">
-              注意：系統已不再支援 PDF 檔案上傳，請將 PDF 轉換為 DOCX 格式後再上傳。
-            </p>
-          </CardContent>
-        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature) => {
