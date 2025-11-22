@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users, BarChart3, TrendingUp } from "lucide-react";
+import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users, BarChart3, TrendingUp, FileEdit, Zap } from "lucide-react";
 import CreateExamWizard from "@/components/CreateExamWizard";
 import ExamPreviewDialog from "@/components/ExamPreviewDialog";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -221,6 +221,34 @@ export default function ExamManagement() {
     }
   };
 
+  // 計算考試狀態（草稿/已發布/進行中/已結束）
+  const getExamStatus = (exam: any) => {
+    if (exam.status === 'draft') {
+      return { text: '草稿', variant: 'secondary' as const, key: 'draft' };
+    }
+    if (exam.status === 'archived') {
+      return { text: '已封存', variant: 'outline' as const, key: 'archived' };
+    }
+    
+    // 已發布的考試，需要根據時間判斷狀態
+    const now = new Date();
+    const startTime = exam.startTime ? new Date(exam.startTime) : null;
+    const endTime = exam.endTime ? new Date(exam.endTime) : null;
+    
+    if (startTime && endTime) {
+      if (now < startTime) {
+        return { text: '已發布', variant: 'default' as const, key: 'published' };
+      } else if (now >= startTime && now <= endTime) {
+        return { text: '進行中', variant: 'default' as const, key: 'ongoing' };
+      } else {
+        return { text: '已結束', variant: 'outline' as const, key: 'ended' };
+      }
+    }
+    
+    // 如果沒有設定時間，則顯示已發布
+    return { text: '已發布', variant: 'default' as const, key: 'published' };
+  };
+  
   const getStatusLabel = (status: string) => {
     const labels: Record<string, { text: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
       draft: { text: "草稿", variant: "secondary" },
@@ -303,7 +331,7 @@ export default function ExamManagement() {
                 </TableHeader>
                 <TableBody>
                   {exams.map((exam: any) => {
-                    const statusInfo = getStatusLabel(exam.status);
+                    const statusInfo = getExamStatus(exam);
                     return (
                       <TableRow key={exam.id}>
                         <TableCell className="font-medium">{exam.title}</TableCell>
@@ -337,22 +365,7 @@ export default function ExamManagement() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setLocation(`/exam/${exam.id}/statistics`)}
-                            >
-                              <BarChart3 className="h-4 w-4 mr-1" />
-                              統計
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setLocation(`/exam/${exam.id}/analytics`)}
-                            >
-                              <TrendingUp className="h-4 w-4 mr-1" />
-                              分析
-                            </Button>
+                            {/* 預覽按鈕 - 所有狀態都可用 */}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -365,14 +378,60 @@ export default function ExamManagement() {
                               <Eye className="h-4 w-4 mr-1" />
                               預覽
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setLocation(`/exams/${exam.id}`)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              編輯
-                            </Button>
+                            
+                            {/* 統計按鈕 - 已發布的考試才顯示 */}
+                            {exam.status !== 'draft' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setLocation(`/exam/${exam.id}/statistics`)}
+                              >
+                                <BarChart3 className="h-4 w-4 mr-1" />
+                                統計
+                              </Button>
+                            )}
+                            
+                            {/* 分析按鈕 - 已發布的考試才顯示 */}
+                            {exam.status !== 'draft' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setLocation(`/exam/${exam.id}/analytics`)}
+                              >
+                                <TrendingUp className="h-4 w-4 mr-1" />
+                                分析
+                              </Button>
+                            )}
+                            
+                            {/* 審查編輯按鈕 - 已發布的考試使用，進入完整編輯頁面 */}
+                            {exam.status !== 'draft' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setLocation(`/exams/${exam.id}`)}
+                                className="text-blue-600 hover:text-blue-700"
+                                title="進入完整編輯頁面進行審查和調整"
+                              >
+                                <FileEdit className="h-4 w-4 mr-1" />
+                                審查編輯
+                              </Button>
+                            )}
+                            
+                            {/* 快速編輯按鈕 - 草稿狀態使用，開啟對話框快速修改 */}
+                            {exam.status === 'draft' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(exam)}
+                                className="text-green-600 hover:text-green-700"
+                                title="快速修改基本資訊"
+                              >
+                                <Zap className="h-4 w-4 mr-1" />
+                                快速編輯
+                              </Button>
+                            )}
+                            
+                            {/* 指派考生按鈕 - 所有狀態都可用 */}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -381,23 +440,19 @@ export default function ExamManagement() {
                               <Users className="h-4 w-4 mr-1" />
                               指派考生
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(exam)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              編輯
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(exam.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              刪除
-                            </Button>
+                            
+                            {/* 刪除按鈕 - 草稿狀態才可刪除 */}
+                            {exam.status === 'draft' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(exam.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                刪除
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
