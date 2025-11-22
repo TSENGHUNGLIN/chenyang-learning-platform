@@ -68,6 +68,28 @@ export default function Files() {
   const [selectedFileIds, setSelectedFileIds] = useState<number[]>([]);
   const [showBatchUpdateDialog, setShowBatchUpdateDialog] = useState(false);
   const [batchUpdateEmployee, setBatchUpdateEmployee] = useState<string>("");
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+
+  // 載入搜尋歷史記錄（從 localStorage 讀取）
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('fileSearchHistory');
+    if (savedHistory) {
+      try {
+        setSearchHistory(JSON.parse(savedHistory));
+      } catch (e) {
+        console.error('Failed to parse search history:', e);
+      }
+    }
+  }, []);
+
+  // 儲存搜尋歷史記錄
+  const saveSearchHistory = (keyword: string) => {
+    if (!keyword.trim()) return;
+    
+    const newHistory = [keyword, ...searchHistory.filter(h => h !== keyword)].slice(0, 10); // 保留最近10筆
+    setSearchHistory(newHistory);
+    localStorage.setItem('fileSearchHistory', JSON.stringify(newHistory));
+  };
 
   // Debounced search
   const debouncedSearch = useMemo(
@@ -82,11 +104,14 @@ export default function Files() {
   const handleSearchChange = useCallback((value: string) => {
     setSearchKeyword(value);
     debouncedSearch(value);
-  }, [debouncedSearch]);
+    if (value.trim()) {
+      saveSearchHistory(value.trim());
+    }
+  }, [debouncedSearch, searchHistory]);
 
   const { data: filesData, isLoading } = trpc.files.list.useQuery({
     page: currentPage,
-    pageSize: 20,
+    pageSize: 10,
     departmentId: selectedDepartment !== "all" ? parseInt(selectedDepartment) : undefined,
     employeeId: selectedEmployee !== "all" ? parseInt(selectedEmployee) : undefined,
     startDate: startDate || undefined,
@@ -285,6 +310,25 @@ export default function Files() {
                     className="pl-9"
                   />
                 </div>
+                {/* 搜尋歷史記錄 */}
+                {searchHistory.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {searchHistory.slice(0, 5).map((keyword, index) => (
+                      <Badge
+                        key={index}
+                        variant="outline"
+                        className="cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                        onClick={() => {
+                          setSearchKeyword(keyword);
+                          setDebouncedKeyword(keyword);
+                          setCurrentPage(1);
+                        }}
+                      >
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* 部門篩選 */}
