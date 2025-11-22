@@ -441,3 +441,77 @@ export const examReminders = mysqlTable("examReminders", {
 export type ExamReminder = typeof examReminders.$inferSelect;
 export type InsertExamReminder = typeof examReminders.$inferInsert;
 
+/**
+ * 補考記錄表格
+ * 記錄不及格考生的補考安排和結果
+ */
+export const makeupExams = mysqlTable("makeupExams", {
+  id: int("id").autoincrement().primaryKey(),
+  originalAssignmentId: int("originalAssignmentId").notNull(), // 原始考試指派ID
+  makeupAssignmentId: int("makeupAssignmentId"), // 補考的考試指派ID（建立補考後填入）
+  userId: int("userId").notNull(), // 考生ID
+  examId: int("examId").notNull(), // 考試ID
+  makeupCount: int("makeupCount").notNull().default(1), // 第幾次補考（1=第一次補考）
+  maxMakeupAttempts: int("maxMakeupAttempts").notNull().default(2), // 最多可補考次數
+  makeupDeadline: timestamp("makeupDeadline"), // 補考截止日期
+  status: mysqlEnum("status", ["pending", "scheduled", "completed", "expired"]).notNull().default("pending"), // 補考狀態
+  originalScore: int("originalScore"), // 原始考試分數
+  makeupScore: int("makeupScore"), // 補考分數
+  reason: text("reason"), // 補考原因（自動填入：不及格）
+  notes: text("notes"), // 管理員備註
+  scheduledBy: int("scheduledBy"), // 安排補考的管理員ID
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MakeupExam = typeof makeupExams.$inferSelect;
+export type InsertMakeupExam = typeof makeupExams.$inferInsert;
+
+/**
+ * 學習建議表格
+ * 根據錯題分析為考生提供學習建議
+ */
+export const learningRecommendations = mysqlTable("learningRecommendations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // 考生ID
+  assignmentId: int("assignmentId"), // 關聯的考試指派ID（可選）
+  makeupExamId: int("makeupExamId"), // 關聯的補考記錄ID（可選）
+  recommendationType: mysqlEnum("recommendationType", ["weak_topics", "practice_questions", "study_materials", "ai_generated"]).notNull(), // 建議類型
+  title: varchar("title", { length: 200 }).notNull(), // 建議標題
+  content: text("content").notNull(), // 建議內容（JSON格式，包含詳細建議）
+  relatedQuestionIds: text("relatedQuestionIds"), // 相關題目ID（JSON陣列）
+  relatedCategoryIds: text("relatedCategoryIds"), // 相關分類ID（JSON陣列）
+  relatedTagIds: text("relatedTagIds"), // 相關標籤ID（JSON陣列）
+  priority: mysqlEnum("priority", ["high", "medium", "low"]).notNull().default("medium"), // 優先級
+  isRead: int("isRead").notNull().default(0), // 是否已讀（1=已讀，0=未讀）
+  readAt: timestamp("readAt"), // 閱讀時間
+  generatedBy: varchar("generatedBy", { length: 50 }).notNull().default("system"), // 生成來源（system=系統自動, ai=AI生成, manual=人工建立）
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LearningRecommendation = typeof learningRecommendations.$inferSelect;
+export type InsertLearningRecommendation = typeof learningRecommendations.$inferInsert;
+
+/**
+ * 通知記錄表格
+ * 記錄系統發送的所有通知（不及格通知、補考提醒等）
+ */
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // 接收通知的使用者ID（0表示通知管理員）
+  notificationType: mysqlEnum("notificationType", ["exam_failed", "makeup_scheduled", "makeup_reminder", "makeup_deadline", "other"]).notNull(), // 通知類型
+  title: varchar("title", { length: 200 }).notNull(), // 通知標題
+  content: text("content").notNull(), // 通知內容
+  relatedExamId: int("relatedExamId"), // 相關考試ID
+  relatedAssignmentId: int("relatedAssignmentId"), // 相關考試指派ID
+  relatedMakeupExamId: int("relatedMakeupExamId"), // 相關補考記錄ID
+  isRead: int("isRead").notNull().default(0), // 是否已讀（1=已讀，0=未讀）
+  readAt: timestamp("readAt"), // 閱讀時間
+  sentAt: timestamp("sentAt").defaultNow().notNull(), // 發送時間
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+

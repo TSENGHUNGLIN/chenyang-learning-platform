@@ -417,6 +417,32 @@ export async function saveGradingResult(
     await db.insert(examScores).values(scoreData);
   }
   
+  // 檢查是否不及格，自動建立補考記錄
+  if (!gradingResult.passed) {
+    const { examAssignments } = await import("../drizzle/schema");
+    const assignmentData = await db
+      .select()
+      .from(examAssignments)
+      .where(eq(examAssignments.id, assignmentId))
+      .limit(1);
+
+    if (assignmentData.length > 0) {
+      const assignment = assignmentData[0];
+      const { autoCreateMakeupExamForFailedStudent } = await import("./makeupExamHelper");
+      
+      // 只為正式考試建立補考記錄（不包含模擬練習）
+      if (assignment.isPractice === 0) {
+        await autoCreateMakeupExamForFailedStudent(
+          assignmentId,
+          assignment.userId,
+          assignment.examId,
+          gradingResult.totalScore,
+          gradingResult.maxScore * 0.6 // 假設及格分數為60%
+        );
+      }
+    }
+  }
+  
   return { success: true };
 }
 

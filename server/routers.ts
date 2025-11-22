@@ -2500,6 +2500,114 @@ ${file.extractedText || "無法提取文字內容"}`
         return await getUserScoreDistribution(ctx.user.id, input || {});
       }),
   }),
+
+  // 補考機制
+  makeupExams: router({
+    // 管理員查看待補考列表
+    getPending: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getPendingMakeupExams } = await import("./makeupExamHelper");
+      return await getPendingMakeupExams();
+    }),
+
+    // 管理員安排補考
+    schedule: protectedProcedure
+      .input(
+        z.object({
+          makeupExamId: z.number(),
+          deadline: z.string(), // ISO date string
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { scheduleMakeupExam } = await import("./makeupExamHelper");
+        return await scheduleMakeupExam(
+          input.makeupExamId,
+          new Date(input.deadline),
+          input.notes || null,
+          ctx.user.id
+        );
+      }),
+
+    // 考生查看自己的補考歷史
+    getHistory: protectedProcedure.query(async ({ ctx }) => {
+      const { getMakeupExamHistory } = await import("./makeupExamHelper");
+      return await getMakeupExamHistory(ctx.user.id);
+    }),
+  }),
+
+  // 學習建議
+  learningRecommendations: router({
+    // 考生查看學習建議
+    getMyRecommendations: protectedProcedure.query(async ({ ctx }) => {
+      const { getLearningRecommendations } = await import("./makeupExamHelper");
+      return await getLearningRecommendations(ctx.user.id);
+    }),
+
+    // 標記建議為已讀
+    markAsRead: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input }) => {
+        const { markRecommendationAsRead } = await import("./makeupExamHelper");
+        return await markRecommendationAsRead(input);
+      }),
+  }),
+
+  // 通知系統
+  notifications: router({
+    // 獲取使用者的通知列表
+    getMyNotifications: protectedProcedure
+      .input(z.object({ unreadOnly: z.boolean().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        const { getUserNotifications } = await import("./notificationHelper");
+        return await getUserNotifications(ctx.user.id, input?.unreadOnly || false);
+      }),
+
+    // 獲取未讀通知數量
+    getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
+      const { getUnreadNotificationCount } = await import("./notificationHelper");
+      return await getUnreadNotificationCount(ctx.user.id);
+    }),
+
+    // 標記通知為已讀
+    markAsRead: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input }) => {
+        const { markNotificationAsRead } = await import("./notificationHelper");
+        return await markNotificationAsRead(input);
+      }),
+
+    // 標記所有通知為已讀
+    markAllAsRead: protectedProcedure.mutation(async ({ ctx }) => {
+      const { markAllNotificationsAsRead } = await import("./notificationHelper");
+      return await markAllNotificationsAsRead(ctx.user.id);
+    }),
+
+    // 刪除通知
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input }) => {
+        const { deleteNotification } = await import("./notificationHelper");
+        return await deleteNotification(input);
+      }),
+
+    // 管理員觸發補考提醒（手動觸發）
+    triggerMakeupReminders: protectedProcedure.mutation(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { sendMakeupExamReminders } = await import("./notificationHelper");
+      return await sendMakeupExamReminders();
+    }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

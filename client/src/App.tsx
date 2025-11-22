@@ -29,6 +29,9 @@ import ExamMonitoring from "./pages/ExamMonitoring";
 import ExamAnalytics from "./pages/ExamAnalytics";
 import WrongQuestionBook from "./pages/WrongQuestionBook";
 import PerformanceTrend from "./pages/PerformanceTrend";
+import MakeupExamManagement from "./pages/MakeupExamManagement";
+import LearningRecommendations from "./pages/LearningRecommendations";
+import MakeupExamDashboard from "./pages/MakeupExamDashboard";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -59,6 +62,9 @@ function Router() {
       <Route path={"/exam-monitoring"} component={ExamMonitoring} />
       <Route path={"/wrong-questions"} component={WrongQuestionBook} />
       <Route path={"/performance-trend"} component={PerformanceTrend} />
+      <Route path={"/makeup-exams"} component={MakeupExamManagement} />
+      <Route path={"/makeup-dashboard"} component={MakeupExamDashboard} />
+      <Route path={"/learning-recommendations"} component={LearningRecommendations} />
       <Route path={"/manage"} component={Manage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

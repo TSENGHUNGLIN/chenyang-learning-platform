@@ -176,6 +176,13 @@
       "when": 1763616661324,
       "tag": "0024_tired_black_cat",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1763828900223,
+      "tag": "0025_odd_gargoyle",
+      "breakpoints": true
     }
   ]
 }
