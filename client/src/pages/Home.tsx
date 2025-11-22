@@ -1,7 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
+import PageHeader from "@/components/PageHeader";
+import { getPageConfig } from "@/config/pageConfig";
 import { Calendar, FileText, Users, TrendingUp, BookOpen, Settings, ClipboardList, Activity, Award, BarChart3, Upload, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -93,13 +94,22 @@ export default function Home() {
     }
   };
 
+  const pageConfig = getPageConfig("/");
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">歡迎回來，{user?.name || "使用者"}</h1>
-          <p className="text-muted-foreground mt-2">晨陽學習成長評核分析</p>
-        </div>
+        {/* 頁面標題區塊 - 蘋果風格 */}
+        {pageConfig && (
+          <PageHeader
+            title={`歡迎回來，${user?.name || "使用者"}`}
+            description="晨陽學習成長評核分析"
+            icon={pageConfig.icon}
+            color={pageConfig.color}
+            bgGradient={pageConfig.bgGradient}
+            breadcrumbs={pageConfig.breadcrumbs}
+          />
+        )}
 
         {/* 統計卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -145,7 +155,29 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* 最新活動報告 - 只對管理員和編輯者顯示 */}
+        {/* 功能卡片區 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <Link key={feature.title} href={feature.link}>
+                <Card className="hover:shadow-lg transition-all cursor-pointer h-full group">
+                  <CardHeader>
+                    <div
+                      className={`h-12 w-12 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
+                    >
+                      <Icon className="h-6 w-6 text-white" />
+                    </div>
+                    <CardTitle>{feature.title}</CardTitle>
+                    <CardDescription>{feature.description}</CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* 最新活動報告 - 移至最下方，只對管理員和編輯者顯示 */}
         {(user?.role === "admin" || user?.role === "editor") && (
           <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 border-indigo-200 dark:border-indigo-800">
             <CardHeader>
@@ -188,31 +220,6 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
-
-
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature) => {
-            const Icon = feature.icon;
-            return (
-              <Link key={feature.title} href={feature.link}>
-                <Card className="hover:shadow-lg transition-all cursor-pointer h-full group">
-                  <CardHeader>
-                    <div
-                      className={`h-12 w-12 rounded-lg bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
-                    >
-                      <Icon className="h-6 w-6 text-white" />
-                    </div>
-                    <CardTitle>{feature.title}</CardTitle>
-                    <CardDescription>{feature.description}</CardDescription>
-                  </CardHeader>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-
-
       </div>
     </DashboardLayout>
   );
