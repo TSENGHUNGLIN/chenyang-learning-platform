@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
-import { AlertCircle, CheckCircle2, Clock, Users, Activity, RefreshCw } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Users, Activity, RefreshCw, Home } from "lucide-react";
 import { toast } from "sonner";
 
 /**
@@ -69,6 +69,10 @@ export default function ExamMonitoring() {
           <p className="text-muted-foreground mt-1">即時監控所有考生的考試狀態和系統效能</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button onClick={() => window.location.href = '/'} variant="outline" size="sm">
+            <Home className="h-4 w-4 mr-2" />
+            返回首頁
+          </Button>
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
