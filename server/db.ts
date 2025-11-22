@@ -341,6 +341,19 @@ export async function deleteFile(id: number) {
   return { success: true };
 }
 
+export async function batchUpdateFileEmployee(fileIds: number[], employeeId: number | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { inArray } = await import("drizzle-orm");
+  
+  await db.update(files)
+    .set({ employeeId, updatedAt: new Date() })
+    .where(inArray(files.id, fileIds));
+  
+  return { success: true, updatedCount: fileIds.length };
+}
+
 // Analysis queries
 export async function getAnalysisByFileId(fileId: number) {
   const db = await getDb();

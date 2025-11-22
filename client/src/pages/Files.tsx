@@ -23,6 +23,7 @@ import { trpc } from "@/lib/trpc";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearch } from "wouter";
 import { Search, FileText, Sparkles, Trash2, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import FileUpload from "@/components/FileUpload";
 import { toast } from "sonner";
 import {
@@ -64,6 +65,9 @@ export default function Files() {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
+  const [selectedFileIds, setSelectedFileIds] = useState<number[]>([]);
+  const [showBatchUpdateDialog, setShowBatchUpdateDialog] = useState(false);
+  const [batchUpdateEmployee, setBatchUpdateEmployee] = useState<string>("");
 
   // Debounced search
   const debouncedSearch = useMemo(
@@ -94,6 +98,7 @@ export default function Files() {
   const { data: employees } = trpc.employees.list.useQuery();
   const analysisMutation = trpc.analysis.create.useMutation();
   const deleteFileMutation = trpc.files.delete.useMutation();
+  const batchUpdateMutation = trpc.files.batchUpdateEmployee.useMutation();
   const utils = trpc.useUtils();
 
   const files = filesData?.files || [];
@@ -177,6 +182,48 @@ export default function Files() {
     setCurrentPage(1);
   };
 
+  const handleSelectAll = () => {
+    if (selectedFileIds.length === files.length) {
+      setSelectedFileIds([]);
+    } else {
+      setSelectedFileIds(files.map((f: any) => f.id));
+    }
+  };
+
+  const handleSelectFile = (fileId: number) => {
+    if (selectedFileIds.includes(fileId)) {
+      setSelectedFileIds(selectedFileIds.filter(id => id !== fileId));
+    } else {
+      setSelectedFileIds([...selectedFileIds, fileId]);
+    }
+  };
+
+  const handleBatchUpdate = async () => {
+    if (selectedFileIds.length === 0) {
+      toast.error("請選擇至少一個檔案");
+      return;
+    }
+
+    if (!batchUpdateEmployee) {
+      toast.error("請選擇人員");
+      return;
+    }
+
+    try {
+      await batchUpdateMutation.mutateAsync({
+        fileIds: selectedFileIds,
+        employeeId: batchUpdateEmployee === "null" ? null : parseInt(batchUpdateEmployee),
+      });
+      toast.success(`已更新 ${selectedFileIds.length} 個檔案的人員歸屬`);
+      setSelectedFileIds([]);
+      setBatchUpdateEmployee("");
+      setShowBatchUpdateDialog(false);
+      utils.files.list.invalidate();
+    } catch (error) {
+      toast.error("批次更新失敗");
+    }
+  };
+
   const hasActiveFilters = 
     debouncedKeyword || 
     selectedDepartment !== "all" || 
@@ -194,7 +241,17 @@ export default function Files() {
               管理所有考核檔案，支援搜尋、篩選與 AI 分析
             </p>
           </div>
-          {(user?.role === "admin" || user?.role === "editor") && <FileUpload />}
+          <div className="flex items-center gap-2">
+            {selectedFileIds.length > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => setShowBatchUpdateDialog(true)}
+              >
+                批次修改人員（{selectedFileIds.length}）
+              </Button>
+            )}
+            {(user?.role === "admin" || user?.role === "editor") && <FileUpload />}
+          </div>
         </div>
 
         <Card>
@@ -319,6 +376,14 @@ export default function Files() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <input
+                          type="checkbox"
+                          checked={selectedFileIds.length === files.length && files.length > 0}
+                          onChange={handleSelectAll}
+                          className="cursor-pointer"
+                        />
+                      </TableHead>
                       <TableHead>檔案名稱</TableHead>
                       <TableHead>人員</TableHead>
                       <TableHead>上傳日期</TableHead>
@@ -333,6 +398,14 @@ export default function Files() {
                       const department = departments?.find((d) => d.id === employee?.departmentId);
                       return (
                         <TableRow key={file.id}>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedFileIds.includes(file.id)}
+                              onChange={() => handleSelectFile(file.id)}
+                              className="cursor-pointer"
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <FileText className="h-4 w-4 text-muted-foreground" />
@@ -545,6 +618,45 @@ export default function Files() {
                 )}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 批次修改人員對話框 */}
+      <Dialog open={showBatchUpdateDialog} onOpenChange={setShowBatchUpdateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>批次修改人員歸屬</DialogTitle>
+            <DialogDescription>
+              已選擇 {selectedFileIds.length} 個檔案，請選擇要指定的人員
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="batch-employee">選擇人員</Label>
+              <Select value={batchUpdateEmployee} onValueChange={setBatchUpdateEmployee}>
+                <SelectTrigger>
+                  <SelectValue placeholder="選擇人員" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">未指定人員</SelectItem>
+                  {employees?.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id.toString()}>
+                      {emp.name} ({departments?.find(d => d.id === emp.departmentId)?.name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowBatchUpdateDialog(false)}>
+                取消
+              </Button>
+              <Button onClick={handleBatchUpdate} disabled={batchUpdateMutation.isPending}>
+                {batchUpdateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                確定修改
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -52,8 +52,8 @@ export default function FileUpload() {
     ? employees?.filter((emp) => emp.departmentId === parseInt(selectedDepartment))
     : employees;
 
-  // 從檔案名稱提取人員姓名
-  const extractNameFromFilename = (filename: string): string | null => {
+  // 從檔案名稱提取人員姓名，返回姓名和信心度
+  const extractNameFromFilename = (filename: string): { name: string; confidence: 'high' | 'medium' | 'low' } | null => {
     // 移除副檔名
     const nameWithoutExt = filename.replace(/\.(pdf|docx|csv)$/i, '');
     
@@ -87,7 +87,7 @@ export default function FileUpload() {
         }
       }
       if (name.length >= 2 && !excludedWords.includes(name)) {
-        return name;
+        return { name, confidence: 'high' };
       }
     }
     
@@ -110,7 +110,7 @@ export default function FileUpload() {
     
     // 從所有匹配中選擇最後一個中文姓名（通常是人名）
     if (names.length > 0) {
-      return names[names.length - 1];
+      return { name: names[names.length - 1], confidence: 'medium' };
     }
     
     // 3. 備用：匹配任何 2-4 個中文字（但排除常見詞彙和後綴詞）
@@ -131,7 +131,7 @@ export default function FileUpload() {
     
     // 優先選擇最後一個匹配（通常是人名）
     if (allFallbackMatches.length > 0) {
-      return allFallbackMatches[allFallbackMatches.length - 1];
+      return { name: allFallbackMatches[allFallbackMatches.length - 1], confidence: 'low' };
     }
     
     return null;
@@ -165,12 +165,12 @@ export default function FileUpload() {
       if (autoDetectNewEmployee && selectedDepartment) {
         const names: string[] = [];
         validFiles.forEach(file => {
-          const name = extractNameFromFilename(file.name);
-          if (name && !names.includes(name)) {
+          const result = extractNameFromFilename(file.name);
+          if (result && !names.includes(result.name)) {
             // 檢查是否已存在於該部門
-            const existingEmployee = filteredEmployees?.find(emp => emp.name === name);
+            const existingEmployee = filteredEmployees?.find(emp => emp.name === result.name);
             if (!existingEmployee) {
-              names.push(name);
+              names.push(result.name);
             }
           }
         });
@@ -252,8 +252,9 @@ export default function FileUpload() {
         
         // 如果啟用自動識別，嘗試從檔案名稱匹配員工
         if (autoDetectNewEmployee) {
-          const detectedName = extractNameFromFilename(file.name);
-          if (detectedName) {
+          const result = extractNameFromFilename(file.name);
+          if (result) {
+            const detectedName = result.name;
             // 優先使用新建立的員工
             if (createdEmployeeIds[detectedName]) {
               employeeId = createdEmployeeIds[detectedName];
@@ -481,6 +482,16 @@ export default function FileUpload() {
 
             {/* 檔案上傳 */}
             <TabsContent value="file" className="space-y-4">
+              {/* 檔名格式建議 */}
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
+                <p className="text-sm font-medium text-amber-900 mb-2">💡 檔名格式建議（提高自動識別準確率）</p>
+                <div className="space-y-1 text-sm text-amber-800">
+                  <p>• <span className="font-medium">高信心度格式</span>：<code className="bg-amber-100 px-1 rounded">張小明-轉正考核.docx</code>、<code className="bg-amber-100 px-1 rounded">李四履歷.docx</code></p>
+                  <p>• <span className="font-medium">中信心度格式</span>：<code className="bg-amber-100 px-1 rounded">考核 - 王五 - 2024.docx</code></p>
+                  <p>• <span className="font-medium">低信心度格式</span>：<code className="bg-amber-100 px-1 rounded">考核資料趙六.docx</code>（建議手動選擇人員）</p>
+                </div>
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="file">選擇檔案（DOCX、CSV，最多{MAX_FILES}個）</Label>
                 <Input

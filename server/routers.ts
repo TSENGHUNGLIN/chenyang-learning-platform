@@ -317,6 +317,19 @@ export const appRouter = router({
         await logFileRead(fileId, ctx.user.id);
         return { success: true };
       }),
+    batchUpdateEmployee: protectedProcedure
+      .input(z.object({
+        fileIds: z.array(z.number()),
+        employeeId: z.number().nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canUploadFiles")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchUpdateFileEmployee } = await import("./db");
+        return await batchUpdateFileEmployee(input.fileIds, input.employeeId);
+      }),
     getWithReadInfo: protectedProcedure
       .input(z.number())
       .query(async ({ input: fileId, ctx }) => {

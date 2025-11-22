@@ -341,7 +341,7 @@ export default function ExamTake() {
     );
   }
 
-  const { exam, questions } = examData;
+  const { exam, assignment, questions } = examData;
 
   // 檢查考試是否有題目
   if (!questions || questions.length === 0) {
