@@ -108,12 +108,12 @@
   --input: oklch(0.9 0 0);
   --ring: oklch(0.569 0.194 248.055);     /* 蘋果藍 focus ring */
   
-  /* 側邊欄 */
-  --sidebar: oklch(0.985 0 0);            /* 接近白色的淺灰 */
+  /* 側邊欄（蘋果風格背景） */
+  --sidebar: oklch(0.975 0 0);            /* 淺灰白色 */
   --sidebar-foreground: oklch(0.25 0 0);
   --sidebar-accent: oklch(0.96 0 0);
   --sidebar-accent-foreground: oklch(0.25 0 0);
-  --sidebar-border: oklch(0.9 0 0);
+  --sidebar-border: oklch(0.92 0 0);      /* 稍深的邊框 */
   --sidebar-ring: oklch(0.569 0.194 248.055);
   
   /* 輔助色 */
@@ -150,10 +150,10 @@
   --chart-3: oklch(0.569 0.194 248.055);
   --chart-4: oklch(0.5 0.2 248);
   --chart-5: oklch(0.4 0.22 248);
-  --sidebar: oklch(0.22 0 0);
+  --sidebar: oklch(0.22 0 0);             /* 深灰色 */
   --sidebar-foreground: oklch(0.9 0 0);
-  --sidebar-accent: oklch(0.3 0 0);
-  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.26 0 0);
+  --sidebar-accent-foreground: oklch(0.8 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.569 0.194 248.055);
 }

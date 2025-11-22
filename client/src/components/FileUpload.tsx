@@ -412,7 +412,7 @@ export default function FileUpload() {
 
         <div className="space-y-4">
           {/* 支援的檔案格式說明 */}
-          <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border border-blue-200 dark:border-blue-800 rounded-xl shadow-[var(--shadow-macos-sm)]">
             <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">📝 支援的檔案格式</p>
             <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
               <p>• <strong>DOCX</strong> - Microsoft Word 文件</p>
@@ -465,9 +465,9 @@ export default function FileUpload() {
 
           {/* 偵測到的新人姓名 */}
           {detectedNames.length > 0 && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm font-medium text-blue-900 mb-1">✨ 偵測到新人姓名</p>
-              <p className="text-sm text-blue-700">
+            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border border-blue-200 dark:border-blue-800 rounded-xl shadow-[var(--shadow-macos-sm)]">
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">✨ 偵測到新人姓名</p>
+              <p className="text-sm text-blue-700 dark:text-blue-200">
                 系統將自動新增以下人員到 {departments?.find(d => d.id.toString() === selectedDepartment)?.name}：
                 <span className="font-medium ml-1">{detectedNames.join('、')}</span>
               </p>
@@ -494,9 +494,9 @@ export default function FileUpload() {
             {/* 檔案上傳 */}
             <TabsContent value="file" className="space-y-4">
               {/* 檔名格式建議 */}
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md">
-                <p className="text-sm font-medium text-amber-900 mb-2">💡 檔名格式建議（提高自動識別準確率）</p>
-                <div className="space-y-1 text-sm text-amber-800">
+              <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border border-amber-200 dark:border-amber-800 rounded-xl shadow-[var(--shadow-macos-sm)]">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-2">💡 檔名格式建議（提高自動識別準確率）</p>
+                <div className="space-y-1 text-sm text-amber-800 dark:text-amber-200">
                   <p>• <span className="font-medium">高信心度格式</span>：<code className="bg-amber-100 px-1 rounded">張小明-轉正考核.docx</code>、<code className="bg-amber-100 px-1 rounded">李四履歷.docx</code></p>
                   <p>• <span className="font-medium">中信心度格式</span>：<code className="bg-amber-100 px-1 rounded">考核 - 王五 - 2024.docx</code></p>
                   <p>• <span className="font-medium">低信心度格式</span>：<code className="bg-amber-100 px-1 rounded">考核資料趙六.docx</code>（建議手動選擇人員）</p>
