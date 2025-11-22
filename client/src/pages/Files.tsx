@@ -86,7 +86,17 @@ export default function Files() {
   const saveSearchHistory = (keyword: string) => {
     if (!keyword.trim()) return;
     
-    const newHistory = [keyword, ...searchHistory.filter(h => h !== keyword)].slice(0, 10); // 保留最近10筆
+    // 過濾不完整字元（注音、單個字元）和不完整字句
+    const trimmedKeyword = keyword.trim();
+    
+    // 檢查是否包含注音符號（ㄅ-ㄯ）
+    const hasBopomofo = /[ㄅ-ㄯ]/u.test(trimmedKeyword);
+    if (hasBopomofo) return; // 如果包含注音，不儲存
+    
+    // 檢查是否至少有兩個字元（過濾單個字元）
+    if (trimmedKeyword.length < 2) return;
+    
+    const newHistory = [trimmedKeyword, ...searchHistory.filter(h => h !== trimmedKeyword)].slice(0, 10); // 保留最近10筆
     setSearchHistory(newHistory);
     localStorage.setItem('fileSearchHistory', JSON.stringify(newHistory));
   };
@@ -460,9 +470,11 @@ export default function Files() {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-medium">{employee?.name}</div>
+                              <div className="font-medium">
+                                {employee?.name ? highlightText(employee.name, debouncedKeyword) : '-'}
+                              </div>
                               <div className="text-sm text-muted-foreground">
-                                {department?.name}
+                                {department?.name ? highlightText(department.name, debouncedKeyword) : '-'}
                               </div>
                             </div>
                           </TableCell>
