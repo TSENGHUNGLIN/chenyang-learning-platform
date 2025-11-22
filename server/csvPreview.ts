@@ -1,4 +1,10 @@
 import iconv from "iconv-lite";
+import { detectEncoding, convertToUTF8 } from "./encodingDetector";
+import {
+  validateCSV as validateCSVData,
+  ValidationResult,
+  FieldValidationRule,
+} from "./csvValidator";
 
 /**
  * CSV 預覽資料結構
@@ -9,6 +15,9 @@ export interface CSVPreviewData {
   totalRows: number;
   totalColumns: number;
   hasMore: boolean;
+  encoding?: string; // 偵測到的編碼格式
+  encodingConfidence?: number; // 編碼偵測信心度
+  validation?: ValidationResult; // 格式驗證結果
 }
 
 /**
@@ -19,19 +28,13 @@ export interface CSVPreviewData {
  */
 export async function parseCSVForPreview(
   buffer: Buffer,
-  maxRows: number = 100
+  maxRows: number = 100,
+  validationRules?: FieldValidationRule[]
 ): Promise<CSVPreviewData> {
   try {
-    // 移除 BOM 標記（如果存在）
-    let content = buffer.toString("utf8");
-    if (content.charCodeAt(0) === 0xfeff) {
-      content = content.slice(1);
-    }
-
-    // 如果 UTF-8 解碼失敗，嘗試使用 Big5
-    if (content.includes("�")) {
-      content = iconv.decode(buffer, "big5");
-    }
+    // 自動偵測編碼並轉換為 UTF-8
+    const detectionResult = detectEncoding(buffer);
+    const content = detectionResult.content;
 
     // 分割成行
     const lines = content.split(/\r?\n/).filter(line => line.trim().length > 0);
@@ -57,12 +60,21 @@ export async function parseCSVForPreview(
       rows.push(row.slice(0, headers.length));
     }
 
+    // 執行格式驗證（如果提供了驗證規則）
+    let validation: ValidationResult | undefined;
+    if (validationRules && validationRules.length > 0) {
+      validation = validateCSVData(headers, rows, validationRules);
+    }
+
     return {
       headers,
       rows,
       totalRows: dataLines.length,
       totalColumns: headers.length,
       hasMore: dataLines.length > maxRows,
+      encoding: detectionResult.encoding,
+      encodingConfidence: detectionResult.confidence,
+      validation,
     };
   } catch (error) {
     console.error("[CSV Preview] 解析錯誤:", error);
