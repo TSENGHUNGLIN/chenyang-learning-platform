@@ -72,7 +72,14 @@ export default function ExamAnalytics() {
     );
   }
 
-  const { exam, statistics, scoreDistribution, answerTimeStats, wrongAnswers, studentScores } = analytics;
+  const { 
+    exam, 
+    statistics = { totalStudents: 0, averageScore: 0, passedCount: 0, passRate: 0 }, 
+    scoreDistribution = [], 
+    answerTimeStats = { averageDuration: 0, fastestDuration: 0, slowestDuration: 0 }, 
+    wrongAnswers = [], 
+    studentScores = [] 
+  } = analytics || {};
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -89,7 +96,7 @@ export default function ExamAnalytics() {
               返回
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">{exam.title}</h1>
+              <h1 className="text-3xl font-bold">{exam?.title || '考試分析'}</h1>
               <p className="text-muted-foreground">成績分析報表</p>
             </div>
           </div>
@@ -288,7 +295,7 @@ export default function ExamAnalytics() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rankings?.map((item: any, index: number) => (
+                    {(rankings || []).map((item: any, index: number) => (
                       <TableRow key={item.userId}>
                         <TableCell className="font-bold">
                           {index === 0 && <Award className="inline h-5 w-5 text-yellow-500 mr-1" />}

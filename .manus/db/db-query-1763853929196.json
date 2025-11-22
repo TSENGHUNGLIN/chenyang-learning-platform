@@ -1,0 +1,23 @@
+{
+  "query": "SELECT * FROM exams WHERE id = 210006 LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute SELECT * FROM exams WHERE id = 210006 LIMIT 1;",
+  "rows": [
+    {
+      "id": "210006",
+      "title": "業管部 彭睛婕 第1課 新進業工務設計師訓練課程 - 考卷",
+      "description": "根據檔案「業管部 彭睛婕 第1課 新進業工務設計師訓練課程.csv」生成的題庫，包含 24 道題目",
+      "timeLimit": "30",
+      "passingScore": "90",
+      "totalScore": "24",
+      "gradingMethod": "auto",
+      "status": "draft",
+      "createdBy": "1",
+      "createdAt": "2025-11-22 23:18:53",
+      "updatedAt": "2025-11-22 23:22:49"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tdescription\ttimeLimit\tpassingScore\ttotalScore\tgradingMethod\tstatus\tcreatedBy\tcreatedAt\tupdatedAt\n210006\t業管部 彭睛婕 第1課 新進業工務設計師訓練課程 - 考卷\t根據檔案「業管部 彭睛婕 第1課 新進業工務設計師訓練課程.csv」生成的題庫，包含 24 道題目\t30\t90\t24\tauto\tdraft\t1\t2025-11-22 23:18:53\t2025-11-22 23:22:49\n",
+  "stderr": "",
+  "execution_time_ms": 1756
+}

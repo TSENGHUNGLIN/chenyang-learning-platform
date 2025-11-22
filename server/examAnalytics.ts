@@ -26,10 +26,10 @@ export async function getExamAnalytics(examId: number) {
   const scores = await db
     .select({
       scoreId: examScores.id,
-      score: examScores.score,
-      totalScore: examScores.totalScore,
-      percentage: sql<number>`(${examScores.score} / ${examScores.totalScore} * 100)`,
-      isPassed: examScores.isPassed,
+      score: examScores.totalScore,
+      totalScore: examScores.maxScore,
+      percentage: examScores.percentage,
+      isPassed: examScores.passed,
       gradedAt: examScores.gradedAt,
       assignmentId: examScores.assignmentId,
       userId: users.id,
@@ -40,7 +40,7 @@ export async function getExamAnalytics(examId: number) {
     .innerJoin(examAssignments, eq(examScores.assignmentId, examAssignments.id))
     .innerJoin(users, eq(examAssignments.userId, users.id))
     .where(eq(examAssignments.examId, examId))
-    .orderBy(desc(examScores.score));
+    .orderBy(desc(examScores.totalScore));
 
   // 3. 計算統計資料
   const totalStudents = scores.length;
@@ -135,7 +135,6 @@ export async function getExamAnalytics(examId: number) {
       questionId: examSubmissions.questionId,
       question: questionsTable.question,
       questionType: questionsTable.type,
-      correctAnswer: questionsTable.correctAnswer,
       totalAttempts: sql<number>`COUNT(*)`,
       wrongAttempts: sql<number>`SUM(CASE WHEN ${examSubmissions.isCorrect} = 0 THEN 1 ELSE 0 END)`,
       errorRate: sql<number>`(SUM(CASE WHEN ${examSubmissions.isCorrect} = 0 THEN 1 ELSE 0 END) / COUNT(*) * 100)`,
@@ -144,26 +143,26 @@ export async function getExamAnalytics(examId: number) {
     .innerJoin(examAssignments, eq(examSubmissions.assignmentId, examAssignments.id))
     .innerJoin(questionsTable, eq(examSubmissions.questionId, questionsTable.id))
     .where(eq(examAssignments.examId, examId))
-    .groupBy(examSubmissions.questionId, questionsTable.question, questionsTable.type, questionsTable.correctAnswer)
+    .groupBy(examSubmissions.questionId, questionsTable.question, questionsTable.type)
     .orderBy(desc(sql`(SUM(CASE WHEN ${examSubmissions.isCorrect} = 0 THEN 1 ELSE 0 END) / COUNT(*) * 100)`))
     .limit(10);
 
   return {
     exam,
     statistics: {
-      totalStudents,
-      averageScore,
-      passedCount,
-      passRate,
+      totalStudents: totalStudents || 0,
+      averageScore: averageScore || 0,
+      passedCount: passedCount || 0,
+      passRate: passRate || 0,
     },
-    scoreDistribution,
+    scoreDistribution: scoreDistribution || [],
     answerTimeStats: {
-      averageDuration,
-      fastestDuration,
-      slowestDuration,
+      averageDuration: averageDuration || 0,
+      fastestDuration: fastestDuration || 0,
+      slowestDuration: slowestDuration || 0,
     },
-    wrongAnswers,
-    studentScores: scores,
+    wrongAnswers: wrongAnswers || [],
+    studentScores: scores || [],
   };
 }
 
@@ -176,21 +175,21 @@ export async function getStudentRankings(examId: number) {
 
   const rankings = await db
     .select({
-      rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${examScores.score} DESC)`,
+      rank: sql<number>`ROW_NUMBER() OVER (ORDER BY ${examScores.totalScore} DESC)`,
       userId: users.id,
       userName: users.name,
       userEmail: users.email,
-      score: examScores.score,
-      totalScore: examScores.totalScore,
-      percentage: sql<number>`(${examScores.score} / ${examScores.totalScore} * 100)`,
-      isPassed: examScores.isPassed,
+      score: examScores.totalScore,
+      totalScore: examScores.maxScore,
+      percentage: examScores.percentage,
+      isPassed: examScores.passed,
       gradedAt: examScores.gradedAt,
     })
     .from(examScores)
     .innerJoin(examAssignments, eq(examScores.assignmentId, examAssignments.id))
     .innerJoin(users, eq(examAssignments.userId, users.id))
     .where(eq(examAssignments.examId, examId))
-    .orderBy(desc(examScores.score));
+    .orderBy(desc(examScores.totalScore));
 
   return rankings;
 }
