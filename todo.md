@@ -503,3 +503,14 @@
 - [x] 優化檔案上傳對話框的卡片設計，加入蘋果風格漸層
 - [x] 測試視覺效果並儲存檢查點
 
+
+
+
+## 修復考試答題頁面 eq is not defined 錯誤（2025-01-22）
+
+- [x] 診斷錯誤來源（routers.ts 缺少 eq 和 desc import）
+- [x] 在 routers.ts 開頭新增 import { eq, desc } from "drizzle-orm"
+- [x] 編寫測試驗證修復結果（3個測試全部通過）
+- [x] 測試考試答題頁面功能正常運作
+- [x] 儲存檢查點
+
