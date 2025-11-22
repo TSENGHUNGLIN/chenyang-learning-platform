@@ -675,8 +675,34 @@ export default function Files() {
                   </div>
                 )}
                 
+                {/* CSV 檔案預視 */}
+                {previewFile.filename.toLowerCase().endsWith('.csv') && (
+                  <div className="p-4">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      CSV 檔案建議使用專用的「CSV 預覽」功能以獲得更好的表格顯示效果。
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          setShowPreviewDialog(false);
+                          setCSVPreviewFile({ url: previewFile.fileUrl, name: previewFile.filename });
+                          setShowCSVPreview(true);
+                        }}
+                      >
+                        開啟 CSV 預覽
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open(previewFile.fileUrl, '_blank')}
+                      >
+                        下載檔案
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
                 {/* 其他檔案類型 */}
-                {!previewFile.filename.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|docx|doc|txt)$/) && (
+                {!previewFile.filename.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|docx|doc|txt|csv)$/) && (
                   <div className="text-center py-12 text-muted-foreground">
                     <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">此檔案類型不支援預視</p>
