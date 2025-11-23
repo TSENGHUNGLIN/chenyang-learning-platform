@@ -34,6 +34,7 @@ export default function QuestionSelector({
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedTag, setSelectedTag] = useState<string>("all");
+  const [selectedSource, setSelectedSource] = useState<string>("all");
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
 
   // 查詢所有題目
@@ -118,9 +119,14 @@ export default function QuestionSelector({
         }
       }
 
+      // 考題出處過濾
+      if (selectedSource !== "all" && q.source !== selectedSource) {
+        return false;
+      }
+
       return true;
     });
-  }, [allQuestions, searchQuery, selectedType, selectedDifficulty, selectedCategory, selectedTag]);
+  }, [allQuestions, searchQuery, selectedType, selectedDifficulty, selectedCategory, selectedTag, selectedSource]);
 
   const handleToggleQuestion = (questionId: number) => {
     setSelectedQuestions((prev) =>
@@ -284,7 +290,7 @@ export default function QuestionSelector({
       <div className="container py-6 h-[calc(100vh-88px)] overflow-auto">
         <div className="space-y-6">
           {/* 篩選區域 */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <div className="space-y-2">
               <Label htmlFor="search">搜尋題目</Label>
               <div className="relative">
@@ -357,6 +363,23 @@ export default function QuestionSelector({
                   {tags?.map((tag) => (
                     <SelectItem key={tag.id} value={tag.id.toString()}>
                       {tag.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="source">考題出處</Label>
+              <Select value={selectedSource} onValueChange={setSelectedSource}>
+                <SelectTrigger id="source">
+                  <SelectValue placeholder="全部出處" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部出處</SelectItem>
+                  {Array.from(new Set(allQuestions?.map(q => q.source).filter(Boolean))).sort().map((source) => (
+                    <SelectItem key={source} value={source as string}>
+                      {source}
                     </SelectItem>
                   ))}
                 </SelectContent>
