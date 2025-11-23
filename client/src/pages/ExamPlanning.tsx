@@ -872,7 +872,7 @@ export default function ExamPlanning() {
             <Dialog open={showExamSelectionDialog} onOpenChange={setShowExamSelectionDialog}>
               <DialogTrigger asChild>
                 <Button
-                  variant="outline"
+                  variant="default"
                   className="w-full"
                   onClick={() => {
                     // 開啟對話框時，將當前選擇複製到暫存狀態
@@ -885,10 +885,38 @@ export default function ExamPlanning() {
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>選擇考卷</DialogTitle>
-                  <DialogDescription>
-                    已選擇 {tempSelectedExamIds.length} 份考卷
-                  </DialogDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <DialogTitle>選擇考卷</DialogTitle>
+                      <DialogDescription>
+                        已選擇 {tempSelectedExamIds.length} 份考卷
+                      </DialogDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          // 取消時不套用暫存選擇，直接關閉對話框
+                          setShowExamSelectionDialog(false);
+                          setTempSelectedExamIds([]);
+                        }}
+                      >
+                        取消
+                      </Button>
+                      <Button 
+                        size="sm"
+                        onClick={() => {
+                          // 確定時才套用暫存選擇到實際狀態
+                          setSelectedExamIds([...tempSelectedExamIds]);
+                          setShowExamSelectionDialog(false);
+                          toast.success(`已選擇 ${tempSelectedExamIds.length} 份考卷`);
+                        }}
+                      >
+                        確定
+                      </Button>
+                    </div>
+                  </div>
                 </DialogHeader>
 
                 <div className="space-y-4">
@@ -966,28 +994,7 @@ export default function ExamPlanning() {
                     )}
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        // 取消時不套用暫存選擇，直接關閉對話框
-                        setShowExamSelectionDialog(false);
-                        setTempSelectedExamIds([]);
-                      }}
-                    >
-                      取消
-                    </Button>
-                    <Button 
-                      onClick={() => {
-                        // 確定時才套用暫存選擇到實際狀態
-                        setSelectedExamIds([...tempSelectedExamIds]);
-                        setShowExamSelectionDialog(false);
-                        toast.success(`已選擇 ${tempSelectedExamIds.length} 份考卷`);
-                      }}
-                    >
-                      確定
-                    </Button>
-                  </div>
+
                 </div>
               </DialogContent>
             </Dialog>
