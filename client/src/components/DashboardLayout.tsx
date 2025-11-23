@@ -49,7 +49,7 @@ const staffMenuItems: Array<{
   { icon: BookOpen, label: "單選題庫", path: "/question-bank", color: "indigo", editorOnly: true },
   { icon: Database, label: "試卷題庫", path: "/question-banks", color: "cyan", editorOnly: true },
   { icon: Award, label: "考卷列表", path: "/exams", color: "rose", editorOnly: true },
-  { icon: CalendarClock, label: "考生規劃", path: "/exam-planning", color: "blue", editorOnly: true },
+  { icon: CalendarClock, label: "考生考試規劃", path: "/exam-planning", color: "blue", editorOnly: true },
   { icon: ClipboardList, label: "考試園地", path: "/my-exams", color: "sky" },
   { icon: AlertTriangle, label: "逾期管理", path: "/overdue-exams", color: "orange", editorOnly: true },
   { icon: RefreshCw, label: "補考管理", path: "/makeup-exams", color: "teal", editorOnly: true },
