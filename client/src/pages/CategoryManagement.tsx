@@ -29,8 +29,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FolderTree, Plus, Pencil, Trash2, Home } from "lucide-react";
+import { FolderTree, Plus, Pencil, Trash2, Home, Info } from "lucide-react";
 import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export default function CategoryManagement() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -125,6 +127,8 @@ export default function CategoryManagement() {
     return `${getCategoryPath(category.parentId)} > ${category.name}`;
   };
 
+  const [showGuide, setShowGuide] = useState(true);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -136,15 +140,74 @@ export default function CategoryManagement() {
             </h1>
             <p className="text-muted-foreground mt-2">管理題目分類，支援多層級樹狀結構</p>
           </div>
-          <Button variant="outline" onClick={() => window.location.href = '/'}>
-            <Home className="h-4 w-4 mr-2" />
-            返回首頁
-          </Button>
-          <Button onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            新增分類
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => window.location.href = '/'}>
+              <Home className="h-4 w-4 mr-2" />
+              返回首頁
+            </Button>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              新增分類
+            </Button>
+          </div>
         </div>
+
+        {/* 操作指南 */}
+        <Collapsible open={showGuide} onOpenChange={setShowGuide}>
+          <Alert className="bg-blue-50 border-blue-200">
+            <Info className="h-4 w-4 text-blue-600" />
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <AlertTitle className="text-blue-900 font-semibold mb-2">分類管理操作指南</AlertTitle>
+                <CollapsibleTrigger asChild>
+                  <Button variant="link" className="p-0 h-auto text-blue-700 hover:text-blue-900">
+                    {showGuide ? "收起指南" : "展開指南"}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+            </div>
+            <CollapsibleContent className="mt-3">
+              <AlertDescription className="text-blue-800 space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-2">📚 功能說明</h4>
+                  <p className="text-sm leading-relaxed">
+                    分類管理用於組織題目，支援多層級樹狀結構（例如：「程式設計 &gt; Python &gt; 基礎語法」）。
+                    合理的分類結構可以幫助您快速找到題目，並在建立考卷時更有效率地篩選題目。
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">✨ 使用步驟</h4>
+                  <ol className="text-sm space-y-2 list-decimal list-inside">
+                    <li><strong>新增分類：</strong>點擊右上角「新增分類」按鈕，輸入分類名稱和描述。可選擇「上層分類」建立子分類。</li>
+                    <li><strong>編輯分類：</strong>點擊表格中的編輯按鈕（鉛筆圖示），修改分類名稱、描述或上層分類。</li>
+                    <li><strong>刪除分類：</strong>點擊表格中的刪除按鈕（垃圾桶圖示）。注意：刪除分類前請確認該分類下沒有題目。</li>
+                    <li><strong>查看層級：</strong>表格中的「完整路徑」欄位顯示分類的完整層級結構。</li>
+                  </ol>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">⚠️ 注意事項</h4>
+                  <ul className="text-sm space-y-1 list-disc list-inside">
+                    <li>建議先建立主要分類（例如：「程式設計」、「資料庫」），再建立子分類。</li>
+                    <li>分類名稱應簡潔明確，避免過長或含糊不清。</li>
+                    <li>刪除分類前，請先將該分類下的題目移至其他分類或刪除。</li>
+                    <li>若分類下有子分類，需先刪除所有子分類才能刪除父分類。</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">💡 最佳實踐</h4>
+                  <ul className="text-sm space-y-1 list-disc list-inside">
+                    <li>建議分類層級不超過 3 層，避免結構過於複雜。</li>
+                    <li>使用描述欄位記錄分類的用途和範圍，方便團隊成員理解。</li>
+                    <li>定期檢視分類結構，合併或刪除不再使用的分類。</li>
+                  </ul>
+                </div>
+              </AlertDescription>
+            </CollapsibleContent>
+          </Alert>
+        </Collapsible>
 
         <Card>
           <CardHeader>

@@ -1,0 +1,100 @@
+{
+  "query": "SELECT id, LEFT(question, 50) as question_preview, isAiGenerated, suggestedCategoryId, suggestedTagIds, categoryId, source FROM questions ORDER BY createdAt DESC LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute SELECT id, LEFT(question, 50) as question_preview, isAiGenerated, suggestedCategoryId, suggestedTagIds, categoryId, source FROM questions ORDER BY createdAt DESC LIMIT 10",
+  "rows": [
+    {
+      "id": "240092",
+      "question_preview": "公司強調團隊合作，因此專案執行上主要依靠單一部門就能做得好。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    },
+    {
+      "id": "240086",
+      "question_preview": "業務部門是整合客戶需求的第一線，負責了解客戶需求、預算、建立信任，並將正確資訊傳達給工務及設計。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    },
+    {
+      "id": "240091",
+      "question_preview": "工務部門在專案執行中，不需要掌握工班品質與進度，只需負責將圖面傳達給工班。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    },
+    {
+      "id": "240088",
+      "question_preview": "公司特有的放樣驗收流程，其目的是讓客戶身歷其境了解整體空間，避免只看圖面產生的落差感。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    },
+    {
+      "id": "240085",
+      "question_preview": "工務部門負責安排各工種時程、與工班核對施工內容，但不需要回饋現況給設規部同步調整圖面。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    },
+    {
+      "id": "240084",
+      "question_preview": "業務在面對團隊同仁的情緒性溝通或行為時，應選擇先冷靜應對，並釐清事情本身的重點。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    },
+    {
+      "id": "240090",
+      "question_preview": "設計師在規劃初期，應先將空間設計配置好，再行檢視預算是否超標，這是一個良好的設計師屬性。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    },
+    {
+      "id": "240089",
+      "question_preview": "業務在面對客戶拒絕或猶豫時，即使最終客戶沒有簽約，也應盡量給客戶留下好印象，以利未來合作或推薦。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    },
+    {
+      "id": "240087",
+      "question_preview": "當客戶提出統包報價更便宜的質疑時，業務應該否認公司報價較貴的事實，以維護公司形象。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    },
+    {
+      "id": "240093",
+      "question_preview": "業務在案件放樣前，必須召集各部門同仁開立工檢會。",
+      "isAiGenerated": "0",
+      "suggestedCategoryId": "NULL",
+      "suggestedTagIds": "NULL",
+      "categoryId": "NULL",
+      "source": "轉正考核問答"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tquestion_preview\tisAiGenerated\tsuggestedCategoryId\tsuggestedTagIds\tcategoryId\tsource\n240092\t公司強調團隊合作，因此專案執行上主要依靠單一部門就能做得好。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n240086\t業務部門是整合客戶需求的第一線，負責了解客戶需求、預算、建立信任，並將正確資訊傳達給工務及設計。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n240091\t工務部門在專案執行中，不需要掌握工班品質與進度，只需負責將圖面傳達給工班。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n240088\t公司特有的放樣驗收流程，其目的是讓客戶身歷其境了解整體空間，避免只看圖面產生的落差感。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n240085\t工務部門負責安排各工種時程、與工班核對施工內容，但不需要回饋現況給設規部同步調整圖面。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n240084\t業務在面對團隊同仁的情緒性溝通或行為時，應選擇先冷靜應對，並釐清事情本身的重點。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n240090\t設計師在規劃初期，應先將空間設計配置好，再行檢視預算是否超標，這是一個良好的設計師屬性。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n240089\t業務在面對客戶拒絕或猶豫時，即使最終客戶沒有簽約，也應盡量給客戶留下好印象，以利未來合作或推薦。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n240087\t當客戶提出統包報價更便宜的質疑時，業務應該否認公司報價較貴的事實，以維護公司形象。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n240093\t業務在案件放樣前，必須召集各部門同仁開立工檢會。\t0\tNULL\tNULL\tNULL\t轉正考核問答\n",
+  "stderr": "",
+  "execution_time_ms": 1547
+}

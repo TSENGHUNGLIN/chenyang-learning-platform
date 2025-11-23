@@ -82,6 +82,8 @@ export default function AIAnalysis() {
   const { data: departments } = trpc.departments.list.useQuery();
   const { data: employees } = trpc.employees.list.useQuery();
   const { data: filesData } = trpc.files.list.useQuery();
+  const { data: categories } = trpc.categories.list.useQuery();
+  const { data: tags } = trpc.tags.list.useQuery();
 
   const files = filesData?.files || [];
 
@@ -398,6 +400,30 @@ export default function AIAnalysis() {
           questionSource = sourceFile?.filename || String(aiSourceFile);
         }
         
+        // 處理 AI 建議的分類
+        let suggestedCategoryId: number | undefined;
+        if (q.suggestedCategory && categories) {
+          const category = categories.find((c: any) => c.name === q.suggestedCategory);
+          if (category) {
+            suggestedCategoryId = category.id;
+          }
+        }
+        
+        // 處理 AI 建議的標籤
+        let suggestedTagIds: string | undefined;
+        if (q.suggestedTags && Array.isArray(q.suggestedTags) && tags) {
+          const tagIdArray: number[] = [];
+          q.suggestedTags.forEach((tagName: string) => {
+            const tag = tags.find((t: any) => t.name === tagName);
+            if (tag) {
+              tagIdArray.push(tag.id);
+            }
+          });
+          if (tagIdArray.length > 0) {
+            suggestedTagIds = JSON.stringify(tagIdArray);
+          }
+        }
+        
         return {
           type,
           difficulty,
@@ -406,6 +432,9 @@ export default function AIAnalysis() {
           correctAnswer: q.answer,
           explanation: q.explanation,
           source: questionSource || '未知',
+          isAiGenerated: 1, // 標記為 AI 生成
+          suggestedCategoryId, // AI 建議的分類 ID
+          suggestedTagIds, // AI 建議的標籤 ID（JSON 格式）
         };
       });
       
