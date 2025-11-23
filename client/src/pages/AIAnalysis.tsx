@@ -828,6 +828,11 @@ export default function AIAnalysis() {
                 </SelectContent>
               </Select>
             )}
+            <p className="text-sm text-muted-foreground mt-1">
+              填寫範例：<br />
+              • 單一檔案：使用檔案全名，例如「業務部邱紫郁轉正考核問答」<br />
+              • 多個檔案：使用最關鍵的共同字詞，例如「業務部轉正考核問答」
+            </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4">

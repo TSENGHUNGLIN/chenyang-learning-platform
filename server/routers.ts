@@ -607,7 +607,7 @@ ${file.extractedText || "無法提取文字內容"}`
             ? `\n\n可用題庫（共 ${questionsWithTags.length} 題）：\n${questionsWithTags.map((q: any, idx: number) => {
                 const categoryName = q.categoryId ? categoryMap.get(q.categoryId) : '無分類';
                 const tagNames = q.tags.map((t: any) => t.name).join(', ') || '無標籤';
-                return `${idx + 1}. [類型: ${q.type === 'true_false' ? '是非題' : q.type === 'multiple_choice' ? '選擇題' : '問答題'}, 難度: ${q.difficulty === 'easy' ? '簡單' : q.difficulty === 'medium' ? '中等' : '困難'}, 分類: ${categoryName}, 標籤: ${tagNames}] ${q.question}`;
+                return `${idx + 1}. [類型: ${q.type === 'true_false' ? '是非題' : q.type === 'multiple_choice' ? '單選題' : q.type === 'multiple_select' ? '複選題' : '問答題'}, 難度: ${q.difficulty === 'easy' ? '簡單' : q.difficulty === 'medium' ? '中等' : '困難'}, 分類: ${categoryName}, 標籤: ${tagNames}] ${q.question}`;
               }).join('\n')}`
             : "";
           
@@ -616,6 +616,12 @@ ${file.extractedText || "無法提取文字內容"}`
           const tagList = tags.map((t: any) => `${t.name}(${t.category})`).join('、');
           
           systemPrompt = `你是一個專業的考題出題助手。你的任務是根據檔案內容、使用者的要求和題庫中的題目，智能選擇或生成適合的考題。優先從題庫中選擇相關題目（根據分類和標籤篩選），如果題庫中沒有適合的題目，再根據檔案內容生成新題目。
+
+題型說明：
+- 是非題：對或錯的判斷題
+- 單選題：只能選擇一個正確答案的選擇題
+- 複選題：可以選擇多個正確答案的選擇題（請在題目中明確標註「複選題」或「可複選」）
+- 問答題：需要文字回答的題目
 
 對於每個題目，請提供：
 1. source：考題出處（檔案名稱、頁碼或段落）
@@ -704,8 +710,8 @@ ${file.extractedText || "無法提取文字內容"}`
                         properties: {
                           number: { type: "number", description: "題號" },
                           question: { type: "string", description: "題目" },
-                          type: { type: "string", enum: ["是非題", "選擇題", "問答題"], description: "題型" },
-                          options: { type: "array", items: { type: "string" }, description: "選項（僅選擇題）" },
+                          type: { type: "string", enum: ["是非題", "單選題", "複選題", "問答題"], description: "題型" },
+                          options: { type: "array", items: { type: "string" }, description: "選項（僅單選題和複選題）" },
                           source: { type: "string", description: "考題出處（檔案名稱、頁碼等）" },
                           suggestedCategory: { type: "string", description: "AI建議的分類" },
                           suggestedTags: { type: "array", items: { type: "string" }, description: "AI建議的標籤" },
@@ -722,8 +728,8 @@ ${file.extractedText || "無法提取文字內容"}`
                         properties: {
                           number: { type: "number", description: "題號" },
                           question: { type: "string", description: "題目" },
-                          type: { type: "string", enum: ["是非題", "選擇題", "問答題"], description: "題型" },
-                          options: { type: "array", items: { type: "string" }, description: "選項（僅選擇題）" },
+                          type: { type: "string", enum: ["是非題", "單選題", "複選題", "問答題"], description: "題型" },
+                          options: { type: "array", items: { type: "string" }, description: "選項（僅單選題和複選題）" },
                           answer: { type: "string", description: "答案" },
                           explanation: { type: "string", description: "解釋" },
                           source: { type: "string", description: "考題出處（檔案名稱、頁碼等）" },
