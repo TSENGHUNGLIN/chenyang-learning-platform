@@ -22,10 +22,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Tag, Plus, Pencil, Trash2, Home, Info } from "lucide-react";
+import { Tag, Plus, Pencil, Trash2, Home, Info, Sparkles, HelpCircle } from "lucide-react";
+import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useIntroTour } from "@/hooks/useIntroTour";
 
 export default function TagManagement() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -37,9 +39,11 @@ export default function TagManagement() {
   });
 
   const { data: tags, refetch: refetchTags } = trpc.tags.list.useQuery();
+  const { data: statistics, refetch: refetchStatistics } = trpc.tags.statistics.useQuery();
   const createMutation = trpc.tags.create.useMutation();
   const updateMutation = trpc.tags.update.useMutation();
   const deleteMutation = trpc.tags.delete.useMutation();
+  const createExamplesMutation = trpc.tags.createExamples.useMutation();
 
   const resetForm = () => {
     setFormData({
@@ -122,6 +126,40 @@ export default function TagManagement() {
 
   const [showGuide, setShowGuide] = useState(false);
 
+  // 互動式導覽配置
+  const { startTour } = useIntroTour({
+    storageKey: "tag-management-tour",
+    autoStart: true,
+    steps: [
+      {
+        intro: "<h3>歡迎使用標籤管理！</h3><p>這個導覽將帶您快速了解如何管理題目標籤。</p>",
+      },
+      {
+        element: "[data-tour='statistics-panel']",
+        intro: "<h4>統計資訊面板</h4><p>這裡顯示標籤的使用統計，包括總數、最常用、未使用和最近新增的標籤。</p>",
+        position: "bottom",
+      },
+      {
+        element: "[data-tour='guide-button']",
+        intro: "<h4>操作指南</h4><p>點擊這個按鈕可以查看詳細的操作指南，包括功能說明、使用步驟和最佳實踐。</p>",
+        position: "bottom",
+      },
+      {
+        element: "[data-tour='create-button']",
+        intro: "<h4>新增標籤</h4><p>點擊這個按鈕可以建立新的標籤。您可以輸入標籤名稱並選擇顏色，以便在界面中區分不同標籤。</p>",
+        position: "left",
+      },
+      {
+        element: "[data-tour='tag-table']",
+        intro: "<h4>標籤清單</h4><p>這裡顯示所有標籤的清單。您可以查看標籤名稱、顏色和預覽效果，並使用編輯和刪除按鈕進行管理。</p>",
+        position: "top",
+      },
+      {
+        intro: "<h3>導覽完成！</h3><p>現在您可以開始管理標籤了。如果需要幫助，可以隨時點擊右上角的問號按鈕查看操作指南。</p>",
+      },
+    ],
+  });
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -134,15 +172,37 @@ export default function TagManagement() {
             <p className="text-muted-foreground mt-2">管理題目標籤，用於分類和篩選題目</p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowGuide(!showGuide)}
+              title="開啟操作指南"
+              data-tour="guide-button"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={startTour}
+              title="重新開始導覽"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
             <Button variant="outline" onClick={() => window.location.href = '/'}>
               <Home className="h-4 w-4 mr-2" />
               返回首頁
             </Button>
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <Button onClick={() => setShowCreateDialog(true)} data-tour="create-button">
               <Plus className="h-4 w-4 mr-2" />
               新增標籤
             </Button>
           </div>
+        </div>
+
+        {/* 統計資訊面板 */}
+        <div data-tour="statistics-panel">
+          {statistics && (
+            <StatisticsPanel type="tag" data={statistics} />
+          )}
         </div>
 
         {/* 操作指南 */}
@@ -198,12 +258,38 @@ export default function TagManagement() {
                     <li>在題庫管理中，利用標籤篩選功能快速找到特定類型的題目。</li>
                   </ul>
                 </div>
+
+                <div className="mt-4 pt-4 border-t border-green-200">
+                  <h4 className="font-semibold mb-3">🚀 快速開始</h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const result = await createExamplesMutation.mutateAsync();
+                        toast.success(result.message || "範例標籤已建立");
+                        refetchTags();
+                        refetchStatistics();
+                      } catch (error: any) {
+                        toast.error(error.message || "建立範例失敗");
+                      }
+                    }}
+                    disabled={createExamplesMutation.isPending}
+                    className="bg-green-100 hover:bg-green-200 text-green-900 border-green-300"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    建立範例標籤
+                  </Button>
+                  <p className="text-xs text-green-700 mt-2">
+                    點擊按鈕可快速建立4個範例標籤，幫助您了解系統結構
+                  </p>
+                </div>
               </AlertDescription>
             </CollapsibleContent>
           </Alert>
         </Collapsible>
 
-        <Card>
+        <Card data-tour="tag-table">
           <CardHeader>
             <CardTitle>所有標籤</CardTitle>
             <CardDescription>共 {tags?.length || 0} 個標籤</CardDescription>

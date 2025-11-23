@@ -3129,3 +3129,215 @@ export async function importTemplateFromJSON(jsonData: any, createdBy: number) {
   return result;
 }
 
+
+
+// ==================== 分類和標籤統計功能 ====================
+
+/**
+ * 取得分類統計資訊
+ */
+export async function getCategoryStatistics() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { questionCategories, questions } = await import("../drizzle/schema");
+  const { sql } = await import("drizzle-orm");
+
+  // 取得所有分類
+  const allCategories = await db.select().from(questionCategories);
+
+  // 取得每個分類的題目數量
+  const categoryUsage = await db
+    .select({
+      categoryId: questions.categoryId,
+      count: sql<number>`count(*)`.as("count"),
+    })
+    .from(questions)
+    .where(sql`${questions.categoryId} IS NOT NULL`)
+    .groupBy(questions.categoryId);
+
+  // 建立使用次數映射
+  const usageMap = new Map<number, number>();
+  categoryUsage.forEach((item) => {
+    if (item.categoryId) {
+      usageMap.set(item.categoryId, item.count);
+    }
+  });
+
+  // 計算統計資訊
+  const totalCategories = allCategories.length;
+  const usedCategories = categoryUsage.length;
+  const unusedCategories = totalCategories - usedCategories;
+
+  // 找出最常用的分類（前5名）
+  const mostUsed = allCategories
+    .map((cat) => ({
+      ...cat,
+      usageCount: usageMap.get(cat.id) || 0,
+    }))
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, 5);
+
+  // 找出未使用的分類
+  const unused = allCategories
+    .filter((cat) => !usageMap.has(cat.id))
+    .slice(0, 10); // 最多顯示10個
+
+  // 找出最近新增的分類（前5名）
+  const recentlyAdded = [...allCategories]
+    .sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    })
+    .slice(0, 5);
+
+  return {
+    totalCategories,
+    usedCategories,
+    unusedCategories,
+    mostUsed,
+    unused,
+    recentlyAdded,
+  };
+}
+
+/**
+ * 取得標籤統計資訊
+ */
+export async function getTagStatistics() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { tags, questionTags } = await import("../drizzle/schema");
+  const { sql } = await import("drizzle-orm");
+
+  // 取得所有標籤
+  const allTags = await db.select().from(tags);
+
+  // 取得每個標籤的使用次數
+  const tagUsage = await db
+    .select({
+      tagId: questionTags.tagId,
+      count: sql<number>`count(*)`.as("count"),
+    })
+    .from(questionTags)
+    .groupBy(questionTags.tagId);
+
+  // 建立使用次數映射
+  const usageMap = new Map<number, number>();
+  tagUsage.forEach((item) => {
+    usageMap.set(item.tagId, item.count);
+  });
+
+  // 計算統計資訊
+  const totalTags = allTags.length;
+  const usedTags = tagUsage.length;
+  const unusedTags = totalTags - usedTags;
+
+  // 找出最常用的標籤（前5名）
+  const mostUsed = allTags
+    .map((tag) => ({
+      ...tag,
+      usageCount: usageMap.get(tag.id) || 0,
+    }))
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, 5);
+
+  // 找出未使用的標籤
+  const unused = allTags
+    .filter((tag) => !usageMap.has(tag.id))
+    .slice(0, 10); // 最多顯示10個
+
+  // 找出最近新增的標籤（前5名）
+  const recentlyAdded = [...allTags]
+    .sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    })
+    .slice(0, 5);
+
+  return {
+    totalTags,
+    usedTags,
+    unusedTags,
+    mostUsed,
+    unused,
+    recentlyAdded,
+  };
+}
+
+/**
+ * 建立範例分類資料
+ */
+export async function createExampleCategories() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { questionCategories } = await import("../drizzle/schema");
+
+  const exampleCategories = [
+    { name: "範例分類 - 基礎知識", description: "這是一個範例分類，用於示範基礎知識題目" },
+    { name: "範例分類 - 進階應用", description: "這是一個範例分類，用於示範進階應用題目" },
+    { name: "範例分類 - 實務操作", description: "這是一個範例分類，用於示範實務操作題目" },
+  ];
+
+  const results = [];
+  for (const category of exampleCategories) {
+    try {
+      const result = await db.insert(questionCategories).values(category);
+      results.push(result);
+    } catch (error) {
+      console.error("Failed to create example category:", error);
+    }
+  }
+
+  return {
+    success: true,
+    created: results.length,
+    message: `成功建立 ${results.length} 個範例分類`,
+  };
+}
+
+/**
+ * 建立範例標籤資料
+ */
+export async function createExampleTags() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { tags } = await import("../drizzle/schema");
+
+  const exampleTags = [
+    { name: "範例標籤 - 重要", color: "#ef4444" }, // 紅色
+    { name: "範例標籤 - 常見", color: "#3b82f6" }, // 藍色
+    { name: "範例標籤 - 進階", color: "#8b5cf6" }, // 紫色
+    { name: "範例標籤 - 實務", color: "#10b981" }, // 綠色
+  ];
+
+  const results = [];
+  for (const tag of exampleTags) {
+    try {
+      const result = await db.insert(tags).values(tag);
+      results.push(result);
+    } catch (error) {
+      console.error("Failed to create example tag:", error);
+    }
+  }
+
+  return {
+    success: true,
+    created: results.length,
+    message: `成功建立 ${results.length} 個範例標籤`,
+  };
+}
+

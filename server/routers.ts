@@ -1257,6 +1257,22 @@ ${file.extractedText || "無法提取文字內容"}`
       const { getAllCategories } = await import("./db");
       return await getAllCategories();
     }),
+    statistics: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getCategoryStatistics } = await import("./db");
+      return await getCategoryStatistics();
+    }),
+    createExamples: protectedProcedure.mutation(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { createExampleCategories } = await import("./db");
+      return await createExampleCategories();
+    }),
     tree: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
       if (!hasPermission(ctx.user.role as any, "canViewAll")) {
@@ -1319,6 +1335,22 @@ ${file.extractedText || "無法提取文字內容"}`
       }
       const { getAllTags } = await import("./db");
       return await getAllTags();
+    }),
+    statistics: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getTagStatistics } = await import("./db");
+      return await getTagStatistics();
+    }),
+    createExamples: protectedProcedure.mutation(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { createExampleTags } = await import("./db");
+      return await createExampleTags();
     }),
     create: protectedProcedure
       .input(z.object({

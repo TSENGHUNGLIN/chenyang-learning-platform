@@ -29,10 +29,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FolderTree, Plus, Pencil, Trash2, Home, Info } from "lucide-react";
+import { FolderTree, Plus, Pencil, Trash2, Home, Info, Sparkles, HelpCircle } from "lucide-react";
+import { StatisticsPanel } from "@/components/StatisticsPanel";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useIntroTour } from "@/hooks/useIntroTour";
 
 export default function CategoryManagement() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -45,9 +47,11 @@ export default function CategoryManagement() {
   });
 
   const { data: categories, refetch: refetchCategories } = trpc.questionCategories.list.useQuery();
+  const { data: statistics, refetch: refetchStatistics } = trpc.questionCategories.statistics.useQuery();
   const createMutation = trpc.questionCategories.create.useMutation();
   const updateMutation = trpc.questionCategories.update.useMutation();
   const deleteMutation = trpc.questionCategories.delete.useMutation();
+  const createExamplesMutation = trpc.questionCategories.createExamples.useMutation();
 
   const resetForm = () => {
     setFormData({
@@ -129,6 +133,40 @@ export default function CategoryManagement() {
 
   const [showGuide, setShowGuide] = useState(false);
 
+  // 互動式導覽配置
+  const { startTour } = useIntroTour({
+    storageKey: "category-management-tour",
+    autoStart: true,
+    steps: [
+      {
+        intro: "<h3>歡迎使用分類管理！</h3><p>這個導覽將帶您快速了解如何管理題目分類。</p>",
+      },
+      {
+        element: "[data-tour='statistics-panel']",
+        intro: "<h4>統計資訊面板</h4><p>這裡顯示分類的使用統計，包括總數、最常用、未使用和最近新增的分類。</p>",
+        position: "bottom",
+      },
+      {
+        element: "[data-tour='guide-button']",
+        intro: "<h4>操作指南</h4><p>點擊這個按鈕可以查看詳細的操作指南，包括功能說明、使用步驟和最佳實踐。</p>",
+        position: "bottom",
+      },
+      {
+        element: "[data-tour='create-button']",
+        intro: "<h4>新增分類</h4><p>點擊這個按鈕可以建立新的分類。您可以輸入分類名稱、描述，並選擇上層分類來建立子分類。</p>",
+        position: "left",
+      },
+      {
+        element: "[data-tour='category-table']",
+        intro: "<h4>分類清單</h4><p>這裡顯示所有分類的清單。您可以查看分類名稱、完整路徑和說明，並使用編輯和刪除按鈕進行管理。</p>",
+        position: "top",
+      },
+      {
+        intro: "<h3>導覽完成！</h3><p>現在您可以開始管理分類了。如果需要幫助，可以隨時點擊右上角的問號按鈕查看操作指南。</p>",
+      },
+    ],
+  });
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -141,15 +179,37 @@ export default function CategoryManagement() {
             <p className="text-muted-foreground mt-2">管理題目分類，支援多層級樹狀結構</p>
           </div>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowGuide(!showGuide)}
+              title="開啟操作指南"
+              data-tour="guide-button"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={startTour}
+              title="重新開始導覽"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
             <Button variant="outline" onClick={() => window.location.href = '/'}>
               <Home className="h-4 w-4 mr-2" />
               返回首頁
             </Button>
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <Button onClick={() => setShowCreateDialog(true)} data-tour="create-button">
               <Plus className="h-4 w-4 mr-2" />
               新增分類
             </Button>
           </div>
+        </div>
+
+        {/* 統計資訊面板 */}
+        <div data-tour="statistics-panel">
+          {statistics && (
+            <StatisticsPanel type="category" data={statistics} />
+          )}
         </div>
 
         {/* 操作指南 */}
@@ -204,12 +264,38 @@ export default function CategoryManagement() {
                     <li>定期檢視分類結構，合併或刪除不再使用的分類。</li>
                   </ul>
                 </div>
+
+                <div className="mt-4 pt-4 border-t border-blue-200">
+                  <h4 className="font-semibold mb-3">🚀 快速開始</h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const result = await createExamplesMutation.mutateAsync();
+                        toast.success(result.message || "範例分類已建立");
+                        refetchCategories();
+                        refetchStatistics();
+                      } catch (error: any) {
+                        toast.error(error.message || "建立範例失敗");
+                      }
+                    }}
+                    disabled={createExamplesMutation.isPending}
+                    className="bg-blue-100 hover:bg-blue-200 text-blue-900 border-blue-300"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    建立範例分類
+                  </Button>
+                  <p className="text-xs text-blue-700 mt-2">
+                    點擊按鈕可快速建立3個範例分類，幫助您了解系統結構
+                  </p>
+                </div>
               </AlertDescription>
             </CollapsibleContent>
           </Alert>
         </Collapsible>
 
-        <Card>
+        <Card data-tour="category-table">
           <CardHeader>
             <CardTitle>所有分類</CardTitle>
             <CardDescription>共 {categories?.length || 0} 個分類</CardDescription>
