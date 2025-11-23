@@ -624,3 +624,22 @@
 - [x] 測試考生選擇功能
 - [x] 儲存檢查點
 
+
+
+
+## 修復 ExamPlanning.tsx 中 filteredUsers 未定義錯誤（2025-01-23）
+
+### 1. 檢查並修復所有遺漏的變數引用
+- [x] 檢查 handleSelectAllUsers 函數中的 filteredUsers 引用
+- [x] 將所有 filteredUsers 改為 filteredEmployees
+- [x] 檢查是否還有其他遺漏的變數引用
+
+### 2. 測試修復後的全選功能
+- [x] 測試全選按鈕功能
+- [x] 測試取消全選功能
+- [x] 確認選擇的考生數量正確
+
+### 3. 儲存檢查點
+- [ ] 儲存修復後的檢查點
+- [ ] 回報使用者修復結果
+

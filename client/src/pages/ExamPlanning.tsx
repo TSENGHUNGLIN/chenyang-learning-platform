@@ -214,10 +214,10 @@ export default function ExamPlanning() {
 
   // 全選考生
   const handleSelectAllUsers = () => {
-    if (selectedUserIds.length === filteredUsers.length) {
+    if (selectedUserIds.length === filteredEmployees.length) {
       setSelectedUserIds([]);
     } else {
-      setSelectedUserIds(filteredUsers.map(u => u.id));
+      setSelectedUserIds(filteredEmployees.map(u => u.id));
     }
   };
 
