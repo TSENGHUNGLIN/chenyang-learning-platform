@@ -1107,7 +1107,8 @@ export async function getAllExams() {
   const { exams, examQuestions } = await import("../drizzle/schema");
   const { sql } = await import("drizzle-orm");
   
-  // 使用左連接查詢考試和題目數量
+  // 使用左連接查詢考試和題目數量（過濾已刪除的考試）
+  const { isNull } = await import("drizzle-orm");
   const result = await db
     .select({
       id: exams.id,
@@ -1125,6 +1126,7 @@ export async function getAllExams() {
     })
     .from(exams)
     .leftJoin(examQuestions, eq(exams.id, examQuestions.examId))
+    .where(isNull(exams.deletedAt))
     .groupBy(exams.id)
     .orderBy(desc(exams.createdAt));
   

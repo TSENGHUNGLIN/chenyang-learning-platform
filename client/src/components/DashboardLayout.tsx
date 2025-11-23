@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity, BookX, TrendingUp, RefreshCw, Lightbulb, ShieldCheck, CalendarClock, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity, BookX, TrendingUp, RefreshCw, Lightbulb, ShieldCheck, CalendarClock, AlertTriangle, Trash2 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -53,6 +53,7 @@ const staffMenuItems: Array<{
   { icon: AlertTriangle, label: "逾期管理", path: "/overdue-exams", color: "orange", editorOnly: true },
   { icon: RefreshCw, label: "補考管理", path: "/makeup-exams", color: "teal", editorOnly: true },
   { icon: Activity, label: "考試監控", path: "/exam-monitoring", color: "red", editorOnly: true },
+  { icon: Trash2, label: "考試回收站", path: "/exam-recycle-bin", color: "gray", editorOnly: true },
   { icon: Settings, label: "部門人員", path: "/manage", color: "slate", adminOnly: true },
   { icon: Users, label: "使用者管理", path: "/users", color: "zinc", adminOnly: true },
 ];

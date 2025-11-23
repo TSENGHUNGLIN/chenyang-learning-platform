@@ -261,6 +261,7 @@ export const exams = mysqlTable("exams", {
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  deletedAt: timestamp("deletedAt"), // 軟刪除時間戳記，null表示未刪除
 });
 
 export type Exam = typeof exams.$inferSelect;

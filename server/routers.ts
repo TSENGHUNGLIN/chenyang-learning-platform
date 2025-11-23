@@ -2031,13 +2031,113 @@ ${file.extractedText || "無法提取文字內容"}`
       }),
     getStudentRankings: protectedProcedure
       .input(z.number())
-      .query(async ({ input, ctx }) => {
+      .query(async ({ input: examId, ctx }) => {
         const { hasPermission } = await import("@shared/permissions");
         if (!hasPermission(ctx.user.role as any, "canViewAll")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
-        const { getStudentRankings } = await import("./examAnalytics");
-        return await getStudentRankings(input);
+        const { getStudentRankings } = await import("./db");
+        return await getStudentRankings(examId);
+      }),
+    // 刪除影響分析 API
+    getDeletionImpact: protectedProcedure
+      .input(z.number())
+      .query(async ({ input: examId, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getExamDeletionImpact } = await import("./examDeletion");
+        return await getExamDeletionImpact(examId);
+      }),
+    // 批次刪除影響分析 API
+    getBatchDeletionImpact: protectedProcedure
+      .input(z.array(z.number()))
+      .query(async ({ input: examIds, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getBatchExamDeletionImpact } = await import("./examDeletion");
+        return await getBatchExamDeletionImpact(examIds);
+      }),
+    // 軟刪除考試 API
+    softDelete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input: examId, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { softDeleteExam } = await import("./examDeletion");
+        await softDeleteExam(examId);
+        return { success: true };
+      }),
+    // 批次軟刪除考試 API
+    batchSoftDelete: protectedProcedure
+      .input(z.array(z.number()))
+      .mutation(async ({ input: examIds, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchSoftDeleteExams } = await import("./examDeletion");
+        return await batchSoftDeleteExams(examIds);
+      }),
+    // 獲取已刪除考試列表（回收站）
+    getDeleted: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getDeletedExams } = await import("./examDeletion");
+      return await getDeletedExams();
+    }),
+    // 恢復考試 API
+    restore: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input: examId, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { restoreExam } = await import("./examDeletion");
+        await restoreExam(examId);
+        return { success: true };
+      }),
+    // 批次恢復考試 API
+    batchRestore: protectedProcedure
+      .input(z.array(z.number()))
+      .mutation(async ({ input: examIds, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchRestoreExams } = await import("./examDeletion");
+        return await batchRestoreExams(examIds);
+      }),
+    // 永久刪除考試 API
+    permanentDelete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input: examId, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "只有管理員可以永久刪除考試" });
+        }
+        const { permanentlyDeleteExam } = await import("./examDeletion");
+        await permanentlyDeleteExam(examId);
+        return { success: true };
+      }),
+    // 批次永久刪除考試 API
+    batchPermanentDelete: protectedProcedure
+      .input(z.array(z.number()))
+      .mutation(async ({ input: examIds, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canManageUsers")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "只有管理員可以永久刪除考試" });
+        }
+        const { batchPermanentlyDeleteExams } = await import("./examDeletion");
+        return await batchPermanentlyDeleteExams(examIds);
       }),
   }),
 

@@ -24,9 +24,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users, BarChart3, TrendingUp, FileEdit, Zap } from "lucide-react";
+import { ArrowLeft, Plus, Eye, Edit, Trash2, FileText, Calendar, Clock, Users, BarChart3, TrendingUp, FileEdit, Zap, CheckSquare, Archive } from "lucide-react";
 import CreateExamWizard from "@/components/CreateExamWizard";
 import ExamPreviewDialog from "@/components/ExamPreviewDialog";
+import ExamDeletionImpactDialog from "@/components/ExamDeletionImpactDialog";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ExamList() {
@@ -42,9 +43,12 @@ export default function ExamList() {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewExamId, setPreviewExamId] = useState<number>(0);
   const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
+  const [selectedExamIds, setSelectedExamIds] = useState<number[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showImpactDialog, setShowImpactDialog] = useState(false);
   const [examToDelete, setExamToDelete] = useState<any | null>(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState("");
+  const [isBatchMode, setIsBatchMode] = useState(false);
   
   // 表單狀態
   const [formData, setFormData] = useState({
@@ -172,14 +176,30 @@ export default function ExamList() {
     },
   });
   
-  // 刪除考試
-  const deleteExamMutation = trpc.exams.delete.useMutation({
+  // 軟刪除考試
+  const softDeleteMutation = trpc.exams.softDelete.useMutation({
     onSuccess: () => {
-      toast.success("考試已刪除");
+      toast.success("考試已移至回收站");
+      setSelectedExamId(null);
+      setSelectedExamIds([]);
       refetch();
     },
     onError: (error) => {
       toast.error(`刪除失敗：${error.message}`);
+    },
+  });
+  
+  // 批次軟刪除考試
+  const batchSoftDeleteMutation = trpc.exams.batchSoftDelete.useMutation({
+    onSuccess: (data) => {
+      toast.success(`已成功刪除 ${data.success} 個考試，失敗 ${data.failed} 個`);
+      setSelectedExamId(null);
+      setSelectedExamIds([]);
+      setIsBatchMode(false);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(`批次刪除失敗：${error.message}`);
     },
   });
   
@@ -256,26 +276,45 @@ export default function ExamList() {
   };
 
   const handleDelete = (exam: any) => {
-    setExamToDelete(exam);
-    setShowDeleteDialog(true);
-    setDeleteConfirmName("");
+    setShowImpactDialog(true);
+  };
+  
+  const handleBatchDelete = () => {
+    if (selectedExamIds.length === 0) {
+      toast.error("請至少選擇一個考試");
+      return;
+    }
+    setShowImpactDialog(true);
   };
   
   const confirmDelete = () => {
-    if (!examToDelete) return;
-    
-    // 如果考試已發布且有考生作答，需要輸入考試名稱確認
-    if (examToDelete.status === 'published' && examToDelete.assignedCount > 0) {
-      if (deleteConfirmName !== examToDelete.title) {
-        toast.error("請輸入正確的考試名稱以確認刪除");
-        return;
-      }
+    if (isBatchMode) {
+      batchSoftDeleteMutation.mutate(selectedExamIds);
+    } else if (selectedExamId) {
+      softDeleteMutation.mutate(selectedExamId);
     }
-    
-    deleteExamMutation.mutate(examToDelete.id);
-    setShowDeleteDialog(false);
-    setExamToDelete(null);
-    setDeleteConfirmName("");
+  };
+  
+  const toggleBatchMode = () => {
+    setIsBatchMode(!isBatchMode);
+    setSelectedExamIds([]);
+  };
+  
+  const toggleExamSelection = (examId: number) => {
+    setSelectedExamIds(prev => 
+      prev.includes(examId) 
+        ? prev.filter(id => id !== examId)
+        : [...prev, examId]
+    );
+  };
+  
+  const toggleSelectAllExams = () => {
+    if (!exams) return;
+    if (selectedExamIds.length === exams.length) {
+      setSelectedExamIds([]);
+    } else {
+      setSelectedExamIds(exams.map(e => e.id));
+    }
   };
   
   const handleAssign = (exam: any) => {
@@ -400,6 +439,26 @@ export default function ExamList() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button 
+              variant={isBatchMode ? "default" : "outline"}
+              onClick={toggleBatchMode}
+            >
+              <CheckSquare className="h-4 w-4 mr-2" />
+              {isBatchMode ? "取消批次模式" : "批次模式"}
+            </Button>
+            {isBatchMode && selectedExamIds.length > 0 && (
+              <Button 
+                variant="destructive"
+                onClick={handleBatchDelete}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                刪除已選 ({selectedExamIds.length})
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setLocation("/exam-recycle-bin")}>
+              <Archive className="h-4 w-4 mr-2" />
+              回收站
+            </Button>
             <Button variant="outline" onClick={() => setLocation("/exam-planning")}>
               <Users className="h-4 w-4 mr-2" />
               考生規劃
@@ -437,7 +496,18 @@ export default function ExamList() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">選擇</TableHead>
+                    <TableHead className="w-12">
+                      {isBatchMode ? (
+                        <input
+                          type="checkbox"
+                          checked={exams.length > 0 && selectedExamIds.length === exams.length}
+                          onChange={toggleSelectAllExams}
+                          className="h-4 w-4 cursor-pointer"
+                        />
+                      ) : (
+                        "選擇"
+                      )}
+                    </TableHead>
                     <TableHead>考試名稱</TableHead>
                     <TableHead>狀態</TableHead>
                     <TableHead>時長</TableHead>
@@ -450,20 +520,31 @@ export default function ExamList() {
                 <TableBody>
                   {exams.map((exam: any) => {
                     const statusInfo = getExamStatus(exam);
-                    const isSelected = selectedExamId === exam.id;
+                    const isSelected = isBatchMode 
+                      ? selectedExamIds.includes(exam.id)
+                      : selectedExamId === exam.id;
                     return (
                       <TableRow 
                         key={exam.id}
                         className={isSelected ? "bg-blue-50 dark:bg-blue-950" : ""}
                       >
                         <TableCell>
-                          <input
-                            type="radio"
-                            name="exam-selection"
-                            checked={isSelected}
-                            onChange={() => setSelectedExamId(exam.id)}
-                            className="h-4 w-4 cursor-pointer"
-                          />
+                          {isBatchMode ? (
+                            <input
+                              type="checkbox"
+                              checked={selectedExamIds.includes(exam.id)}
+                              onChange={() => toggleExamSelection(exam.id)}
+                              className="h-4 w-4 cursor-pointer"
+                            />
+                          ) : (
+                            <input
+                              type="radio"
+                              name="exam-selection"
+                              checked={isSelected}
+                              onChange={() => setSelectedExamId(exam.id)}
+                              className="h-4 w-4 cursor-pointer"
+                            />
+                          )}
                         </TableCell>
                         <TableCell className="font-medium">{exam.title}</TableCell>
                         <TableCell>
@@ -806,86 +887,14 @@ export default function ExamList() {
         </Dialog>
         
         {/* 刪除確認對話框 */}
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-destructive">確認刪除考試</DialogTitle>
-              <DialogDescription>
-                此操作無法復原，請仔細確認以下資訊。
-              </DialogDescription>
-            </DialogHeader>
-            
-            {examToDelete && (
-              <div className="space-y-4">
-                {/* 考試基本資訊 */}
-                <div className="space-y-2 p-4 bg-muted rounded-lg">
-                  <div className="flex justify-between">
-                    <span className="font-medium">考試名稱：</span>
-                    <span>{examToDelete.title}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">狀態：</span>
-                    <Badge variant={examToDelete.status === 'published' ? 'default' : 'secondary'}>
-                      {examToDelete.status === 'draft' ? '草稿' : '已發布'}
-                    </Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">建立時間：</span>
-                    <span>{new Date(examToDelete.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-                
-                {/* 警告訊息 */}
-                {examToDelete.status === 'published' && (
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-sm text-destructive font-medium">
-                      ⚠️ 注意：此考試已發布
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      刪除後所有相關的考生指派和成績記錄將被永久刪除。
-                    </p>
-                  </div>
-                )}
-                
-                {/* 高風險刪除需要輸入考試名稱 */}
-                {examToDelete.status === 'published' && (
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmName">
-                      請輸入考試名稱以確認刪除：
-                    </Label>
-                    <Input
-                      id="confirmName"
-                      value={deleteConfirmName}
-                      onChange={(e) => setDeleteConfirmName(e.target.value)}
-                      placeholder={`輸入「${examToDelete.title}」`}
-                      className="font-mono"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-            
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setShowDeleteDialog(false);
-                  setExamToDelete(null);
-                  setDeleteConfirmName("");
-                }}
-              >
-                取消
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={confirmDelete}
-                disabled={deleteExamMutation.isPending}
-              >
-                {deleteExamMutation.isPending ? "刪除中..." : "確認刪除"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* 刪除影響分析對話框 */}
+        <ExamDeletionImpactDialog
+          open={showImpactDialog}
+          onOpenChange={setShowImpactDialog}
+          examIds={isBatchMode ? selectedExamIds : selectedExamId ? [selectedExamId] : []}
+          onConfirm={confirmDelete}
+          isBatch={isBatchMode}
+        />
         
         {/* 考試預覽對話框 */}
         <ExamPreviewDialog

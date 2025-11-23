@@ -36,6 +36,7 @@ import MakeupExamDashboard from "./pages/MakeupExamDashboard";
 import DataQualityCheck from "./pages/DataQualityCheck";
 import ExamPlanning from "./pages/ExamPlanning";
 import OverdueExams from "./pages/OverdueExams";
+import ExamRecycleBin from "./pages/ExamRecycleBin";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -74,6 +75,7 @@ function Router() {
       <Route path={"/data-quality"} component={DataQualityCheck} />
       <Route path={"/exam-planning"} component={ExamPlanning} />
       <Route path={"/overdue-exams"} component={OverdueExams} />
+      <Route path={"/exam-recycle-bin"} component={ExamRecycleBin} />
       <Route path={"/manage"} component={Manage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
