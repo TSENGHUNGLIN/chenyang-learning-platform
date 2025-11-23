@@ -49,6 +49,9 @@ export default function ExamPlanning() {
   const [csvContent, setCsvContent] = useState<string>("");
   const [showCsvDialog, setShowCsvDialog] = useState(false);
 
+  // 考卷選擇對話框
+  const [showExamSelectionDialog, setShowExamSelectionDialog] = useState(false);
+
   // 搜尋
   const [userSearch, setUserSearch] = useState("");
   const [examSearch, setExamSearch] = useState("");
@@ -510,8 +513,63 @@ export default function ExamPlanning() {
               </>
             )}
 
-            {/* 搜尋考生 */}
-            {(selectionMode === "single" || selectionMode === "multiple") && (
+            {/* 單選考生：按部門分組 */}
+            {selectionMode === "single" && (
+              <>
+                <div>
+                  <Label>選擇考生（按部門分組）</Label>
+                  <Select
+                    value={selectedUserIds[0]?.toString() || ""}
+                    onValueChange={(v) => {
+                      const empId = Number(v);
+                      setSelectedUserIds([empId]);
+                      // 找到該考生所屬的部門
+                      const emp = employees?.find(e => e.id === empId);
+                      if (emp) {
+                        setSelectedDepartmentId(emp.departmentId || 0);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="選擇考生" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments?.map(dept => {
+                        const deptEmps = employeesByDepartment[dept.id] || [];
+                        if (deptEmps.length === 0) return null;
+                        return (
+                          <div key={dept.id}>
+                            <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                              {dept.name} ({deptEmps.length} 人)
+                            </div>
+                            {deptEmps.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id.toString()} className="pl-6">
+                                {emp.name || "未命名"} ({emp.email})
+                              </SelectItem>
+                            ))}
+                          </div>
+                        );
+                      })}
+                      {employeesByDepartment[0]?.length > 0 && (
+                        <div>
+                          <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                            未分配部門 ({employeesByDepartment[0].length} 人)
+                          </div>
+                          {employeesByDepartment[0].map(emp => (
+                            <SelectItem key={emp.id} value={emp.id.toString()} className="pl-6">
+                              {emp.name || "未命名"} ({emp.email})
+                            </SelectItem>
+                          ))}
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            {/* 複選考生：按部門分組 */}
+            {selectionMode === "multiple" && (
               <>
                 <div>
                   <Label htmlFor="user-search">搜尋考生</Label>
@@ -524,74 +582,81 @@ export default function ExamPlanning() {
                   />
                 </div>
 
-                {selectionMode === "multiple" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSelectAllUsers}
-                    className="w-full"
-                  >
-                    {selectedUserIds.length === filteredEmployees.length ? "取消全選" : "全選"}
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAllUsers}
+                  className="w-full"
+                >
+                  {selectedUserIds.length === filteredEmployees.length ? "取消全選" : "全選"}
+                </Button>
 
-                {/* 考生列表 */}
-                {selectionMode === "single" ? (
-                  <RadioGroup
-                    value={selectedUserIds[0]?.toString() || ""}
-                    onValueChange={(value) => setSelectedUserIds([parseInt(value)])}
-                  >
-                    <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2">
-                      {filteredEmployees.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          沒有找到考生
-                        </p>
-                      ) : (
-                        filteredEmployees.map(emp => (
-                          <div
-                            key={emp.id}
-                            className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
-                            onClick={() => setSelectedUserIds([emp.id])}
-                          >
-                            <RadioGroupItem
-                              value={emp.id.toString()}
-                              id={`emp-${emp.id}`}
-                            />
-                            <Label htmlFor={`emp-${emp.id}`} className="flex-1 min-w-0 cursor-pointer">
-                              <p className="text-sm font-medium truncate">{emp.name || "未命名"}</p>
-                              <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
-                            </Label>
+                {/* 按部門分組的考生列表 */}
+                <div className="max-h-96 overflow-y-auto space-y-3 border rounded-md p-2">
+                  {filteredEmployees.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      沒有找到考生
+                    </p>
+                  ) : (
+                    <>
+                      {departments?.map(dept => {
+                        const deptEmps = filteredEmployees.filter(emp => emp.departmentId === dept.id);
+                        if (deptEmps.length === 0) return null;
+                        return (
+                          <div key={dept.id} className="space-y-2">
+                            <div className="px-2 py-1 text-sm font-semibold text-muted-foreground bg-accent/50 rounded">
+                              {dept.name} ({deptEmps.length} 人)
+                            </div>
+                            {deptEmps.map(emp => (
+                              <div
+                                key={emp.id}
+                                className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer ml-2"
+                                onClick={() => handleUserToggle(emp.id)}
+                              >
+                                <Checkbox
+                                  checked={selectedUserIds.includes(emp.id)}
+                                  onCheckedChange={() => handleUserToggle(emp.id)}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{emp.name || "未命名"}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </RadioGroup>
-                ) : (
-                  <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2">
-                    {filteredEmployees.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        沒有找到考生
-                      </p>
-                    ) : (
-                      filteredEmployees.map(emp => (
-                        <div
-                          key={emp.id}
-                          className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
-                          onClick={() => handleUserToggle(emp.id)}
-                        >
-                          <Checkbox
-                            checked={selectedUserIds.includes(emp.id)}
-                            onCheckedChange={() => handleUserToggle(emp.id)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{emp.name || "未命名"}</p>
-                            <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
+                        );
+                      })}
+                      {/* 未分配部門的考生 */}
+                      {(() => {
+                        const unassignedEmps = filteredEmployees.filter(emp => !emp.departmentId || emp.departmentId === 0);
+                        if (unassignedEmps.length === 0) return null;
+                        return (
+                          <div className="space-y-2">
+                            <div className="px-2 py-1 text-sm font-semibold text-muted-foreground bg-accent/50 rounded">
+                              未分配部門 ({unassignedEmps.length} 人)
+                            </div>
+                            {unassignedEmps.map(emp => (
+                              <div
+                                key={emp.id}
+                                className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer ml-2"
+                                onClick={() => handleUserToggle(emp.id)}
+                              >
+                                <Checkbox
+                                  checked={selectedUserIds.includes(emp.id)}
+                                  onCheckedChange={() => handleUserToggle(emp.id)}
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium truncate">{emp.name || "未命名"}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
+                        );
+                      })()}
+                    </>
+                  )}
+                </div>
               </>
             )}
           </CardContent>
@@ -616,7 +681,7 @@ export default function ExamPlanning() {
                 <div className="flex-1 relative">
                   <Input
                     id="exam-search"
-                    placeholder="輸入考卷名稱或選擇下拉選單"
+                    placeholder="輸入考卷名稱或點擊下方按鈕選擇"
                     value={examSearch}
                     onChange={(e) => handleExamSearchChange(e.target.value)}
                     onFocus={() => setShowExamHistory(true)}
@@ -647,64 +712,104 @@ export default function ExamPlanning() {
                     </div>
                   )}
                 </div>
-                <Select
-                  value={examSearch}
-                  onValueChange={(value) => {
-                    setExamSearch(value);
-                    saveSearchHistory(value);
-                  }}
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="下拉選單" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {exams?.filter(e => e.status === "published").map(exam => (
-                      <SelectItem key={exam.id} value={exam.title}>
-                        {exam.title.length > 20 ? exam.title.substring(0, 20) + "..." : exam.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSelectAllExams}
-              className="w-full"
-            >
-              {selectedExamIds.length === filteredExams.length ? "取消全選" : "全選"}
-            </Button>
+            {/* 考卷選擇對話框觸發按鈕 */}
+            <Dialog open={showExamSelectionDialog} onOpenChange={setShowExamSelectionDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  選擇考卷（已選 {selectedExamIds.length} 份）
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>選擇考卷</DialogTitle>
+                  <DialogDescription>
+                    已選擇 {selectedExamIds.length} 份考卷
+                  </DialogDescription>
+                </DialogHeader>
 
-            {/* 考卷列表 */}
-            <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2">
-              {filteredExams.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  沒有找到已發布的考卷
-                </p>
-              ) : (
-                filteredExams.map(exam => (
-                  <div
-                    key={exam.id}
-                    className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
-                    onClick={() => handleExamToggle(exam.id)}
+                <div className="space-y-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAllExams}
+                    className="w-full"
                   >
-                    <Checkbox
-                      checked={selectedExamIds.includes(exam.id)}
-                      onCheckedChange={() => handleExamToggle(exam.id)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{exam.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {exam.timeLimit ? `${exam.timeLimit} 分鐘` : "不限時"} · 
-                        及格分數 {exam.passingScore}
+                    {selectedExamIds.length === filteredExams.length ? "取消全選" : "全選"}
+                  </Button>
+
+                  {/* 考卷列表 */}
+                  <div className="space-y-2">
+                    {filteredExams.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        沒有找到匹配的已發布考卷
                       </p>
-                    </div>
+                    ) : (
+                      filteredExams.map(exam => (
+                        <div
+                          key={exam.id}
+                          className="flex items-center gap-3 p-3 hover:bg-accent rounded-md cursor-pointer border"
+                          onClick={() => handleExamToggle(exam.id)}
+                        >
+                          <Checkbox
+                            checked={selectedExamIds.includes(exam.id)}
+                            onCheckedChange={() => handleExamToggle(exam.id)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{exam.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {exam.timeLimit ? `${exam.timeLimit} 分鐘` : "不限時"} · 
+                              及格分數 {exam.passingScore}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
-                ))
-              )}
-            </div>
+
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <Button variant="outline" onClick={() => setShowExamSelectionDialog(false)}>
+                      取消
+                    </Button>
+                    <Button onClick={() => setShowExamSelectionDialog(false)}>
+                      確認選擇
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* 已選考卷顯示 */}
+            {selectedExamIds.length > 0 && (
+              <div className="border rounded-md p-3 space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">已選擇的考卷：</p>
+                <div className="space-y-1">
+                  {selectedExamIds.map(examId => {
+                    const exam = exams?.find(e => e.id === examId);
+                    if (!exam) return null;
+                    return (
+                      <div key={examId} className="flex items-center justify-between text-sm">
+                        <span className="truncate">{exam.title}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleExamToggle(examId)}
+                          className="h-6 px-2"
+                        >
+                          移除
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

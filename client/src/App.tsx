@@ -54,6 +54,7 @@ function Router() {
       <Route path={"/categories"} component={CategoryManagement} />
       <Route path={"/tags"} component={TagManagement} />
       <Route path={"/analysis-history"} component={AnalysisHistory} />
+      <Route path={"/exam-management"} component={ExamManagement} />
       <Route path={"/exams"} component={ExamManagement} />
       <Route path={"/exams/list"} component={ExamList} />
       <Route path={"/exams/:id"} component={ExamDetail} />
