@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,11 +11,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Upload, Users, FileText, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Upload, Users, FileText, Calendar, AlertCircle, CheckCircle2, Home, Download, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { zhTW } from "date-fns/locale";
+import { useLocation } from "wouter";
 
 export default function ExamPlanning() {
+  const [, navigate] = useLocation();
+
   // 資料查詢
   const { data: exams, isLoading: examsLoading } = trpc.exams.list.useQuery();
   const { data: users, isLoading: usersLoading } = trpc.users.list.useQuery();
@@ -34,6 +37,9 @@ export default function ExamPlanning() {
   // 時間設定
   const [batchStartTime, setBatchStartTime] = useState<string>("");
   const [batchDeadline, setBatchDeadline] = useState<string>("");
+  const [examFrequency, setExamFrequency] = useState<"daily" | "weekly" | "custom" | "none">("none");
+  const [customInterval, setCustomInterval] = useState<number>(1);
+  const [customIntervalUnit, setCustomIntervalUnit] = useState<"days" | "weeks">("days");
 
   // 批次資訊
   const [batchName, setBatchName] = useState<string>("");
@@ -46,6 +52,42 @@ export default function ExamPlanning() {
   // 搜尋
   const [userSearch, setUserSearch] = useState("");
   const [examSearch, setExamSearch] = useState("");
+  const [examSearchHistory, setExamSearchHistory] = useState<string[]>([]);
+  const [showExamHistory, setShowExamHistory] = useState(false);
+
+  // 從 localStorage 讀取搜尋歷史
+  useEffect(() => {
+    const history = localStorage.getItem("examSearchHistory");
+    if (history) {
+      try {
+        setExamSearchHistory(JSON.parse(history));
+      } catch (e) {
+        console.error("Failed to parse exam search history", e);
+      }
+    }
+  }, []);
+
+  // 儲存搜尋歷史
+  const saveSearchHistory = (searchTerm: string) => {
+    if (!searchTerm.trim()) return;
+    const newHistory = [searchTerm, ...examSearchHistory.filter(h => h !== searchTerm)].slice(0, 5);
+    setExamSearchHistory(newHistory);
+    localStorage.setItem("examSearchHistory", JSON.stringify(newHistory));
+  };
+
+  // 處理搜尋輸入
+  const handleExamSearchChange = (value: string) => {
+    setExamSearch(value);
+    if (value.trim()) {
+      setShowExamHistory(false);
+    }
+  };
+
+  // 選擇歷史記錄
+  const handleSelectHistory = (historyItem: string) => {
+    setExamSearch(historyItem);
+    setShowExamHistory(false);
+  };
 
   // API mutations
   const batchPlanMutation = trpc.examPlanning.batchPlan.useMutation({
@@ -107,22 +149,46 @@ export default function ExamPlanning() {
     return filtered;
   }, [users, userSearch]);
 
+  // 查詢人員資料（用於部門關聯）
+  const { data: employees } = trpc.employees.list.useQuery();
+
   // 按部門分組考生
   const usersByDepartment = useMemo(() => {
-    if (!filteredUsers || !departments) return {};
+    if (!filteredUsers || !departments || !employees) return {};
 
     const grouped: Record<number, typeof filteredUsers> = {};
     
+    // 初始化每個部門的空陣列
     departments.forEach(dept => {
       grouped[dept.id] = [];
     });
+    // 未分配部門
+    grouped[0] = [];
 
-    // 注意：這裡假設 users 表格沒有 departmentId，需要透過 employees 表格關聯
-    // 暫時先顯示所有考生在「未分配部門」
-    grouped[0] = filteredUsers;
+    // 建立 email 到 departmentId 的映射
+    const emailToDept: Record<string, number> = {};
+    employees.forEach(emp => {
+      if (emp.email) {
+        emailToDept[emp.email.toLowerCase()] = emp.departmentId;
+      }
+    });
+
+    // 將考生分配到對應的部門
+    filteredUsers.forEach(user => {
+      if (user.email) {
+        const deptId = emailToDept[user.email.toLowerCase()];
+        if (deptId !== undefined && grouped[deptId]) {
+          grouped[deptId].push(user);
+        } else {
+          grouped[0].push(user);
+        }
+      } else {
+        grouped[0].push(user);
+      }
+    });
 
     return grouped;
-  }, [filteredUsers, departments]);
+  }, [filteredUsers, departments, employees]);
 
   // 篩選考卷
   const filteredExams = useMemo(() => {
@@ -192,17 +258,47 @@ export default function ExamPlanning() {
       return;
     }
 
+    // 計算每份考卷的開始時間（根據頻率設定）
+    const calculateStartTimes = () => {
+      if (examFrequency === "none" || selectedExamIds.length === 1) {
+        // 不定時考或只有一份考卷：所有考卷使用相同的開始時間
+        return selectedExamIds.map(() => batchStartTime || undefined);
+      }
+
+      const startTimes: (string | undefined)[] = [];
+      const baseDate = batchStartTime ? new Date(batchStartTime) : new Date();
+
+      let intervalDays = 0;
+      if (examFrequency === "daily") {
+        intervalDays = 1;
+      } else if (examFrequency === "weekly") {
+        intervalDays = 7;
+      } else if (examFrequency === "custom") {
+        intervalDays = customIntervalUnit === "weeks" ? customInterval * 7 : customInterval;
+      }
+
+      for (let i = 0; i < selectedExamIds.length; i++) {
+        const examDate = new Date(baseDate);
+        examDate.setDate(examDate.getDate() + (i * intervalDays));
+        startTimes.push(examDate.toISOString().slice(0, 16));
+      }
+
+      return startTimes;
+    };
+
+    const startTimes = calculateStartTimes();
+
     // 建立規劃項目（笛卡爾積：每位考生 × 每份考卷）
     const planningItems = [];
     for (const userId of selectedUserIds) {
-      for (const examId of selectedExamIds) {
+      selectedExamIds.forEach((examId, index) => {
         planningItems.push({
           userId,
           examId,
-          startTime: batchStartTime || undefined,
+          startTime: startTimes[index],
           deadline: batchDeadline || undefined,
         });
-      }
+      });
     }
 
     batchPlanMutation.mutate({
@@ -236,6 +332,27 @@ export default function ExamPlanning() {
     parseCSVMutation.mutate({ csvContent });
   };
 
+  // 下載 CSV 範本
+  const handleDownloadTemplate = () => {
+    const template = [
+      "考生姓名,考生Email,考卷名稱,開始時間,截止時間",
+      "張三,zhang@example.com,JavaScript基礎測驗,2025-02-01 09:00,2025-02-07 23:59",
+      "李四,li@example.com,React進階考試,2025-02-01 09:00,2025-02-14 23:59",
+      "王五,wang@example.com,TypeScript測驗,2025-02-01 09:00,2025-02-07 23:59",
+    ].join("\n");
+
+    const blob = new Blob(["\uFEFF" + template], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "考試規劃範本.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("CSV 範本已下載");
+  };
+
   if (examsLoading || usersLoading || depsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -249,11 +366,16 @@ export default function ExamPlanning() {
       {/* 頁面標題 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">考生考試規劃</h1>
+          <h1 className="text-3xl font-bold">考生規劃</h1>
           <p className="text-muted-foreground mt-2">為考生批次安排考試，支援手動選擇或 CSV 匯入</p>
         </div>
 
-        <Dialog open={showCsvDialog} onOpenChange={setShowCsvDialog}>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate("/exams")}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            返回考試管理
+          </Button>
+          <Dialog open={showCsvDialog} onOpenChange={setShowCsvDialog}>
           <DialogTrigger asChild>
             <Button variant="outline">
               <Upload className="w-4 h-4 mr-2" />
@@ -269,6 +391,12 @@ export default function ExamPlanning() {
             </DialogHeader>
 
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
+                  <Download className="w-4 h-4 mr-2" />
+                  下載 CSV 範本
+                </Button>
+              </div>
               <div>
                 <Label htmlFor="csv-file">選擇 CSV 檔案</Label>
                 <Input
@@ -306,7 +434,8 @@ export default function ExamPlanning() {
               </div>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* 主要內容 */}
@@ -344,24 +473,56 @@ export default function ExamPlanning() {
 
             {/* 按部門選擇 */}
             {selectionMode === "department" && (
-              <div>
-                <Label>選擇部門</Label>
-                <Select
-                  value={selectedDepartmentId?.toString()}
-                  onValueChange={(v) => handleDepartmentSelect(Number(v))}
-                >
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="選擇部門" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {departments?.map(dept => (
-                      <SelectItem key={dept.id} value={dept.id.toString()}>
-                        {dept.name}
+              <>
+                <div>
+                  <Label>選擇部門</Label>
+                  <Select
+                    value={selectedDepartmentId?.toString()}
+                    onValueChange={(v) => handleDepartmentSelect(Number(v))}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="選擇部門" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {departments?.map(dept => (
+                        <SelectItem key={dept.id} value={dept.id.toString()}>
+                          {dept.name} ({usersByDepartment[dept.id]?.length || 0} 人)
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="0">
+                        未分配部門 ({usersByDepartment[0]?.length || 0} 人)
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* 顯示該部門的考生名單 */}
+                {selectedDepartmentId !== null && (
+                  <div>
+                    <Label>該部門考生名單</Label>
+                    <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2 mt-2">
+                      {(usersByDepartment[selectedDepartmentId] || []).length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          該部門沒有考生
+                        </p>
+                      ) : (
+                        (usersByDepartment[selectedDepartmentId] || []).map(user => (
+                          <div
+                            key={user.id}
+                            className="flex items-center gap-2 p-2 bg-accent/50 rounded-md"
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-primary" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{user.name || "未命名"}</p>
+                              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* 搜尋考生 */}
@@ -464,15 +625,62 @@ export default function ExamPlanning() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* 搜尋考卷 */}
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="exam-search">搜尋考卷</Label>
-              <Input
-                id="exam-search"
-                placeholder="輸入考卷名稱"
-                value={examSearch}
-                onChange={(e) => setExamSearch(e.target.value)}
-                className="mt-2"
-              />
+              <div className="flex gap-2">
+                <div className="flex-1 relative">
+                  <Input
+                    id="exam-search"
+                    placeholder="輸入考卷名稱或選擇下拉選單"
+                    value={examSearch}
+                    onChange={(e) => handleExamSearchChange(e.target.value)}
+                    onFocus={() => setShowExamHistory(true)}
+                    onBlur={() => setTimeout(() => setShowExamHistory(false), 200)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && examSearch.trim()) {
+                        saveSearchHistory(examSearch);
+                        setShowExamHistory(false);
+                      }
+                    }}
+                  />
+                  {/* 搜尋歷史記錄 */}
+                  {showExamHistory && examSearchHistory.length > 0 && !examSearch && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                      <div className="p-2 space-y-1">
+                        <p className="text-xs text-muted-foreground px-2 py-1">歷史記錄</p>
+                        {examSearchHistory.map((item, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded-sm"
+                            onClick={() => handleSelectHistory(item)}
+                          >
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <Select
+                  value={examSearch}
+                  onValueChange={(value) => {
+                    setExamSearch(value);
+                    saveSearchHistory(value);
+                  }}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="下拉選單" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {exams?.filter(e => e.status === "published").map(exam => (
+                      <SelectItem key={exam.id} value={exam.title}>
+                        {exam.title.length > 20 ? exam.title.substring(0, 20) + "..." : exam.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <Button
@@ -574,6 +782,79 @@ export default function ExamPlanning() {
                 onChange={(e) => setBatchDeadline(e.target.value)}
                 className="mt-2"
               />
+            </div>
+
+            {/* 考試頻率設定 */}
+            <div className="space-y-3 pt-2 border-t">
+              <div>
+                <Label>考試頻率設定</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  適用於多份考卷的間隔安排
+                </p>
+              </div>
+              <RadioGroup value={examFrequency} onValueChange={(v) => setExamFrequency(v as any)}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="none" id="freq-none" />
+                  <Label htmlFor="freq-none" className="font-normal cursor-pointer">
+                    不定時考（所有考卷同時開放）
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="daily" id="freq-daily" />
+                  <Label htmlFor="freq-daily" className="font-normal cursor-pointer">
+                    每日考（每天開放一份考卷）
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="weekly" id="freq-weekly" />
+                  <Label htmlFor="freq-weekly" className="font-normal cursor-pointer">
+                    每週考（每週開放一份考卷）
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="custom" id="freq-custom" />
+                  <Label htmlFor="freq-custom" className="font-normal cursor-pointer">
+                    自訂間隔
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {/* 自訂間隔設定 */}
+              {examFrequency === "custom" && (
+                <div className="flex gap-2 items-center pl-6">
+                  <Label className="text-sm">每</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={customInterval}
+                    onChange={(e) => setCustomInterval(parseInt(e.target.value) || 1)}
+                    className="w-20"
+                  />
+                  <Select value={customIntervalUnit} onValueChange={(v) => setCustomIntervalUnit(v as any)}>
+                    <SelectTrigger className="w-24">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="days">天</SelectItem>
+                      <SelectItem value="weeks">週</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Label className="text-sm">開放一份</Label>
+                </div>
+              )}
+
+              {/* 智能建議 */}
+              {selectedExamIds.length > 1 && (
+                <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    <AlertCircle className="w-3 h-3 inline mr-1" />
+                    <strong>智能建議：</strong>
+                    {selectedExamIds.length <= 5 && "建議使用「每日考」或「不定時考」"}
+                    {selectedExamIds.length > 5 && selectedExamIds.length <= 20 && "建議使用「每週考」或每 2-3 天一份"}
+                    {selectedExamIds.length > 20 && "建議使用「每週考」以避免考生負擔過重"}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* 規劃摘要 */}

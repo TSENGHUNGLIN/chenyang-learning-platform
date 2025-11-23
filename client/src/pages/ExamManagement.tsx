@@ -285,14 +285,20 @@ export default function ExamManagement() {
               返回首頁
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">考卷列表</h1>
+              <h1 className="text-3xl font-bold text-gray-900">考試管理</h1>
               <p className="text-muted-foreground mt-1">管理所有考卷，包括草稿、已發布和封存的考試</p>
             </div>
           </div>
-          <Button onClick={() => setShowCreateWizard(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            建立考試
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setLocation("/exam-planning")}>
+              <Users className="h-4 w-4 mr-2" />
+              考生規劃
+            </Button>
+            <Button onClick={() => setShowCreateWizard(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              建立考試
+            </Button>
+          </div>
         </div>
 
         {/* 考試列表 */}
