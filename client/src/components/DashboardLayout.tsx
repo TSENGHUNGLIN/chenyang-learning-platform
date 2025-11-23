@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity, BookX, TrendingUp, RefreshCw, Lightbulb, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity, BookX, TrendingUp, RefreshCw, Lightbulb, ShieldCheck, CalendarClock, AlertTriangle } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -49,7 +49,9 @@ const staffMenuItems: Array<{
   { icon: Database, label: "題庫檔案", path: "/question-banks", color: "cyan", editorOnly: true },
   { icon: FileStack, label: "考卷範本", path: "/exam-templates", color: "purple", editorOnly: true },
   { icon: ClipboardList, label: "考試園地", path: "/my-exams", color: "sky" },
-  { icon: Award, label: "考試管理", path: "/exams", color: "rose", editorOnly: true },
+  { icon: Award, label: "考卷列表", path: "/exams", color: "rose", editorOnly: true },
+  { icon: CalendarClock, label: "考生規劃", path: "/exam-planning", color: "blue", editorOnly: true },
+  { icon: AlertTriangle, label: "逾期管理", path: "/overdue-exams", color: "orange", editorOnly: true },
   { icon: RefreshCw, label: "補考管理", path: "/makeup-exams", color: "teal", editorOnly: true },
   { icon: Activity, label: "考試監控", path: "/exam-monitoring", color: "red", editorOnly: true },
   { icon: Settings, label: "部門人員", path: "/manage", color: "slate", adminOnly: true },

@@ -285,8 +285,8 @@ export default function ExamManagement() {
               返回首頁
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">考試管理</h1>
-              <p className="text-muted-foreground mt-1">建立、編輯和管理線上考試</p>
+              <h1 className="text-3xl font-bold text-gray-900">考卷列表</h1>
+              <p className="text-muted-foreground mt-1">管理所有考卷，包括草稿、已發布和封存的考試</p>
             </div>
           </div>
           <Button onClick={() => setShowCreateWizard(true)}>

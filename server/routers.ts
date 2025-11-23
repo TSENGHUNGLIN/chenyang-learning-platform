@@ -2607,11 +2607,136 @@ ${file.extractedText || "無法提取文字內容"}`
       const { sendMakeupExamReminders } = await import("./notificationHelper");
       return await sendMakeupExamReminders();
     }),
+  }),  // 考試規劃
+  examPlanning: router({
+    // 批次規劃考試
+    batchPlan: protectedProcedure
+      .input(z.object({
+        planningItems: z.array(z.object({
+          examId: z.number(),
+          userId: z.number(),
+          startTime: z.string().optional(),
+          deadline: z.string().optional(),
+        })),
+        batchName: z.string().optional(),
+        description: z.string().optional(),
+        importSource: z.enum(["manual", "csv", "excel"]).optional(),
+        importFileName: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { batchPlanExams } = await import("./examPlanning");
+        
+        // 轉換時間字串為 Date 物件
+        const planningItems = input.planningItems.map(item => ({
+          examId: item.examId,
+          userId: item.userId,
+          startTime: item.startTime ? new Date(item.startTime) : undefined,
+          deadline: item.deadline ? new Date(item.deadline) : undefined,
+        }));
+        
+        return await batchPlanExams({
+          planningItems,
+          batchName: input.batchName,
+          description: input.description,
+          importSource: input.importSource,
+          importFileName: input.importFileName,
+          createdBy: ctx.user.id,
+        });
+      }),
+    
+    // 解析 CSV 批次匯入
+    parseCSV: protectedProcedure
+      .input(z.object({
+        csvContent: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { parseExamPlanningCSV, convertCSVToPlanningItems } = await import("./examPlanning");
+        
+        const parsedItems = await parseExamPlanningCSV(input.csvContent);
+        const { planningItems, errors } = await convertCSVToPlanningItems(parsedItems);
+        
+        return { planningItems, errors, parsedCount: parsedItems.length };
+      }),
+    
+    // 查詢批次記錄
+    listBatches: protectedProcedure
+      .input(z.object({
+        limit: z.number().optional(),
+        offset: z.number().optional(),
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getExamPlanningBatches } = await import("./examPlanning");
+        return await getExamPlanningBatches(input);
+      }),
+    
+    // 查詢逾期考試
+    listOverdue: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getOverdueExams } = await import("./examPlanning");
+      return await getOverdueExams();
+    }),
+    
+    // 標記逾期
+    markOverdue: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { markExamAsOverdue } = await import("./examPlanning");
+        return await markExamAsOverdue(input, ctx.user.id);
+      }),
+    
+    // 延長截止時間
+    extendDeadline: protectedProcedure
+      .input(z.object({
+        assignmentId: z.number(),
+        newDeadline: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { extendExamDeadline } = await import("./examPlanning");
+        return await extendExamDeadline(input.assignmentId, new Date(input.newDeadline), ctx.user.id);
+      }),
+    
+    // 查詢逾期處理記錄
+    listOverdueActions: protectedProcedure
+      .input(z.object({
+        assignmentId: z.number().optional(),
+        userId: z.number().optional(),
+        limit: z.number().optional(),
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getOverdueExamActions } = await import("./examPlanning");
+        return await getOverdueExamActions(input);
+      }),
   }),
 
   // 資料品質檢查
-  dataQuality: router({
-    checkQuestions: protectedProcedure.query(async ({ ctx }) => {
+  dataQualityCheck: router({  checkQuestions: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
       if (!hasPermission(ctx.user.role as any, "canEdit")) {
         throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });

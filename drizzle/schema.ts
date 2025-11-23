@@ -515,3 +515,44 @@ export const notifications = mysqlTable("notifications", {
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
 
+/**
+ * 考試規劃批次記錄表格
+ * 記錄每次批次規劃的操作，方便追蹤和管理
+ */
+export const examPlanningBatches = mysqlTable("examPlanningBatches", {
+  id: int("id").autoincrement().primaryKey(),
+  batchName: varchar("batchName", { length: 200 }), // 批次名稱（可選）
+  description: text("description"), // 批次說明
+  totalAssignments: int("totalAssignments").notNull().default(0), // 本批次建立的指派總數
+  examIds: text("examIds").notNull(), // 考試ID列表（JSON陣列）
+  userIds: text("userIds").notNull(), // 考生ID列表（JSON陣列）
+  importSource: mysqlEnum("importSource", ["manual", "csv", "excel"]).notNull().default("manual"), // 來源：手動、CSV、Excel
+  importFileName: varchar("importFileName", { length: 500 }), // 匯入檔案名稱（如果是批次匯入）
+  createdBy: int("createdBy").notNull(), // 建立者ID
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ExamPlanningBatch = typeof examPlanningBatches.$inferSelect;
+export type InsertExamPlanningBatch = typeof examPlanningBatches.$inferInsert;
+
+/**
+ * 逾期考試處理記錄表格
+ * 記錄逾期考試的處理動作（提醒、標記、補考安排等）
+ */
+export const overdueExamActions = mysqlTable("overdueExamActions", {
+  id: int("id").autoincrement().primaryKey(),
+  assignmentId: int("assignmentId").notNull(), // 關聯的考試指派ID
+  examId: int("examId").notNull(), // 考試ID
+  userId: int("userId").notNull(), // 考生ID
+  actionType: mysqlEnum("actionType", ["reminder_sent", "marked_overdue", "makeup_scheduled", "deadline_extended"]).notNull(), // 處理動作類型
+  actionDetails: text("actionDetails"), // 動作詳情（JSON格式）
+  overdueBy: int("overdueBy"), // 逾期天數
+  originalDeadline: timestamp("originalDeadline"), // 原始截止時間
+  newDeadline: timestamp("newDeadline"), // 新截止時間（如果延期）
+  performedBy: int("performedBy"), // 執行動作的管理員ID（null表示系統自動）
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OverdueExamAction = typeof overdueExamActions.$inferSelect;
+export type InsertOverdueExamAction = typeof overdueExamActions.$inferInsert;
+
