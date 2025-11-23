@@ -42,6 +42,9 @@ export default function ExamList() {
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewExamId, setPreviewExamId] = useState<number>(0);
   const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [examToDelete, setExamToDelete] = useState<any | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState("");
   
   // 表單狀態
   const [formData, setFormData] = useState({
@@ -147,7 +150,7 @@ export default function ExamList() {
   const createExamMutation = trpc.exams.create.useMutation({
     onSuccess: () => {
       toast.success("考試已建立");
-      setShowCreateDialog(false);
+      setShowCreateWizard(false);
       resetForm();
       refetch();
     },
@@ -252,10 +255,27 @@ export default function ExamList() {
     });
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("確定要刪除這個考試嗎？此操作無法復原。")) {
-      deleteExamMutation.mutate(id);
+  const handleDelete = (exam: any) => {
+    setExamToDelete(exam);
+    setShowDeleteDialog(true);
+    setDeleteConfirmName("");
+  };
+  
+  const confirmDelete = () => {
+    if (!examToDelete) return;
+    
+    // 如果考試已發布且有考生作答，需要輸入考試名稱確認
+    if (examToDelete.status === 'published' && examToDelete.assignedCount > 0) {
+      if (deleteConfirmName !== examToDelete.title) {
+        toast.error("請輸入正確的考試名稱以確認刪除");
+        return;
+      }
     }
+    
+    deleteExamMutation.mutate(examToDelete.id);
+    setShowDeleteDialog(false);
+    setExamToDelete(null);
+    setDeleteConfirmName("");
   };
   
   const handleAssign = (exam: any) => {
@@ -555,12 +575,12 @@ export default function ExamList() {
                                   指派考生
                                 </Button>
                                 
-                                {/* 刪除按鈕 - 草稿狀態才可刪除 */}
-                                {exam.status === 'draft' && (
+                                {/* 刪除按鈕 - 草稿狀態所有人可刪，已發布只有管理員可刪 */}
+                                {(exam.status === 'draft' || (exam.status === 'published' && user?.role === 'admin')) && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => handleDelete(exam.id)}
+                                    onClick={() => handleDelete(exam)}
                                     className="text-destructive hover:text-destructive"
                                   >
                                     <Trash2 className="h-4 w-4 mr-1" />
@@ -780,6 +800,88 @@ export default function ExamList() {
                 disabled={batchAssignMutation.isPending || selectedUserIds.length === 0}
               >
                 {batchAssignMutation.isPending ? "指派中..." : `指派 ${selectedUserIds.length} 位員工`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* 刪除確認對話框 */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-destructive">確認刪除考試</DialogTitle>
+              <DialogDescription>
+                此操作無法復原，請仔細確認以下資訊。
+              </DialogDescription>
+            </DialogHeader>
+            
+            {examToDelete && (
+              <div className="space-y-4">
+                {/* 考試基本資訊 */}
+                <div className="space-y-2 p-4 bg-muted rounded-lg">
+                  <div className="flex justify-between">
+                    <span className="font-medium">考試名稱：</span>
+                    <span>{examToDelete.title}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">狀態：</span>
+                    <Badge variant={examToDelete.status === 'published' ? 'default' : 'secondary'}>
+                      {examToDelete.status === 'draft' ? '草稿' : '已發布'}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">建立時間：</span>
+                    <span>{new Date(examToDelete.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                
+                {/* 警告訊息 */}
+                {examToDelete.status === 'published' && (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                    <p className="text-sm text-destructive font-medium">
+                      ⚠️ 注意：此考試已發布
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      刪除後所有相關的考生指派和成績記錄將被永久刪除。
+                    </p>
+                  </div>
+                )}
+                
+                {/* 高風險刪除需要輸入考試名稱 */}
+                {examToDelete.status === 'published' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmName">
+                      請輸入考試名稱以確認刪除：
+                    </Label>
+                    <Input
+                      id="confirmName"
+                      value={deleteConfirmName}
+                      onChange={(e) => setDeleteConfirmName(e.target.value)}
+                      placeholder={`輸入「${examToDelete.title}」`}
+                      className="font-mono"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setExamToDelete(null);
+                  setDeleteConfirmName("");
+                }}
+              >
+                取消
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmDelete}
+                disabled={deleteExamMutation.isPending}
+              >
+                {deleteExamMutation.isPending ? "刪除中..." : "確認刪除"}
               </Button>
             </DialogFooter>
           </DialogContent>

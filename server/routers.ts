@@ -1577,7 +1577,23 @@ ${file.extractedText || "無法提取文字內容"}`
         if (!hasPermission(ctx.user.role as any, "canEdit")) {
           throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
         }
-        const { deleteExam } = await import("./db");
+        
+        // 檢查考試狀態和權限
+        const { getExamById, deleteExam } = await import("./db");
+        const exam = await getExamById(input);
+        
+        if (!exam) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "考試不存在" });
+        }
+        
+        // 如果考試已發布，只有管理員可以刪除
+        if (exam.status === "published" && !hasPermission(ctx.user.role as any, "canManageUsers")) {
+          throw new TRPCError({ 
+            code: "FORBIDDEN", 
+            message: "已發布的考試只有管理員可以刪除" 
+          });
+        }
+        
         await deleteExam(input);
         return { success: true };
       }),
