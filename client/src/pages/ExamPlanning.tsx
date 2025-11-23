@@ -21,8 +21,8 @@ export default function ExamPlanning() {
 
   // 資料查詢
   const { data: exams, isLoading: examsLoading } = trpc.exams.list.useQuery();
-  const { data: users, isLoading: usersLoading } = trpc.users.list.useQuery();
   const { data: departments, isLoading: depsLoading } = trpc.departments.list.useQuery();
+  const { data: employees, isLoading: employeesLoading } = trpc.employees.list.useQuery();
 
   // 選擇模式：single（單選）、department（按部門）、multiple（複選）
   const [selectionMode, setSelectionMode] = useState<"single" | "department" | "multiple">("single");
@@ -133,31 +133,25 @@ export default function ExamPlanning() {
     },
   });
 
-  // 篩選考生（根據部門和搜尋）
-  const filteredUsers = useMemo(() => {
-    if (!users) return [];
-
-    // 顯示所有非管理員的使用者（包括 examinee, editor, viewer）
-    let filtered = users.filter(u => u.role !== "admin");
+  // 篩選考生（直接使用 employees 表）
+  const filteredEmployees = useMemo(() => {
+    if (!employees) return [];
 
     if (userSearch) {
-      filtered = filtered.filter(u =>
-        u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
-        u.email?.toLowerCase().includes(userSearch.toLowerCase())
+      return employees.filter(emp =>
+        emp.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+        emp.email?.toLowerCase().includes(userSearch.toLowerCase())
       );
     }
 
-    return filtered;
-  }, [users, userSearch]);
-
-  // 查詢人員資料（用於部門關聯）
-  const { data: employees } = trpc.employees.list.useQuery();
+    return employees;
+  }, [employees, userSearch]);
 
   // 按部門分組考生
-  const usersByDepartment = useMemo(() => {
-    if (!filteredUsers || !departments || !employees) return {};
+  const employeesByDepartment = useMemo(() => {
+    if (!filteredEmployees || !departments) return {};
 
-    const grouped: Record<number, typeof filteredUsers> = {};
+    const grouped: Record<number, typeof filteredEmployees> = {};
     
     // 初始化每個部門的空陣列
     departments.forEach(dept => {
@@ -166,30 +160,18 @@ export default function ExamPlanning() {
     // 未分配部門
     grouped[0] = [];
 
-    // 建立 email 到 departmentId 的映射
-    const emailToDept: Record<string, number> = {};
-    employees.forEach(emp => {
-      if (emp.email) {
-        emailToDept[emp.email.toLowerCase()] = emp.departmentId;
-      }
-    });
-
     // 將考生分配到對應的部門
-    filteredUsers.forEach(user => {
-      if (user.email) {
-        const deptId = emailToDept[user.email.toLowerCase()];
-        if (deptId !== undefined && grouped[deptId]) {
-          grouped[deptId].push(user);
-        } else {
-          grouped[0].push(user);
-        }
+    filteredEmployees.forEach(emp => {
+      const deptId = emp.departmentId || 0;
+      if (grouped[deptId]) {
+        grouped[deptId].push(emp);
       } else {
-        grouped[0].push(user);
+        grouped[0].push(emp);
       }
     });
 
     return grouped;
-  }, [filteredUsers, departments, employees]);
+  }, [filteredEmployees, departments]);
 
   // 篩選考卷
   const filteredExams = useMemo(() => {
@@ -355,7 +337,7 @@ export default function ExamPlanning() {
     toast.success("CSV 範本已下載");
   };
 
-  if (examsLoading || usersLoading || depsLoading) {
+  if (examsLoading || employeesLoading || depsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -481,15 +463,12 @@ export default function ExamPlanning() {
                   <Select
                     value={selectedUserIds[0]?.toString() || ""}
                     onValueChange={(v) => {
-                      const userId = Number(v);
-                      setSelectedUserIds([userId]);
+                      const empId = Number(v);
+                      setSelectedUserIds([empId]);
                       // 找到該考生所屬的部門
-                      const user = filteredUsers.find(u => u.id === userId);
-                      if (user && user.email) {
-                        const emp = employees?.find(e => e.email?.toLowerCase() === user.email?.toLowerCase());
-                        if (emp) {
-                          setSelectedDepartmentId(emp.departmentId);
-                        }
+                      const emp = filteredEmployees.find(e => e.id === empId);
+                      if (emp) {
+                        setSelectedDepartmentId(emp.departmentId || 0);
                       }
                     }}
                   >
@@ -498,29 +477,29 @@ export default function ExamPlanning() {
                     </SelectTrigger>
                     <SelectContent>
                       {departments?.map(dept => {
-                        const deptUsers = usersByDepartment[dept.id] || [];
-                        if (deptUsers.length === 0) return null;
+                        const deptEmps = employeesByDepartment[dept.id] || [];
+                        if (deptEmps.length === 0) return null;
                         return (
                           <div key={dept.id}>
                             <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                              {dept.name} ({deptUsers.length} 人)
+                              {dept.name} ({deptEmps.length} 人)
                             </div>
-                            {deptUsers.map(user => (
-                              <SelectItem key={user.id} value={user.id.toString()} className="pl-6">
-                                {user.name || "未命名"} ({user.email})
+                            {deptEmps.map(emp => (
+                              <SelectItem key={emp.id} value={emp.id.toString()} className="pl-6">
+                                {emp.name || "未命名"} ({emp.email})
                               </SelectItem>
                             ))}
                           </div>
                         );
                       })}
-                      {usersByDepartment[0]?.length > 0 && (
+                      {employeesByDepartment[0]?.length > 0 && (
                         <div>
                           <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
-                            未分配部門 ({usersByDepartment[0].length} 人)
+                            未分配部門 ({employeesByDepartment[0].length} 人)
                           </div>
-                          {usersByDepartment[0].map(user => (
-                            <SelectItem key={user.id} value={user.id.toString()} className="pl-6">
-                              {user.name || "未命名"} ({user.email})
+                          {employeesByDepartment[0].map(emp => (
+                            <SelectItem key={emp.id} value={emp.id.toString()} className="pl-6">
+                              {emp.name || "未命名"} ({emp.email})
                             </SelectItem>
                           ))}
                         </div>
@@ -552,7 +531,7 @@ export default function ExamPlanning() {
                     onClick={handleSelectAllUsers}
                     className="w-full"
                   >
-                    {selectedUserIds.length === filteredUsers.length ? "取消全選" : "全選"}
+                    {selectedUserIds.length === filteredEmployees.length ? "取消全選" : "全選"}
                   </Button>
                 )}
 
@@ -563,24 +542,24 @@ export default function ExamPlanning() {
                     onValueChange={(value) => setSelectedUserIds([parseInt(value)])}
                   >
                     <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2">
-                      {filteredUsers.length === 0 ? (
+                      {filteredEmployees.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-4">
                           沒有找到考生
                         </p>
                       ) : (
-                        filteredUsers.map(user => (
+                        filteredEmployees.map(emp => (
                           <div
-                            key={user.id}
+                            key={emp.id}
                             className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
-                            onClick={() => setSelectedUserIds([user.id])}
+                            onClick={() => setSelectedUserIds([emp.id])}
                           >
                             <RadioGroupItem
-                              value={user.id.toString()}
-                              id={`user-${user.id}`}
+                              value={emp.id.toString()}
+                              id={`emp-${emp.id}`}
                             />
-                            <Label htmlFor={`user-${user.id}`} className="flex-1 min-w-0 cursor-pointer">
-                              <p className="text-sm font-medium truncate">{user.name || "未命名"}</p>
-                              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                            <Label htmlFor={`emp-${emp.id}`} className="flex-1 min-w-0 cursor-pointer">
+                              <p className="text-sm font-medium truncate">{emp.name || "未命名"}</p>
+                              <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
                             </Label>
                           </div>
                         ))
@@ -589,24 +568,24 @@ export default function ExamPlanning() {
                   </RadioGroup>
                 ) : (
                   <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2">
-                    {filteredUsers.length === 0 ? (
+                    {filteredEmployees.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         沒有找到考生
                       </p>
                     ) : (
-                      filteredUsers.map(user => (
+                      filteredEmployees.map(emp => (
                         <div
-                          key={user.id}
+                          key={emp.id}
                           className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
-                          onClick={() => handleUserToggle(user.id)}
+                          onClick={() => handleUserToggle(emp.id)}
                         >
                           <Checkbox
-                            checked={selectedUserIds.includes(user.id)}
-                            onCheckedChange={() => handleUserToggle(user.id)}
+                            checked={selectedUserIds.includes(emp.id)}
+                            onCheckedChange={() => handleUserToggle(emp.id)}
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{user.name || "未命名"}</p>
-                            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                            <p className="text-sm font-medium truncate">{emp.name || "未命名"}</p>
+                            <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
                           </div>
                         </div>
                       ))

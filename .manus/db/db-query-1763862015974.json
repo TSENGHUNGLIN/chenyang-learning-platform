@@ -1,0 +1,437 @@
+{
+  "query": "\nSELECT \n  e.id, \n  e.name, \n  e.email, \n  e.departmentId,\n  d.name as departmentName\nFROM employees e\nLEFT JOIN departments d ON e.departmentId = d.id\nORDER BY e.departmentId, e.name;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute \nSELECT \n  e.id, \n  e.name, \n  e.email, \n  e.departmentId,\n  d.name as departmentName\nFROM employees e\nLEFT JOIN departments d ON e.departmentId = d.id\nORDER BY e.departmentId, e.name;\n",
+  "rows": [
+    {
+      "id": "180025",
+      "name": "余瑞瑾",
+      "email": "florence711005@gmail.com",
+      "departmentId": "1",
+      "departmentName": "業管部"
+    },
+    {
+      "id": "180023",
+      "name": "彭宥緁",
+      "email": "yuyujepeng@gmail.com",
+      "departmentId": "1",
+      "departmentName": "業管部"
+    },
+    {
+      "id": "180027",
+      "name": "彭睛婕",
+      "email": "a0970699901@gmail.com",
+      "departmentId": "1",
+      "departmentName": "業管部"
+    },
+    {
+      "id": "180021",
+      "name": "柳佳佑",
+      "email": "leou3936@gmail.com",
+      "departmentId": "1",
+      "departmentName": "業管部"
+    },
+    {
+      "id": "180026",
+      "name": "許晏蓉",
+      "email": "linda38189@gmail.com",
+      "departmentId": "1",
+      "departmentName": "業管部"
+    },
+    {
+      "id": "180022",
+      "name": "陳淑芬",
+      "email": "sallychen0211@gmail.com",
+      "departmentId": "1",
+      "departmentName": "業管部"
+    },
+    {
+      "id": "180024",
+      "name": "陳琮曜",
+      "email": "h01968613@gmail.com",
+      "departmentId": "1",
+      "departmentName": "業管部"
+    },
+    {
+      "id": "180032",
+      "name": "余佩潔",
+      "email": "kris000526@gmail.com",
+      "departmentId": "2",
+      "departmentName": "行銷部"
+    },
+    {
+      "id": "180030",
+      "name": "姜榕",
+      "email": "ada001018@gmail.com",
+      "departmentId": "2",
+      "departmentName": "行銷部"
+    },
+    {
+      "id": "180029",
+      "name": "張育慈",
+      "email": "a0913898196@gmail.com",
+      "departmentId": "2",
+      "departmentName": "行銷部"
+    },
+    {
+      "id": "180028",
+      "name": "李郅暄",
+      "email": "li70753808498li@gmail.com",
+      "departmentId": "2",
+      "departmentName": "行銷部"
+    },
+    {
+      "id": "180031",
+      "name": "江婉妤",
+      "email": "vicky213zxc@gmail.com",
+      "departmentId": "2",
+      "departmentName": "行銷部"
+    },
+    {
+      "id": "180061",
+      "name": "徐淑芬",
+      "email": "eva.raken@gmail.com",
+      "departmentId": "4",
+      "departmentName": "業務部"
+    },
+    {
+      "id": "180013",
+      "name": "徐秀雲",
+      "email": "nitashu1210@gmail.com",
+      "departmentId": "4",
+      "departmentName": "業務部"
+    },
+    {
+      "id": "180010",
+      "name": "李亮華",
+      "email": "maggielove1124@gmail.com",
+      "departmentId": "4",
+      "departmentName": "業務部"
+    },
+    {
+      "id": "180018",
+      "name": "林淑娟",
+      "email": "NULL",
+      "departmentId": "4",
+      "departmentName": "業務部"
+    },
+    {
+      "id": "180008",
+      "name": "楊璦璘",
+      "email": "alin16816811@gmail.com",
+      "departmentId": "4",
+      "departmentName": "業務部"
+    },
+    {
+      "id": "180020",
+      "name": "蔣昀真",
+      "email": "NULL",
+      "departmentId": "4",
+      "departmentName": "業務部"
+    },
+    {
+      "id": "180036",
+      "name": "邱紫郁",
+      "email": "zxc188597@gmail.com",
+      "departmentId": "4",
+      "departmentName": "業務部"
+    },
+    {
+      "id": "180040",
+      "name": "黃桂玲",
+      "email": "for9920827@gmail.com",
+      "departmentId": "4",
+      "departmentName": "業務部"
+    },
+    {
+      "id": "180037",
+      "name": "黃資文",
+      "email": "jeldahuangtw@gmail.com",
+      "departmentId": "4",
+      "departmentName": "業務部"
+    },
+    {
+      "id": "180017",
+      "name": "卓育申",
+      "email": "aaa998894@gmail.com",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180009",
+      "name": "吳俊緯",
+      "email": "NULL",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180019",
+      "name": "吳昱賢",
+      "email": "leo50464@gmail.com",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180012",
+      "name": "廖振江",
+      "email": "NULL",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180015",
+      "name": "張期發",
+      "email": "far51688@gmail.com",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180016",
+      "name": "徐國銘",
+      "email": "sigm55041016@gmail.com",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180014",
+      "name": "李柏希",
+      "email": "yoshikiss523@gmail.com",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180038",
+      "name": "郭昱秀",
+      "email": "yellow9420@gmail.com",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180035",
+      "name": "鄭乃端",
+      "email": "ironman.dany@gmail.com",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180039",
+      "name": "鄭宇凱",
+      "email": "shotter0981611765@gmail.com",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180011",
+      "name": "鄭宏諒",
+      "email": "oftensmile3@gmail.com",
+      "departmentId": "5",
+      "departmentName": "工務部"
+    },
+    {
+      "id": "180060",
+      "name": "張郡宜",
+      "email": "sun.evachang@gmail.com",
+      "departmentId": "30001",
+      "departmentName": "董事長室"
+    },
+    {
+      "id": "180003",
+      "name": "曾國憲",
+      "email": "NULL",
+      "departmentId": "30001",
+      "departmentName": "董事長室"
+    },
+    {
+      "id": "180034",
+      "name": "曾家碩",
+      "email": "NULL",
+      "departmentId": "30001",
+      "departmentName": "董事長室"
+    },
+    {
+      "id": "180001",
+      "name": "曾富銓",
+      "email": "tsenghunglin384438443844@gmail.com",
+      "departmentId": "30001",
+      "departmentName": "董事長室"
+    },
+    {
+      "id": "180002",
+      "name": "郭寶鈞",
+      "email": "beauty0937945171@gmail.com",
+      "departmentId": "30001",
+      "departmentName": "董事長室"
+    },
+    {
+      "id": "180041",
+      "name": "陳建良",
+      "email": "chenyang360assessment@gmail.com",
+      "departmentId": "30001",
+      "departmentName": "董事長室"
+    },
+    {
+      "id": "180005",
+      "name": "劉佩玲",
+      "email": "peylinanan@gmail.com",
+      "departmentId": "30002",
+      "departmentName": "管理部"
+    },
+    {
+      "id": "180006",
+      "name": "曾郅寧",
+      "email": "peihsuan0814@gmail.com",
+      "departmentId": "30002",
+      "departmentName": "管理部"
+    },
+    {
+      "id": "180004",
+      "name": "許家雯",
+      "email": "a0915715855@gmail.com",
+      "departmentId": "30002",
+      "departmentName": "管理部"
+    },
+    {
+      "id": "180007",
+      "name": "黃惠如",
+      "email": "zenobia7249@gmail.com",
+      "departmentId": "30002",
+      "departmentName": "管理部"
+    },
+    {
+      "id": "180042",
+      "name": "劉奕彰",
+      "email": "will741206@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180053",
+      "name": "劉姿蘋",
+      "email": "NULL",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180058",
+      "name": "劉育誠",
+      "email": "yucheng20010513@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180054",
+      "name": "呂學彰",
+      "email": "s1004268@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180050",
+      "name": "呂宜庭",
+      "email": "jocelyn040899@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180043",
+      "name": "宋珮瑜",
+      "email": "v0306518@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180044",
+      "name": "左允柔",
+      "email": "wanyue.tso@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180055",
+      "name": "戴如忻",
+      "email": "ljkgak002@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180052",
+      "name": "李和蓁",
+      "email": "hochen0530@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180046",
+      "name": "林品忻",
+      "email": "linjinjin0617@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180056",
+      "name": "林嘉容",
+      "email": "c0903539121@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180057",
+      "name": "湯芸琇",
+      "email": "my860325a@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180051",
+      "name": "湯馥瑄",
+      "email": "susan19971218@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180047",
+      "name": "胡沛緹",
+      "email": "litrain27@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180045",
+      "name": "薛仁杰",
+      "email": "asd333299@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180048",
+      "name": "郭姵杉",
+      "email": "shiny860524@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180049",
+      "name": "陳玟瑾",
+      "email": "nnickeytw@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180059",
+      "name": "黃淑娥",
+      "email": "sufayai0509@gmail.com",
+      "departmentId": "30004",
+      "departmentName": "設計規劃部"
+    },
+    {
+      "id": "180033",
+      "name": "黃美雲",
+      "email": "alicehuang1103@gmail.com",
+      "departmentId": "60004",
+      "departmentName": "開發部"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\tdepartmentId\tdepartmentName\n180025\t余瑞瑾\tflorence711005@gmail.com\t1\t業管部\n180023\t彭宥緁\tyuyujepeng@gmail.com\t1\t業管部\n180027\t彭睛婕\ta0970699901@gmail.com\t1\t業管部\n180021\t柳佳佑\tleou3936@gmail.com\t1\t業管部\n180026\t許晏蓉\tlinda38189@gmail.com\t1\t業管部\n180022\t陳淑芬\tsallychen0211@gmail.com\t1\t業管部\n180024\t陳琮曜\th01968613@gmail.com\t1\t業管部\n180032\t余佩潔\tkris000526@gmail.com\t2\t行銷部\n180030\t姜榕\tada001018@gmail.com\t2\t行銷部\n180029\t張育慈\ta0913898196@gmail.com\t2\t行銷部\n180028\t李郅暄\tli70753808498li@gmail.com\t2\t行銷部\n180031\t江婉妤\tvicky213zxc@gmail.com\t2\t行銷部\n180061\t徐淑芬\teva.raken@gmail.com\t4\t業務部\n180013\t徐秀雲\tnitashu1210@gmail.com\t4\t業務部\n180010\t李亮華\tmaggielove1124@gmail.com\t4\t業務部\n180018\t林淑娟\tNULL\t4\t業務部\n180008\t楊璦璘\talin16816811@gmail.com\t4\t業務部\n180020\t蔣昀真\tNULL\t4\t業務部\n180036\t邱紫郁\tzxc188597@gmail.com\t4\t業務部\n180040\t黃桂玲\tfor9920827@gmail.com\t4\t業務部\n180037\t黃資文\tjeldahuangtw@gmail.com\t4\t業務部\n180017\t卓育申\taaa998894@gmail.com\t5\t工務部\n180009\t吳俊緯\tNULL\t5\t工務部\n180019\t吳昱賢\tleo50464@gmail.com\t5\t工務部\n180012\t廖振江\tNULL\t5\t工務部\n180015\t張期發\tfar51688@gmail.com\t5\t工務部\n180016\t徐國銘\tsigm55041016@gmail.com\t5\t工務部\n180014\t李柏希\tyoshikiss523@gmail.com\t5\t工務部\n180038\t郭昱秀\tyellow9420@gmail.com\t5\t工務部\n180035\t鄭乃端\tironman.dany@gmail.com\t5\t工務部\n180039\t鄭宇凱\tshotter0981611765@gmail.com\t5\t工務部\n180011\t鄭宏諒\toftensmile3@gmail.com\t5\t工務部\n180060\t張郡宜\tsun.evachang@gmail.com\t30001\t董事長室\n180003\t曾國憲\tNULL\t30001\t董事長室\n180034\t曾家碩\tNULL\t30001\t董事長室\n180001\t曾富銓\ttsenghunglin384438443844@gmail.com\t30001\t董事長室\n180002\t郭寶鈞\tbeauty0937945171@gmail.com\t30001\t董事長室\n180041\t陳建良\tchenyang360assessment@gmail.com\t30001\t董事長室\n180005\t劉佩玲\tpeylinanan@gmail.com\t30002\t管理部\n180006\t曾郅寧\tpeihsuan0814@gmail.com\t30002\t管理部\n180004\t許家雯\ta0915715855@gmail.com\t30002\t管理部\n180007\t黃惠如\tzenobia7249@gmail.com\t30002\t管理部\n180042\t劉奕彰\twill741206@gmail.com\t30004\t設計規劃部\n180053\t劉姿蘋\tNULL\t30004\t設計規劃部\n180058\t劉育誠\tyucheng20010513@gmail.com\t30004\t設計規劃部\n180054\t呂學彰\ts1004268@gmail.com\t30004\t設計規劃部\n180050\t呂宜庭\tjocelyn040899@gmail.com\t30004\t設計規劃部\n180043\t宋珮瑜\tv0306518@gmail.com\t30004\t設計規劃部\n180044\t左允柔\twanyue.tso@gmail.com\t30004\t設計規劃部\n180055\t戴如忻\tljkgak002@gmail.com\t30004\t設計規劃部\n180052\t李和蓁\thochen0530@gmail.com\t30004\t設計規劃部\n180046\t林品忻\tlinjinjin0617@gmail.com\t30004\t設計規劃部\n180056\t林嘉容\tc0903539121@gmail.com\t30004\t設計規劃部\n180057\t湯芸琇\tmy860325a@gmail.com\t30004\t設計規劃部\n180051\t湯馥瑄\tsusan19971218@gmail.com\t30004\t設計規劃部\n180047\t胡沛緹\tlitrain27@gmail.com\t30004\t設計規劃部\n180045\t薛仁杰\tasd333299@gmail.com\t30004\t設計規劃部\n180048\t郭姵杉\tshiny860524@gmail.com\t30004\t設計規劃部\n180049\t陳玟瑾\tnnickeytw@gmail.com\t30004\t設計規劃部\n180059\t黃淑娥\tsufayai0509@gmail.com\t30004\t設計規劃部\n180033\t黃美雲\talicehuang1103@gmail.com\t60004\t開發部\n",
+  "stderr": "",
+  "execution_time_ms": 2657
+}
