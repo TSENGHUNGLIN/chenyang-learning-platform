@@ -765,19 +765,19 @@ export default function QuestionBank() {
             管理考核單選題題庫，支援是非題、選擇題、問答題
           </p>
         </div>        <div className="flex gap-2">
-          <Button variant="outline" onClick={downloadTemplate}>
+          <Button variant="default" onClick={downloadTemplate} className="bg-green-600 hover:bg-green-700 text-white">
             <Download className="h-4 w-4 mr-2" />
             下載範本
           </Button>
-          <Button variant="outline" onClick={() => setShowImportDialog(true)}>
+          <Button variant="default" onClick={() => setShowImportDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
             <Upload className="h-4 w-4 mr-2" />
             批次匯入
           </Button>
-          <Button variant="outline" onClick={() => window.location.href = '/recycle-bin'}>
+          <Button variant="default" onClick={() => window.location.href = '/recycle-bin'} className="bg-orange-600 hover:bg-orange-700 text-white">
             <Trash2 className="h-4 w-4 mr-2" />
             回收站
           </Button>
-          <Button variant="outline" onClick={() => window.location.href = '/'}>
+          <Button variant="default" onClick={() => window.location.href = '/'} className="bg-purple-600 hover:bg-purple-700 text-white">
             <Home className="h-4 w-4 mr-2" />
             返回首頁
           </Button>

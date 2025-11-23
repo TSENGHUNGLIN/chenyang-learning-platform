@@ -3172,6 +3172,26 @@ ${file.extractedText || "無法提取文字內容"}`
     }),
   }),
 
+  // Categories router (別名，指向 questionCategories)
+  categories: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getAllCategories } = await import("./db");
+      return await getAllCategories();
+    }),
+    tree: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getCategoryTree } = await import("./db");
+      return await getCategoryTree();
+    }),
+  }),
+
   // 資料品質檢查
   dataQualityCheck: router({  checkQuestions: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
