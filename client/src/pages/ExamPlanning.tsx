@@ -373,7 +373,7 @@ export default function ExamPlanning() {
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => navigate("/exams")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            返回考試管理
+            返回
           </Button>
           <Dialog open={showCsvDialog} onOpenChange={setShowCsvDialog}>
           <DialogTrigger asChild>

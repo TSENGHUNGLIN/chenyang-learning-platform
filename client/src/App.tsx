@@ -17,6 +17,7 @@ import CategoryManagement from "./pages/CategoryManagement";
 import TagManagement from "./pages/TagManagement";
 import AnalysisHistory from "./pages/AnalysisHistory";
 import ExamManagement from "./pages/ExamManagement";
+import ExamList from "./pages/ExamList";
 import ExamTake from "./pages/ExamTake";
 import MyExams from "./pages/MyExams";
 import ExamResult from "./pages/ExamResult";
@@ -54,6 +55,7 @@ function Router() {
       <Route path={"/tags"} component={TagManagement} />
       <Route path={"/analysis-history"} component={AnalysisHistory} />
       <Route path={"/exams"} component={ExamManagement} />
+      <Route path={"/exams/list"} component={ExamList} />
       <Route path={"/exams/:id"} component={ExamDetail} />
       <Route path={"/exam-templates"} component={ExamTemplates} />
       <Route path={"/my-exams"} component={MyExams} />
