@@ -120,7 +120,7 @@ export default function TagManagement() {
     "#f97316", // orange
   ];
 
-  const [showGuide, setShowGuide] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
 
   return (
     <DashboardLayout>

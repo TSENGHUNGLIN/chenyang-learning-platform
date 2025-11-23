@@ -127,7 +127,7 @@ export default function CategoryManagement() {
     return `${getCategoryPath(category.parentId)} > ${category.name}`;
   };
 
-  const [showGuide, setShowGuide] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
 
   return (
     <DashboardLayout>
