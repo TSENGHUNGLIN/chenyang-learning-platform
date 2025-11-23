@@ -6,12 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Upload, Users, FileText, Calendar, AlertCircle, CheckCircle2, Home, Download, ArrowLeft } from "lucide-react";
+import { Loader2, Upload, Users, FileText, Calendar, AlertCircle, CheckCircle2, Home, Download, ArrowLeft, Check, ChevronsUpDown } from "lucide-react";
 import { format } from "date-fns";
 import { zhTW } from "date-fns/locale";
 import { useLocation } from "wouter";
@@ -27,6 +30,7 @@ export default function ExamPlanning() {
   const { data: exams, isLoading: examsLoading } = trpc.exams.list.useQuery();
   const { data: departments, isLoading: depsLoading } = trpc.departments.list.useQuery();
   const { data: employees, isLoading: employeesLoading } = trpc.employees.list.useQuery();
+  const { data: batches, isLoading: batchesLoading } = trpc.examPlanning.listBatches.useQuery({ limit: 50 });
   
   // 考卷預覽查詢
   const { data: previewData, isLoading: previewLoading } = trpc.exams.getPreview.useQuery(
@@ -59,6 +63,7 @@ export default function ExamPlanning() {
   // 批次資訊
   const [batchName, setBatchName] = useState<string>("");
   const [batchDescription, setBatchDescription] = useState<string>("");
+  const [openBatchCombobox, setOpenBatchCombobox] = useState(false);
 
   // CSV 匯入
   const [csvContent, setCsvContent] = useState<string>("");
@@ -975,16 +980,88 @@ export default function ExamPlanning() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* 考卷選擇 */}
+            <div>
+              <Label htmlFor="exam-selection">考卷選擇</Label>
+              <CardDescription className="mt-1 mb-2">
+                已選擇 {selectedExamIds.length} 份考卷
+              </CardDescription>
+              {selectedExamIds.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-3 border rounded-md bg-muted/20">請先從中間區域選擇考卷</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3 bg-muted/20">
+                  {selectedExamIds.map((examId) => {
+                    const exam = exams?.find((e) => e.id === examId);
+                    if (!exam) return null;
+                    return (
+                      <div key={examId} className="flex items-center justify-between p-2 bg-background rounded-md border">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{exam.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {exam.description || "無描述"}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleExamToggle(examId)}
+                          className="h-8 px-2 ml-2 shrink-0"
+                        >
+                          移除
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* 批次名稱 */}
             <div>
               <Label htmlFor="batch-name">批次名稱（可選）</Label>
-              <Input
-                id="batch-name"
-                placeholder="例如：2025年第一季新人考試"
-                value={batchName}
-                onChange={(e) => setBatchName(e.target.value)}
-                className="mt-2"
-              />
+              <Popover open={openBatchCombobox} onOpenChange={setOpenBatchCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openBatchCombobox}
+                    className="w-full justify-between mt-2"
+                  >
+                    {batchName || "選擇或輸入批次名稱..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput 
+                      placeholder="搜尋或輸入批次名稱..." 
+                      value={batchName}
+                      onValueChange={setBatchName}
+                    />
+                    <CommandEmpty>輸入新的批次名稱</CommandEmpty>
+                    <CommandGroup>
+                      {batches?.map((batch) => (
+                        <CommandItem
+                          key={batch.id}
+                          value={batch.batchName}
+                          onSelect={(currentValue) => {
+                            setBatchName(currentValue === batchName ? "" : currentValue);
+                            setOpenBatchCombobox(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              batchName === batch.batchName ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {batch.batchName}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* 時間設定模式切換 */}
@@ -1201,17 +1278,36 @@ export default function ExamPlanning() {
                         className="mt-2"
                       />
                     </div>
-                    {/* 複製到其他考卷按鈕 */}
-                    {individualExamTimes[selectedExamForTime]?.startTime && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowCopyTimeDialog(true)}
-                        className="w-full"
-                      >
-                        複製到其他考卷
-                      </Button>
-                    )}
+                    {/* 操作按鈕 */}
+                    <div className="flex gap-2">
+                      {individualExamTimes[selectedExamForTime]?.startTime && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowCopyTimeDialog(true)}
+                          className="flex-1"
+                        >
+                          複製到其他考卷
+                        </Button>
+                      )}
+                      {(individualExamTimes[selectedExamForTime]?.startTime || individualExamTimes[selectedExamForTime]?.deadline) && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            setIndividualExamTimes(prev => {
+                              const newTimes = { ...prev };
+                              delete newTimes[selectedExamForTime];
+                              return newTimes;
+                            });
+                            toast.success("已清除時間設定");
+                          }}
+                          className="flex-1"
+                        >
+                          清除時間
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1227,11 +1323,39 @@ export default function ExamPlanning() {
                         const times = individualExamTimes[examId];
                         if (!times?.startTime) return null;
                         return (
-                          <div key={examId} className="flex items-center justify-between p-2 bg-accent/30 rounded">
-                            <span className="truncate flex-1">{exam?.title}</span>
-                            <span className="text-muted-foreground ml-2">
-                              {times.startTime ? new Date(times.startTime).toLocaleString("zh-TW", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
-                            </span>
+                          <div key={examId} className="flex items-center justify-between p-2 bg-accent/30 rounded hover:bg-accent/50 transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <p className="truncate font-medium">{exam?.title}</p>
+                              <p className="text-muted-foreground">
+                                {times.startTime ? new Date(times.startTime).toLocaleString("zh-TW", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                                {times.deadline && " ~ " + new Date(times.deadline).toLocaleString("zh-TW", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                            <div className="flex gap-1 ml-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedExamForTime(examId)}
+                                className="h-7 px-2"
+                              >
+                                編輯
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setIndividualExamTimes(prev => {
+                                    const newTimes = { ...prev };
+                                    delete newTimes[examId];
+                                    return newTimes;
+                                  });
+                                  toast.success("已清除時間設定");
+                                }}
+                                className="h-7 px-2 text-destructive hover:text-destructive"
+                              >
+                                清除
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}
