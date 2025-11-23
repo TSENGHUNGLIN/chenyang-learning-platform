@@ -83,6 +83,17 @@ export default function ExamPlanning() {
   const [timeConflicts, setTimeConflicts] = useState<Array<{ examId: number; conflictWith: number[]; }>>([]);
   const [showConflictWarning, setShowConflictWarning] = useState(false);
 
+  // 分頁狀態
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // 當開啟預覽對話框或更換考卷時，重置頁碼
+  useEffect(() => {
+    if (showPreviewDialog) {
+      setCurrentPage(1);
+    }
+  }, [showPreviewDialog, previewExamId]);
+
   // 搜尋
   const [userSearch, setUserSearch] = useState("");
   const [examSearch, setExamSearch] = useState("");
@@ -1672,18 +1683,53 @@ export default function ExamPlanning() {
 
               {/* 題目清單 */}
               <div className="space-y-3">
-                <h4 className="font-medium text-sm">題目清單</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">題目清單</h4>
+                  {previewData.questions.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      共 {previewData.questions.length} 題
+                    </p>
+                  )}
+                </div>
                 {previewData.questions.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     此考卷尚未加入題目
                   </p>
                 ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {previewData.questions.map((q, index) => (
+                  <>
+                    {/* 分頁導航 - 頁首 */}
+                    {previewData.questions.length > itemsPerPage && (
+                      <div className="flex items-center justify-between gap-2 py-2 border-b">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          上一頁
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          第 {currentPage} / {Math.ceil(previewData.questions.length / itemsPerPage)} 頁
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.min(Math.ceil(previewData.questions.length / itemsPerPage), p + 1))}
+                          disabled={currentPage === Math.ceil(previewData.questions.length / itemsPerPage)}
+                        >
+                          下一頁
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {previewData.questions
+                        .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                        .map((q, index) => (
                       <div key={q.id} className="border rounded-md p-3 space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-medium">
-                            {index + 1}. {q.content}
+                            {(currentPage - 1) * itemsPerPage + index + 1}. {q.content}
                           </p>
                           <span className="text-xs bg-accent px-2 py-1 rounded flex-shrink-0">
                             {q.type === "multiple_choice" ? "選擇" :
@@ -1714,8 +1760,34 @@ export default function ExamPlanning() {
                           </p>
                         )}
                       </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+
+                    {/* 分頁導航 - 頁尾（可選） */}
+                    {previewData.questions.length > itemsPerPage && (
+                      <div className="flex items-center justify-center gap-2 pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          上一頁
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          第 {currentPage} / {Math.ceil(previewData.questions.length / itemsPerPage)} 頁
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.min(Math.ceil(previewData.questions.length / itemsPerPage), p + 1))}
+                          disabled={currentPage === Math.ceil(previewData.questions.length / itemsPerPage)}
+                        >
+                          下一頁
+                        </Button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
