@@ -1,0 +1,1 @@
+ALTER TABLE `examSubmissions` ADD `teacherComment` text;

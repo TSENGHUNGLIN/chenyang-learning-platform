@@ -14,10 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { Upload, Loader2, X, FileText } from "lucide-react";
+import { Upload, Loader2, X, FileText, Link as LinkIcon, Type } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 
@@ -28,25 +31,124 @@ export default function FileUpload() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [files, setFiles] = useState<File[]>([]);
+  const [googleDriveLink, setGoogleDriveLink] = useState("");
+  const [textContent, setTextContent] = useState("");
+  const [textTitle, setTextTitle] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [activeTab, setActiveTab] = useState("file");
+  const [autoDetectNewEmployee, setAutoDetectNewEmployee] = useState(true);
+  const [detectedNames, setDetectedNames] = useState<string[]>([]);
 
   const { data: departments } = trpc.departments.list.useQuery();
   const { data: employees } = trpc.employees.list.useQuery();
   const createFileMutation = trpc.files.create.useMutation();
+  const createTextMutation = trpc.files.createFromText.useMutation();
+  const createEmployeeMutation = trpc.employees.create.useMutation();
   const utils = trpc.useUtils();
+
+  // 根據選擇的部門篩選人員
+  const filteredEmployees = selectedDepartment
+    ? employees?.filter((emp) => emp.departmentId === parseInt(selectedDepartment))
+    : employees;
+
+  // 從檔案名稱提取人員姓名，返回姓名和信心度
+  const extractNameFromFilename = (filename: string): { name: string; confidence: 'high' | 'medium' | 'low' } | null => {
+    // 移除副檔名
+    const nameWithoutExt = filename.replace(/\.(pdf|docx|csv)$/i, '');
+    
+    // 常見的非姓名詞彙清單（擴充）
+    const excludedWords = [
+      'Eva', '專課程', '報價', '薪酬', '細節', '考核', '履歷',
+      '初階', '中階', '進階', '高階', '資料', '文件', '報告',
+      '計劃', '方案', '提案', '簡報', '細節', '說明', '考試',
+      '測驗', '問答', '作業', '練習', '筆記', '心得', '總結',
+      '分析', '檢討', '評估', '回饋', '轉正', '薪資', '證明',
+      '申請', '表格', '名單', '清單', '統計', '汇总', '概述'
+    ];
+    
+    // 非姓名後綴詞（常接在姓名後面）- 擴充清單
+    const nameSuffixes = [
+      '測', '測驗', '考試', '考核', '報告', '履歷', '轉正', '回饋', '評估',
+      '問答', '作業', '練習', '筆記', '心得', '總結', '分析', '檢討',
+      '記錄', '表單', '資料', '文件', '說明', '細節'
+    ];
+    
+    // 優先匹配常見的檔名格式：
+    // 1. 「姓名 + 轉正/考核」格式（例：張小明轉正考核.docx）
+    const nameBeforeKeywordPattern = /([\u4e00-\u9fa5]{2,4})(?=[轉正考核報告履歷測驗回饋])/;
+    let match = nameWithoutExt.match(nameBeforeKeywordPattern);
+    if (match) {
+      let name = match[1];
+      // 移除後綴詞
+      for (const suffix of nameSuffixes) {
+        if (name.endsWith(suffix)) {
+          name = name.slice(0, -suffix.length);
+        }
+      }
+      if (name.length >= 2 && !excludedWords.includes(name)) {
+        return { name, confidence: 'high' };
+      }
+    }
+    
+    // 2. 「分隔符 + 姓名 + 分隔符」格式（例：初階報價專課程 – Eva – 湯芸珠薪酬細節.pdf）
+    // 匹配分隔符後的中文姓名（分隔符可以是空格、橫線、底線等）
+    const nameAfterSeparatorPattern = /[\s\-_–—]+([\u4e00-\u9fa5]{2,4})(?=[\s\-_–—]|$)/g;
+    const allMatches = nameWithoutExt.matchAll(nameAfterSeparatorPattern);
+    const names = Array.from(allMatches)
+      .map(m => {
+        let name = m[1];
+        // 移除後綴詞
+        for (const suffix of nameSuffixes) {
+          if (name.endsWith(suffix)) {
+            name = name.slice(0, -suffix.length);
+          }
+        }
+        return name;
+      })
+      .filter(name => name.length >= 2 && !excludedWords.includes(name));
+    
+    // 從所有匹配中選擇最後一個中文姓名（通常是人名）
+    if (names.length > 0) {
+      return { name: names[names.length - 1], confidence: 'medium' };
+    }
+    
+    // 3. 備用：匹配任何 2-4 個中文字（但排除常見詞彙和後綴詞）
+    // 注意：這個模式可能導致誤判，建議手動選擇人員而非依賴自動識別
+    const fallbackPattern = /([\u4e00-\u9fa5]{2,4})/g;
+    const allFallbackMatches = Array.from(nameWithoutExt.matchAll(fallbackPattern))
+      .map(m => {
+        let name = m[1];
+        // 移除後綴詞
+        for (const suffix of nameSuffixes) {
+          if (name.endsWith(suffix)) {
+            name = name.slice(0, -suffix.length);
+          }
+        }
+        return name;
+      })
+      .filter(name => name.length >= 2 && !excludedWords.includes(name));
+    
+    // 優先選擇最後一個匹配（通常是人名）
+    if (allFallbackMatches.length > 0) {
+      return { name: allFallbackMatches[allFallbackMatches.length - 1], confidence: 'low' };
+    }
+    
+    return null;
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
       const allowedTypes = [
-        "application/pdf",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/csv",
+        "application/csv",
       ];
 
       const validFiles = selectedFiles.filter((file) => {
         if (!allowedTypes.includes(file.type)) {
-          toast.error(`${file.name} 不是支援的檔案格式`);
+          toast.error(`${file.name} 不是支援的檔案格式，請使用 DOCX 或 CSV 格式`);
           return false;
         }
         return true;
@@ -58,6 +160,25 @@ export default function FileUpload() {
       }
 
       setFiles([...files, ...validFiles]);
+
+      // 自動識別新人姓名
+      if (autoDetectNewEmployee && selectedDepartment) {
+        const names: string[] = [];
+        validFiles.forEach(file => {
+          const result = extractNameFromFilename(file.name);
+          if (result && !names.includes(result.name)) {
+            // 檢查是否已存在於該部門
+            const existingEmployee = filteredEmployees?.find(emp => emp.name === result.name);
+            if (!existingEmployee) {
+              names.push(result.name);
+            }
+          }
+        });
+        if (names.length > 0) {
+          setDetectedNames(names);
+          toast.info(`偵測到新人姓名：${names.join('、')}`);
+        }
+      }
     }
   };
 
@@ -65,114 +186,248 @@ export default function FileUpload() {
     setFiles(files.filter((_, i) => i !== index));
   };
 
-  const handleUpload = async () => {
-    if (files.length === 0 || !selectedEmployee) {
-      toast.error("請選擇檔案和人員");
+  const handleFileUpload = async () => {
+    if (files.length === 0) {
+      toast.error("請選擇檔案");
       return;
     }
+
+    if (!selectedDepartment) {
+      toast.error("請選擇部門");
+      return;
+    }
+
+    // 允許沒有人員也能上傳，之後由人工分類
+    // 不再強制要求選擇人員
 
     setUploading(true);
     setUploadProgress(0);
 
     try {
+      // 如果有偵測到新人姓名，先批次建立人員資料
+      const createdEmployeeIds: Record<string, string> = {};
+      if (autoDetectNewEmployee && detectedNames.length > 0) {
+        for (const name of detectedNames) {
+          // 先檢查是否已存在於該部門
+          const existingEmployee = filteredEmployees?.find(emp => emp.name === name);
+          if (existingEmployee) {
+            // 如果已存在，直接使用現有 ID
+            createdEmployeeIds[name] = existingEmployee.id.toString();
+            toast.info(`人員 ${name} 已存在，將使用現有資料`);
+          } else {
+            // 不存在才建立新人員
+            try {
+              const newEmployee = await createEmployeeMutation.mutateAsync({
+                name,
+                departmentId: parseInt(selectedDepartment),
+              });
+              createdEmployeeIds[name] = newEmployee.id.toString();
+              toast.success(`已自動新增人員：${name}`);
+            } catch (error) {
+              // 建立失敗時，再次檢查是否已存在（可能是並發建立導致）
+              await utils.employees.list.invalidate();
+              const updatedEmployees = await utils.employees.list.fetch();
+              const retryEmployee = updatedEmployees?.find(emp => emp.name === name && emp.departmentId === parseInt(selectedDepartment));
+              if (retryEmployee) {
+                createdEmployeeIds[name] = retryEmployee.id.toString();
+                toast.info(`人員 ${name} 已存在，將使用現有資料`);
+              } else {
+                toast.error(`新增人員 ${name} 失敗`);
+              }
+            }
+          }
+        }
+        await utils.employees.list.invalidate();
+      }
+
       const totalFiles = files.length;
       let successCount = 0;
       let failCount = 0;
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        try {
-          // Upload file to S3
-          const formData = new FormData();
-          formData.append("file", file);
+        
+        // 決定使用哪個員工ID
+        let employeeId = selectedEmployee;
+        
+        // 如果啟用自動識別，嘗試從檔案名稱匹配員工
+        if (autoDetectNewEmployee) {
+          const result = extractNameFromFilename(file.name);
+          if (result) {
+            const detectedName = result.name;
+            // 優先使用新建立的員工
+            if (createdEmployeeIds[detectedName]) {
+              employeeId = createdEmployeeIds[detectedName];
+            } else {
+              // 否則查找現有員工
+              const existingEmployee = filteredEmployees?.find(emp => emp.name === detectedName);
+              if (existingEmployee) {
+                employeeId = existingEmployee.id.toString();
+              }
+            }
+          }
+        }
 
-          const uploadResponse = await fetch("/api/upload", {
+        // 如果沒有employeeId，也允許上傳（設為null，由人工分類）
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const response = await fetch("/api/upload", {
             method: "POST",
             body: formData,
           });
 
-          if (!uploadResponse.ok) {
-            throw new Error("檔案上傳失敗");
+          if (response.ok) {
+            const uploadResult = await response.json();
+            // 儲存檔案metadata到資料庫
+            await createFileMutation.mutateAsync({
+              employeeId: employeeId ? parseInt(employeeId) : null,
+              filename: uploadResult.filename,
+              fileUrl: uploadResult.fileUrl,
+              fileKey: uploadResult.fileKey,
+              mimeType: uploadResult.mimeType,
+              fileSize: uploadResult.fileSize,
+              uploadDate: new Date(),
+              extractedText: uploadResult.extractedText || "",
+            });
+            successCount++;
+          } else {
+            failCount++;
+            toast.error(`${file.name} 上傳失敗`);
           }
-
-          const { fileKey, fileUrl, extractedText } = await uploadResponse.json();
-
-          // Save file metadata to database
-          await createFileMutation.mutateAsync({
-            employeeId: parseInt(selectedEmployee),
-            filename: file.name,
-            fileKey,
-            fileUrl,
-            mimeType: file.type,
-            fileSize: file.size,
-            uploadDate: new Date(),
-            extractedText,
-          });
-
-          successCount++;
         } catch (error) {
-          console.error(`Upload error for ${file.name}:`, error);
           failCount++;
+          toast.error(`${file.name} 上傳失敗`);
+          console.error(`Upload error for ${file.name}:`, error);
         }
 
-        // Update progress
         setUploadProgress(((i + 1) / totalFiles) * 100);
       }
 
-      // Show result
       if (successCount > 0) {
         toast.success(`成功上傳 ${successCount} 個檔案`);
-        utils.files.list.invalidate();
+        await utils.files.list.invalidate();
+        setFiles([]);
+        setSelectedDepartment("");
+        setSelectedEmployee("");
+        setDetectedNames([]);
+        setOpen(false);
       }
+
       if (failCount > 0) {
         toast.error(`${failCount} 個檔案上傳失敗`);
       }
+    } catch (error) {
+      toast.error("上傳失敗，請稍後再試");
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
 
-      // Reset form
-      setOpen(false);
-      setFiles([]);
+  const handleGoogleDriveUpload = async () => {
+    if (!googleDriveLink || !selectedEmployee) {
+      toast.error("請輸入Google雲端連結和選擇人員");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      await createTextMutation.mutateAsync({
+        employeeId: parseInt(selectedEmployee),
+        fileName: "Google雲端文件",
+        content: `Google雲端連結：${googleDriveLink}`,
+        fileUrl: googleDriveLink,
+      });
+
+      toast.success("Google雲端連結已儲存");
+      await utils.files.list.invalidate();
+      setGoogleDriveLink("");
       setSelectedDepartment("");
       setSelectedEmployee("");
-      setUploadProgress(0);
+      setOpen(false);
     } catch (error) {
-      console.error("Upload error:", error);
-      toast.error("上傳失敗");
+      toast.error("儲存失敗，請稍後再試");
     } finally {
       setUploading(false);
     }
   };
 
-  const getTotalSize = () => {
-    return files.reduce((acc, file) => acc + file.size, 0);
+  const handleTextUpload = async () => {
+    if (!textContent || !textTitle || !selectedEmployee) {
+      toast.error("請輸入標題、內容和選擇人員");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      await createTextMutation.mutateAsync({
+        employeeId: parseInt(selectedEmployee),
+        fileName: textTitle,
+        content: textContent,
+        fileUrl: "",
+      });
+
+      toast.success("文字內容已儲存");
+      await utils.files.list.invalidate();
+      setTextContent("");
+      setTextTitle("");
+      setSelectedDepartment("");
+      setSelectedEmployee("");
+      setOpen(false);
+    } catch (error) {
+      toast.error("儲存失敗，請稍後再試");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleUpload = () => {
+    if (activeTab === "file") {
+      handleFileUpload();
+    } else if (activeTab === "link") {
+      handleGoogleDriveUpload();
+    } else if (activeTab === "text") {
+      handleTextUpload();
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button>
-          <Upload className="h-4 w-4 mr-2" />
+          <Upload className="mr-2 h-4 w-4" />
           上傳檔案
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>上傳考核問答檔案</DialogTitle>
-          <DialogDescription>
-            請選擇人員並上傳 PDF 或 DOCX 檔案（最多 {MAX_FILES} 個）
-          </DialogDescription>
+          <DialogTitle>上傳檔案</DialogTitle>
+          <DialogDescription>選擇部門、人員，並上傳檔案、連結或文字內容</DialogDescription>
         </DialogHeader>
+
         <div className="space-y-4">
-          <div>
-            <Label>選擇部門</Label>
-            <Select 
-              value={selectedDepartment} 
-              onValueChange={(value) => {
-                setSelectedDepartment(value);
-                setSelectedEmployee(""); // 重置人員選擇
-              }}
-            >
+          {/* 支援的檔案格式說明 */}
+          <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border border-blue-200 dark:border-blue-800 rounded-xl shadow-[var(--shadow-macos-sm)]">
+            <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">📝 支援的檔案格式</p>
+            <div className="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+              <p>• <strong>DOCX</strong> - Microsoft Word 文件</p>
+              <p>• <strong>CSV</strong> - 逗號分隔值檔案</p>
+            </div>
+            <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+              注意：系統已不再支援 PDF 檔案上傳，請將 PDF 轉換為 DOCX 格式後再上傳。
+            </p>
+          </div>
+          {/* 部門選擇 */}
+          <div className="space-y-2">
+            <Label htmlFor="department">部門</Label>
+            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
               <SelectTrigger>
-                <SelectValue placeholder="請先選擇部門" />
+                <SelectValue placeholder="選擇部門" />
               </SelectTrigger>
               <SelectContent>
                 {departments?.map((dept) => (
@@ -184,83 +439,159 @@ export default function FileUpload() {
             </Select>
           </div>
 
-          <div>
-            <Label>選擇人員</Label>
-            <Select 
-              value={selectedEmployee} 
+          {/* 人員選擇 */}
+          <div className="space-y-2">
+            <Label htmlFor="employee">人員（選填）</Label>
+            <Select
+              value={selectedEmployee}
               onValueChange={setSelectedEmployee}
               disabled={!selectedDepartment}
             >
               <SelectTrigger>
-                <SelectValue placeholder={selectedDepartment ? "選擇人員" : "請先選擇部門"} />
+                <SelectValue placeholder={selectedDepartment ? "選擇人員或留空自動識別" : "請先選擇部門"} />
               </SelectTrigger>
               <SelectContent>
-                {employees
-                  ?.filter((emp) => 
-                    selectedDepartment ? emp.departmentId === parseInt(selectedDepartment) : true
-                  )
-                  .map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id.toString()}>
-                      {emp.name}
-                    </SelectItem>
-                  ))}
+                {filteredEmployees?.map((emp) => (
+                  <SelectItem key={emp.id} value={emp.id.toString()}>
+                    {emp.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            <p className="text-sm text-muted-foreground">
+              💡 提示：如果檔案名稱包含人員姓名（例如：蔣昀眞轉正考核.docx），系統會自動識別並建立新人員資料
+            </p>
           </div>
 
-          <div>
-            <Label>選擇檔案</Label>
-            <input
-              type="file"
-              accept=".pdf,.docx"
-              multiple
-              onChange={handleFileChange}
-              disabled={files.length >= MAX_FILES}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-            {files.length >= MAX_FILES && (
-              <p className="text-sm text-orange-600 mt-1">
-                已達到最大檔案數量限制
-              </p>
-            )}
-          </div>
-
-          {files.length > 0 && (
-            <div className="space-y-2">
-              <Label>已選擇的檔案 ({files.length}/{MAX_FILES})</Label>
-              <div className="border rounded-lg p-3 space-y-2 max-h-48 overflow-y-auto">
-                {files.map((file, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <FileText className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024).toFixed(2)} KB
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(index)}
-                      disabled={uploading}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                總大小: {(getTotalSize() / 1024).toFixed(2)} KB
+          {/* 偵測到的新人姓名 */}
+          {detectedNames.length > 0 && (
+            <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border border-blue-200 dark:border-blue-800 rounded-xl shadow-[var(--shadow-macos-sm)]">
+              <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">✨ 偵測到新人姓名</p>
+              <p className="text-sm text-blue-700 dark:text-blue-200">
+                系統將自動新增以下人員到 {departments?.find(d => d.id.toString() === selectedDepartment)?.name}：
+                <span className="font-medium ml-1">{detectedNames.join('、')}</span>
               </p>
             </div>
           )}
 
-          {uploading && (
+          {/* 上傳方式選擇 */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="file">
+                <FileText className="mr-2 h-4 w-4" />
+                檔案上傳
+              </TabsTrigger>
+              <TabsTrigger value="link">
+                <LinkIcon className="mr-2 h-4 w-4" />
+                雲端連結
+              </TabsTrigger>
+              <TabsTrigger value="text">
+                <Type className="mr-2 h-4 w-4" />
+                直接貼文
+              </TabsTrigger>
+            </TabsList>
+
+            {/* 檔案上傳 */}
+            <TabsContent value="file" className="space-y-4">
+              {/* 檔名格式建議 */}
+              <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border border-amber-200 dark:border-amber-800 rounded-xl shadow-[var(--shadow-macos-sm)]">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mb-2">💡 檔名格式建議（提高自動識別準確率）</p>
+                <div className="space-y-1 text-sm text-amber-800 dark:text-amber-200">
+                  <p>• <span className="font-medium">高信心度格式</span>：<code className="bg-amber-100 px-1 rounded">張小明-轉正考核.docx</code>、<code className="bg-amber-100 px-1 rounded">李四履歷.docx</code></p>
+                  <p>• <span className="font-medium">中信心度格式</span>：<code className="bg-amber-100 px-1 rounded">考核 - 王五 - 2024.docx</code></p>
+                  <p>• <span className="font-medium">低信心度格式</span>：<code className="bg-amber-100 px-1 rounded">考核資料趙六.docx</code>（建議手動選擇人員）</p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="file">選擇檔案（DOCX、CSV，最多{MAX_FILES}個）</Label>
+                <Input
+                  id="file"
+                  type="file"
+                  accept=".docx,.csv"
+                  multiple
+                  onChange={handleFileChange}
+                  disabled={uploading}
+                />
+              </div>
+
+              {files.length > 0 && (
+                <div className="space-y-2">
+                  <Label>已選擇的檔案（{files.length}/{MAX_FILES}）</Label>
+                  <div className="space-y-2">
+                    {files.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-2 border rounded"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-4 w-4" />
+                          <span className="text-sm">{file.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({(file.size / 1024).toFixed(2)} KB)
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          disabled={uploading}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Google雲端連結 */}
+            <TabsContent value="link" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="google-link">Google雲端文件連結</Label>
+                <Input
+                  id="google-link"
+                  type="url"
+                  placeholder="https://docs.google.com/..."
+                  value={googleDriveLink}
+                  onChange={(e) => setGoogleDriveLink(e.target.value)}
+                  disabled={uploading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  請確保連結已設定為「知道連結的任何人都可以檢視」
+                </p>
+              </div>
+            </TabsContent>
+
+            {/* 直接貼文 */}
+            <TabsContent value="text" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="text-title">標題</Label>
+                <Input
+                  id="text-title"
+                  type="text"
+                  placeholder="輸入標題"
+                  value={textTitle}
+                  onChange={(e) => setTextTitle(e.target.value)}
+                  disabled={uploading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="text-content">內容</Label>
+                <Textarea
+                  id="text-content"
+                  placeholder="貼上或輸入文字內容"
+                  value={textContent}
+                  onChange={(e) => setTextContent(e.target.value)}
+                  disabled={uploading}
+                  rows={10}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {uploading && uploadProgress > 0 && (
             <div className="space-y-2">
               <Label>上傳進度</Label>
               <Progress value={uploadProgress} />
@@ -270,20 +601,24 @@ export default function FileUpload() {
             </div>
           )}
 
-          <Button
-            onClick={handleUpload}
-            disabled={uploading || files.length === 0 || !selectedEmployee}
-            className="w-full"
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                上傳中...
-              </>
-            ) : (
-              `確認上傳 (${files.length} 個檔案)`
-            )}
-          </Button>
+          <div className="flex justify-end space-x-2">
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={uploading}>
+              取消
+            </Button>
+            <Button onClick={handleUpload} disabled={uploading || (!selectedEmployee && detectedNames.length === 0)}>
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  上傳中...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  上傳
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { Building2, UserPlus, Trash2, Plus, Pencil } from "lucide-react";
+import { Building2, UserPlus, Trash2, Plus, Pencil, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 type Department = { id: number; name: string; description: string | null };
@@ -43,6 +43,9 @@ export default function Manage() {
   const [isEmpDialogOpen, setIsEmpDialogOpen] = useState(false);
   const [isEditingDept, setIsEditingDept] = useState(false);
   const [isEditingEmp, setIsEditingEmp] = useState(false);
+  const [isBatchImportDialogOpen, setIsBatchImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
 
   const { data: departments, isLoading: deptLoading } = trpc.departments.list.useQuery();
   const { data: employees, isLoading: empLoading } = trpc.employees.list.useQuery();
@@ -52,6 +55,7 @@ export default function Manage() {
   const createEmpMutation = trpc.employees.create.useMutation();
   const updateEmpMutation = trpc.employees.update.useMutation();
   const deleteEmpMutation = trpc.employees.delete.useMutation();
+  const batchImportMutation = trpc.employees.batchImport.useMutation();
   const utils = trpc.useUtils();
 
   const canManage = user?.role === "admin";
@@ -173,6 +177,65 @@ export default function Manage() {
   const getDepartmentName = (deptId: number) => {
     return departments?.find((d) => d.id === deptId)?.name || "-";
   };
+  
+  const parseCSVMutation = trpc.employees.parseCSV.useMutation();
+  
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setImportFile(file);
+    
+    // 讀取檔案並傳送到後端解析
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const dataUrl = event.target?.result as string;
+        
+        // 傳送到後端解析
+        const result = await parseCSVMutation.mutateAsync({ csvContent: dataUrl });
+        setImportPreview(result.preview);
+        
+        const validCount = result.preview.filter((i: any) => i.valid).length;
+        toast.success(`檔案讀取成功，共 ${result.preview.length} 筆，有效 ${validCount} 筆`);
+      } catch (error: any) {
+        console.error('CSV解析錯誤:', error);
+        toast.error(error.message || "檔案讀取失敗，請確認檔案格式正確");
+      }
+    };
+    
+    reader.readAsDataURL(file);
+  };
+  
+  const handleBatchImport = async () => {
+    if (!importFile || importPreview.length === 0) {
+      toast.error("請選擇檔案");
+      return;
+    }
+    
+    const validData = importPreview.filter(item => item.valid);
+    if (validData.length === 0) {
+      toast.error("沒有有效的資料");
+      return;
+    }
+    
+    try {
+      const employees = validData.map(item => ({
+        name: item.name,
+        departmentId: item.departmentId,
+        email: item.email
+      }));
+      
+      await batchImportMutation.mutateAsync({ employees });
+      toast.success(`成功匯入 ${validData.length} 筆資料`);
+      setIsBatchImportDialogOpen(false);
+      setImportFile(null);
+      setImportPreview([]);
+      utils.employees.list.invalidate();
+    } catch (error) {
+      toast.error("匯入失敗，請稍後再試");
+    }
+  };
 
   if (!canManage) {
     return (
@@ -193,15 +256,15 @@ export default function Manage() {
         </div>
 
         {/* 部門管理 */}
-        <Card>
+        <Card className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 border-orange-200 dark:border-orange-800">
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-100">
                   <Building2 className="h-5 w-5" />
                   部門管理
                 </CardTitle>
-                <CardDescription>管理所有部門資料</CardDescription>
+                <CardDescription className="text-orange-700 dark:text-orange-300">管理所有部門資料</CardDescription>
               </div>
               <Dialog open={isDeptDialogOpen} onOpenChange={(open) => {
                 setIsDeptDialogOpen(open);
@@ -298,26 +361,31 @@ export default function Manage() {
         </Card>
 
         {/* 人員管理 */}
-        <Card>
+        <Card className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950 dark:to-purple-950 border-indigo-200 dark:border-indigo-800">
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-indigo-900 dark:text-indigo-100">
                   <UserPlus className="h-5 w-5" />
                   人員管理
                 </CardTitle>
-                <CardDescription>管理所有人員資料</CardDescription>
+                <CardDescription className="text-indigo-700 dark:text-indigo-300">管理所有人員資料</CardDescription>
               </div>
-              <Dialog open={isEmpDialogOpen} onOpenChange={(open) => {
-                setIsEmpDialogOpen(open);
-                if (!open) resetEmpForm();
-              }}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => handleOpenEmpDialog()}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    新增人員
-                  </Button>
-                </DialogTrigger>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsBatchImportDialogOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  批次匯入
+                </Button>
+                <Dialog open={isEmpDialogOpen} onOpenChange={(open) => {
+                  setIsEmpDialogOpen(open);
+                  if (!open) resetEmpForm();
+                }}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => handleOpenEmpDialog()}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      新增人員
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>{isEditingEmp ? "編輯人員" : "新增人員"}</DialogTitle>
@@ -373,6 +441,7 @@ export default function Manage() {
                   </div>
                 </DialogContent>
               </Dialog>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -419,6 +488,86 @@ export default function Manage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* 批次匯入對話框 */}
+      <Dialog open={isBatchImportDialogOpen} onOpenChange={setIsBatchImportDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>批次匯入人員</DialogTitle>
+            <DialogDescription>
+              上傳 CSV 檔案以批次建立人員資料
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="import-file">CSV 檔案</Label>
+              <Input
+                id="import-file"
+                type="file"
+                accept=".csv"
+                onChange={handleFileChange}
+              />
+              <p className="text-sm text-muted-foreground">
+                檔案格式：姓名,部門名稱,電子郵件（選填）
+              </p>
+              <p className="text-sm text-muted-foreground">
+                範例：王小明,業務部,wang@example.com
+              </p>
+            </div>
+            
+            {importPreview.length > 0 && (
+              <div className="space-y-2">
+                <Label>預覽（共 {importPreview.length} 筆，有效 {importPreview.filter(i => i.valid).length} 筆）</Label>
+                <div className="max-h-64 overflow-y-auto border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>姓名</TableHead>
+                        <TableHead>部門</TableHead>
+                        <TableHead>電子郵件</TableHead>
+                        <TableHead className="w-20">狀態</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {importPreview.map((item) => (
+                        <TableRow key={item.index} className={!item.valid ? "bg-red-50" : ""}>
+                          <TableCell>{item.index}</TableCell>
+                          <TableCell>{item.name}</TableCell>
+                          <TableCell>{item.departmentName}</TableCell>
+                          <TableCell>{item.email || "-"}</TableCell>
+                          <TableCell>
+                            {item.valid ? (
+                              <span className="text-green-600">✓</span>
+                            ) : (
+                              <span className="text-red-600">✗</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => {
+              setIsBatchImportDialogOpen(false);
+              setImportFile(null);
+              setImportPreview([]);
+            }}>
+              取消
+            </Button>
+            <Button 
+              onClick={handleBatchImport}
+              disabled={importPreview.length === 0 || importPreview.filter(i => i.valid).length === 0}
+            >
+              確認匯入 ({importPreview.filter(i => i.valid).length} 筆)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

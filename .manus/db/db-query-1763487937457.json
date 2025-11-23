@@ -1,0 +1,14 @@
+{
+  "query": "SELECT id, title FROM exams WHERE title LIKE '%新人培訓測驗%' ORDER BY id DESC LIMIT 1",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute SELECT id, title FROM exams WHERE title LIKE '%新人培訓測驗%' ORDER BY id DESC LIMIT 1",
+  "rows": [
+    {
+      "id": "60001",
+      "title": "新人培訓測驗"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\n60001\t新人培訓測驗\n",
+  "stderr": "",
+  "execution_time_ms": 1607
+}

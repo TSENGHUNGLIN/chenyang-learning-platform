@@ -21,18 +21,53 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity, BookX, TrendingUp, RefreshCw, Lightbulb, ShieldCheck } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { Link } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
+import { getPermissions } from "@shared/permissions";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "首頁", path: "/" },
-  { icon: Calendar, label: "日曆檢視", path: "/calendar" },
-  { icon: FileText, label: "檔案管理", path: "/files" },
-  { icon: Settings, label: "部門與人員", path: "/manage", adminOnly: true },
-  { icon: Users, label: "使用者管理", path: "/users", adminOnly: true },
+// 管理者/編輯者/檢視者的選單
+const staffMenuItems: Array<{
+  icon: any;
+  label: string;
+  path: string;
+  color: string;
+  adminOnly?: boolean;
+  editorOnly?: boolean;
+}> = [
+  { icon: LayoutDashboard, label: "首頁", path: "/", color: "blue" },
+  { icon: Calendar, label: "評核日曆", path: "/calendar", color: "purple" },
+  { icon: FolderTree, label: "分類管理", path: "/categories", color: "emerald", editorOnly: true },
+  { icon: Tag, label: "標籤管理", path: "/tags", color: "amber", editorOnly: true },
+  { icon: FileText, label: "檔案管理", path: "/files", color: "pink" },
+  { icon: Sparkles, label: "AI 分析出題", path: "/ai-analysis", color: "orange" },
+  { icon: ShieldCheck, label: "考題品質檢查", path: "/data-quality", color: "violet", editorOnly: true },
+  { icon: BookOpen, label: "題庫管理", path: "/question-bank", color: "indigo", editorOnly: true },
+  { icon: Database, label: "題庫檔案", path: "/question-banks", color: "cyan", editorOnly: true },
+  { icon: FileStack, label: "考卷範本", path: "/exam-templates", color: "purple", editorOnly: true },
+  { icon: ClipboardList, label: "考試園地", path: "/my-exams", color: "sky" },
+  { icon: Award, label: "考試管理", path: "/exams", color: "rose", editorOnly: true },
+  { icon: RefreshCw, label: "補考管理", path: "/makeup-exams", color: "teal", editorOnly: true },
+  { icon: Activity, label: "考試監控", path: "/exam-monitoring", color: "red", editorOnly: true },
+  { icon: Settings, label: "部門人員", path: "/manage", color: "slate", adminOnly: true },
+  { icon: Users, label: "使用者管理", path: "/users", color: "zinc", adminOnly: true },
+];
+
+// 考生的選單（只能看到考試相關功能）
+const examineeMenuItems: Array<{
+  icon: any;
+  label: string;
+  path: string;
+  color: string;
+}> = [
+  { icon: ClipboardList, label: "考試園地", path: "/my-exams", color: "sky" },
+  { icon: BookX, label: "錯題本", path: "/wrong-questions", color: "red" },
+  { icon: TrendingUp, label: "成績趨勢", path: "/performance-trend", color: "green" },
+  { icon: Lightbulb, label: "學習建議", path: "/learning-recommendations", color: "yellow" },
+  { icon: Award, label: "我的成績", path: "/my-scores", color: "purple" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -94,7 +129,8 @@ export default function DashboardLayout({
     );
   }
 
-  if (user?.role === "pending") {
+  // examinee 角色不需要審核，直接顯示主頁面
+  if (false) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
@@ -142,6 +178,9 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  // 根據權限選擇選單
+  const permissions = user ? getPermissions(user.role as any) : null;
+  const menuItems = permissions?.canViewAll ? staffMenuItems : examineeMenuItems;
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
@@ -193,11 +232,14 @@ function DashboardLayoutContent({
             <div className="flex items-center gap-3 pl-2 group-data-[collapsible=icon]:px-0 transition-all w-full">
               {isCollapsed ? (
                 <div className="relative h-8 w-8 shrink-0 group">
-                  <img
-                    src={APP_LOGO}
-                    className="h-8 w-8 rounded-md object-cover ring-1 ring-border"
-                    alt="Logo"
-                  />
+                  <Link href="/">
+                    <img
+                      src={APP_LOGO}
+                      className="h-8 w-8 rounded-md object-cover ring-1 ring-border cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                      alt="Logo"
+                      title="返回首頁"
+                    />
+                  </Link>
                   <button
                     onClick={toggleSidebar}
                     className="absolute inset-0 flex items-center justify-center bg-accent rounded-md ring-1 ring-border opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -207,16 +249,17 @@ function DashboardLayoutContent({
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-3 min-w-0">
+                  <Link href="/" className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity">
                     <img
                       src={APP_LOGO}
-                      className="h-8 w-8 rounded-md object-cover ring-1 ring-border shrink-0"
+                      className="h-8 w-8 rounded-md object-cover ring-1 ring-border shrink-0 cursor-pointer"
                       alt="Logo"
+                      title="返回首頁"
                     />
                     <span className="font-semibold tracking-tight truncate">
                       {APP_TITLE}
                     </span>
-                  </div>
+                  </Link>
                   <button
                     onClick={toggleSidebar}
                     className="ml-auto h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
@@ -230,20 +273,63 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.filter(item => !item.adminOnly || user?.role === "admin").map(item => {
+              {menuItems.filter(item => {
+                // 沒有canViewAll權限（examinee）不過濾
+                if (!permissions?.canViewAll) return true;
+                // 有canViewAll權限（admin/editor/viewer）需要權限過濾
+                if ('adminOnly' in item && item.adminOnly && user?.role !== "admin") return false;
+                if ('editorOnly' in item && item.editorOnly && user?.role !== "admin" && user?.role !== "editor") return false;
+                return true;
+              }).map(item => {
                 const isActive = location === item.path;
+                const colorClass = item.color || "blue";
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
+                      className={`h-11 transition-all font-normal group relative overflow-hidden ${
+                        isActive 
+                          ? "bg-accent/50 shadow-sm" 
+                          : "hover:bg-accent/30"
+                      }`}
                     >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
+                      {/* 彩色圖示背景 */}
+                      <div 
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm transition-all ${
+                          isActive ? "scale-105" : "group-hover:scale-105"
+                        }`}
+                        style={{
+                          backgroundColor: isActive 
+                            ? `hsl(var(--${colorClass}-500, var(--primary)))`
+                            : `hsl(var(--${colorClass}-100, var(--muted)))`,
+                        }}
+                      >
+                        <item.icon
+                          className={`h-4 w-4 transition-colors ${
+                            isActive 
+                              ? "text-white" 
+                              : `text-${colorClass}-600 dark:text-${colorClass}-700`
+                          }`}
+                          style={{
+                            color: isActive ? "white" : undefined,
+                          }}
+                        />
+                      </div>
+                      <span className={`transition-colors ${
+                        isActive ? "font-medium" : ""
+                      }`}>{item.label}</span>
+                      
+                      {/* 活動指示器 */}
+                      {isActive && (
+                        <div 
+                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full"
+                          style={{
+                            backgroundColor: `hsl(var(--${colorClass}-500, var(--primary)))`,
+                          }}
+                        />
+                      )}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );

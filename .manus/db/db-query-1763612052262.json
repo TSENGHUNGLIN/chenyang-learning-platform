@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO departments (name, description, createdAt, updatedAt) VALUES \n('董事長室', '公司最高決策單位', NOW(), NOW()),\n('管理部', '負責公司行政管理事務', NOW(), NOW()),\n('營業部', '負責業務開發與客戶服務', NOW(), NOW()),\n('設計規劃部', '負責產品設計與規劃', NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute INSERT INTO departments (name, description, createdAt, updatedAt) VALUES \n('董事長室', '公司最高決策單位', NOW(), NOW()),\n('管理部', '負責公司行政管理事務', NOW(), NOW()),\n('營業部', '負責業務開發與客戶服務', NOW(), NOW()),\n('設計規劃部', '負責產品設計與規劃', NOW(), NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2109
+}

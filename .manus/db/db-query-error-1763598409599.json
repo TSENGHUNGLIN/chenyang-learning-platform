@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO tags (name, category, description) VALUES ('AI生成', '題目來源', '由AI自動生成的題目');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute INSERT INTO tags (name, category, description) VALUES ('AI生成', '題目來源', '由AI自動生成的題目');",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1062 (23000) at line 1: Duplicate entry '?' for key 'tags.tags_name_unique'"
+  ]
+}

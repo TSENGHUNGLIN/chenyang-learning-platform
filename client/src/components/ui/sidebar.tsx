@@ -251,7 +251,7 @@ function Sidebar({
         <div
           data-sidebar="sidebar"
           data-slot="sidebar-inner"
-          className="bg-sidebar group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:shadow-sm"
+          className="bg-gradient-to-b from-[oklch(0.99_0_0)] to-[oklch(0.97_0_0)] dark:from-[oklch(0.24_0_0)] dark:to-[oklch(0.20_0_0)] backdrop-blur-xl border-r border-sidebar-border group-data-[variant=floating]:border-sidebar-border flex h-full w-full flex-col group-data-[variant=floating]:rounded-xl group-data-[variant=floating]:border group-data-[variant=floating]:shadow-[var(--shadow-macos-lg)]"
         >
           {children}
         </div>
