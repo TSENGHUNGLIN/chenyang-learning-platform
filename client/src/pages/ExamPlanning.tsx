@@ -41,6 +41,11 @@ export default function ExamPlanning() {
   const [customInterval, setCustomInterval] = useState<number>(1);
   const [customIntervalUnit, setCustomIntervalUnit] = useState<"days" | "weeks">("days");
 
+  // 每張考卷獨立時間設定
+  const [individualExamTimes, setIndividualExamTimes] = useState<Record<number, { startTime: string; deadline: string }>>({});
+  const [selectedExamForTime, setSelectedExamForTime] = useState<number | null>(null);
+  const [useIndividualTimes, setUseIndividualTimes] = useState<boolean>(false);
+
   // 批次資訊
   const [batchName, setBatchName] = useState<string>("");
   const [batchDescription, setBatchDescription] = useState<string>("");
@@ -245,45 +250,43 @@ export default function ExamPlanning() {
       return;
     }
 
-    // 計算每份考卷的開始時間（根據頻率設定）
-    const calculateStartTimes = () => {
-      if (examFrequency === "none" || selectedExamIds.length === 1) {
-        // 不定時考或只有一份考卷：所有考卷使用相同的開始時間
-        return selectedExamIds.map(() => batchStartTime || undefined);
-      }
-
-      const startTimes: (string | undefined)[] = [];
-      const baseDate = batchStartTime ? new Date(batchStartTime) : new Date();
-
-      let intervalDays = 0;
-      if (examFrequency === "daily") {
-        intervalDays = 1;
-      } else if (examFrequency === "weekly") {
-        intervalDays = 7;
-      } else if (examFrequency === "custom") {
-        intervalDays = customIntervalUnit === "weeks" ? customInterval * 7 : customInterval;
-      }
-
-      for (let i = 0; i < selectedExamIds.length; i++) {
-        const examDate = new Date(baseDate);
-        examDate.setDate(examDate.getDate() + (i * intervalDays));
-        startTimes.push(examDate.toISOString().slice(0, 16));
-      }
-
-      return startTimes;
-    };
-
-    const startTimes = calculateStartTimes();
-
     // 建立規劃項目（笛卡爾積：每位考生 × 每份考卷）
     const planningItems = [];
     for (const userId of selectedUserIds) {
       selectedExamIds.forEach((examId, index) => {
+        let startTime: string | undefined;
+        let deadline: string | undefined;
+
+        if (useIndividualTimes && individualExamTimes[examId]) {
+          // 使用獨立時間設定
+          startTime = individualExamTimes[examId].startTime || undefined;
+          deadline = individualExamTimes[examId].deadline || undefined;
+        } else {
+          // 使用批次時間設定（根據頻率計算）
+          if (examFrequency === "none" || selectedExamIds.length === 1) {
+            startTime = batchStartTime || undefined;
+          } else {
+            const baseDate = batchStartTime ? new Date(batchStartTime) : new Date();
+            let intervalDays = 0;
+            if (examFrequency === "daily") {
+              intervalDays = 1;
+            } else if (examFrequency === "weekly") {
+              intervalDays = 7;
+            } else if (examFrequency === "custom") {
+              intervalDays = customIntervalUnit === "weeks" ? customInterval * 7 : customInterval;
+            }
+            const examDate = new Date(baseDate);
+            examDate.setDate(examDate.getDate() + (index * intervalDays));
+            startTime = examDate.toISOString().slice(0, 16);
+          }
+          deadline = batchDeadline || undefined;
+        }
+
         planningItems.push({
           userId,
           examId,
-          startTime: startTimes[index],
-          deadline: batchDeadline || undefined,
+          startTime,
+          deadline,
         });
       });
     }
@@ -610,17 +613,20 @@ export default function ExamPlanning() {
                             {deptEmps.map(emp => (
                               <div
                                 key={emp.id}
-                                className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer ml-2"
-                                onClick={() => handleUserToggle(emp.id)}
+                                className="flex items-center gap-2 p-2 hover:bg-accent rounded-md ml-2"
                               >
                                 <Checkbox
                                   checked={selectedUserIds.includes(emp.id)}
                                   onCheckedChange={() => handleUserToggle(emp.id)}
                                 />
-                                <div className="flex-1 min-w-0">
+                                <label
+                                  htmlFor={`emp-${emp.id}`}
+                                  className="flex-1 min-w-0 cursor-pointer"
+                                  onClick={() => handleUserToggle(emp.id)}
+                                >
                                   <p className="text-sm font-medium truncate">{emp.name || "未命名"}</p>
                                   <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
-                                </div>
+                                </label>
                               </div>
                             ))}
                           </div>
@@ -638,17 +644,20 @@ export default function ExamPlanning() {
                             {unassignedEmps.map(emp => (
                               <div
                                 key={emp.id}
-                                className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer ml-2"
-                                onClick={() => handleUserToggle(emp.id)}
+                                className="flex items-center gap-2 p-2 hover:bg-accent rounded-md ml-2"
                               >
                                 <Checkbox
                                   checked={selectedUserIds.includes(emp.id)}
                                   onCheckedChange={() => handleUserToggle(emp.id)}
                                 />
-                                <div className="flex-1 min-w-0">
+                                <label
+                                  htmlFor={`emp-${emp.id}`}
+                                  className="flex-1 min-w-0 cursor-pointer"
+                                  onClick={() => handleUserToggle(emp.id)}
+                                >
                                   <p className="text-sm font-medium truncate">{emp.name || "未命名"}</p>
                                   <p className="text-xs text-muted-foreground truncate">{emp.email}</p>
-                                </div>
+                                </label>
                               </div>
                             ))}
                           </div>
@@ -754,20 +763,23 @@ export default function ExamPlanning() {
                       filteredExams.map(exam => (
                         <div
                           key={exam.id}
-                          className="flex items-center gap-3 p-3 hover:bg-accent rounded-md cursor-pointer border"
-                          onClick={() => handleExamToggle(exam.id)}
+                          className="flex items-center gap-3 p-3 hover:bg-accent rounded-md border"
                         >
                           <Checkbox
                             checked={selectedExamIds.includes(exam.id)}
                             onCheckedChange={() => handleExamToggle(exam.id)}
                           />
-                          <div className="flex-1 min-w-0">
+                          <label
+                            htmlFor={`exam-${exam.id}`}
+                            className="flex-1 min-w-0 cursor-pointer"
+                            onClick={() => handleExamToggle(exam.id)}
+                          >
                             <p className="text-sm font-medium">{exam.title}</p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {exam.timeLimit ? `${exam.timeLimit} 分鐘` : "不限時"} · 
                               及格分數 {exam.passingScore}
                             </p>
-                          </div>
+                          </label>
                         </div>
                       ))
                     )}
@@ -837,6 +849,30 @@ export default function ExamPlanning() {
               />
             </div>
 
+            {/* 時間設定模式切換 */}
+            {selectedExamIds.length > 0 && (
+              <div className="space-y-2">
+                <Label>時間設定模式</Label>
+                <RadioGroup
+                  value={useIndividualTimes ? "individual" : "batch"}
+                  onValueChange={(v) => setUseIndividualTimes(v === "individual")}
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="batch" id="time-batch" />
+                    <Label htmlFor="time-batch" className="font-normal cursor-pointer">
+                      批次設定（所有考卷使用相同時間）
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="individual" id="time-individual" />
+                    <Label htmlFor="time-individual" className="font-normal cursor-pointer">
+                      逐一設定（為每張考卷獨立設定時間）
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+
             {/* 批次說明 */}
             <div>
               <Label htmlFor="batch-desc">批次說明（可選）</Label>
@@ -850,102 +886,209 @@ export default function ExamPlanning() {
               />
             </div>
 
-            {/* 開始時間 */}
-            <div>
-              <Label htmlFor="start-time">開始時間（可選）</Label>
-              <Input
-                id="start-time"
-                type="datetime-local"
-                value={batchStartTime}
-                onChange={(e) => setBatchStartTime(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-
-            {/* 截止時間 */}
-            <div>
-              <Label htmlFor="deadline">截止時間（可選）</Label>
-              <Input
-                id="deadline"
-                type="datetime-local"
-                value={batchDeadline}
-                onChange={(e) => setBatchDeadline(e.target.value)}
-                className="mt-2"
-              />
-            </div>
-
-            {/* 考試頻率設定 */}
-            <div className="space-y-3 pt-2 border-t">
-              <div>
-                <Label>考試頻率設定</Label>
-                <p className="text-xs text-muted-foreground mt-1">
-                  適用於多份考卷的間隔安排
-                </p>
-              </div>
-              <RadioGroup value={examFrequency} onValueChange={(v) => setExamFrequency(v as any)}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="none" id="freq-none" />
-                  <Label htmlFor="freq-none" className="font-normal cursor-pointer">
-                    不定時考（所有考卷同時開放）
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="daily" id="freq-daily" />
-                  <Label htmlFor="freq-daily" className="font-normal cursor-pointer">
-                    每日考（每天開放一份考卷）
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="weekly" id="freq-weekly" />
-                  <Label htmlFor="freq-weekly" className="font-normal cursor-pointer">
-                    每週考（每週開放一份考卷）
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="custom" id="freq-custom" />
-                  <Label htmlFor="freq-custom" className="font-normal cursor-pointer">
-                    自訂間隔
-                  </Label>
-                </div>
-              </RadioGroup>
-
-              {/* 自訂間隔設定 */}
-              {examFrequency === "custom" && (
-                <div className="flex gap-2 items-center pl-6">
-                  <Label className="text-sm">每</Label>
+            {/* 批次時間設定 */}
+            {!useIndividualTimes && (
+              <>
+                {/* 開始時間 */}
+                <div>
+                  <Label htmlFor="start-time">開始時間（可選）</Label>
                   <Input
-                    type="number"
-                    min="1"
-                    value={customInterval}
-                    onChange={(e) => setCustomInterval(parseInt(e.target.value) || 1)}
-                    className="w-20"
+                    id="start-time"
+                    type="datetime-local"
+                    value={batchStartTime}
+                    onChange={(e) => setBatchStartTime(e.target.value)}
+                    className="mt-2"
                   />
-                  <Select value={customIntervalUnit} onValueChange={(v) => setCustomIntervalUnit(v as any)}>
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="days">天</SelectItem>
-                      <SelectItem value="weeks">週</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Label className="text-sm">開放一份</Label>
                 </div>
-              )}
 
-              {/* 智能建議 */}
-              {selectedExamIds.length > 1 && (
-                <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
-                    <AlertCircle className="w-3 h-3 inline mr-1" />
-                    <strong>智能建議：</strong>
-                    {selectedExamIds.length <= 5 && "建議使用「每日考」或「不定時考」"}
-                    {selectedExamIds.length > 5 && selectedExamIds.length <= 20 && "建議使用「每週考」或每 2-3 天一份"}
-                    {selectedExamIds.length > 20 && "建議使用「每週考」以避免考生負擔過重"}
+                {/* 截止時間 */}
+                <div>
+                  <Label htmlFor="deadline">截止時間（可選）</Label>
+                  <Input
+                    id="deadline"
+                    type="datetime-local"
+                    value={batchDeadline}
+                    onChange={(e) => setBatchDeadline(e.target.value)}
+                    className="mt-2"
+                  />
+                </div>
+
+                {/* 考試頻率設定 */}
+                <div className="space-y-3 pt-2 border-t">
+                  <div>
+                    <Label>考試頻率設定</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      適用於多份考卷的間隔安排
+                    </p>
+                  </div>
+                  <RadioGroup value={examFrequency} onValueChange={(v) => setExamFrequency(v as any)}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="none" id="freq-none" />
+                      <Label htmlFor="freq-none" className="font-normal cursor-pointer">
+                        不定時考（所有考卷同時開放）
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="daily" id="freq-daily" />
+                      <Label htmlFor="freq-daily" className="font-normal cursor-pointer">
+                        每日考（每天開放一份考卷）
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="weekly" id="freq-weekly" />
+                      <Label htmlFor="freq-weekly" className="font-normal cursor-pointer">
+                        每週考（每週開放一份考卷）
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="custom" id="freq-custom" />
+                      <Label htmlFor="freq-custom" className="font-normal cursor-pointer">
+                        自訂間隔
+                      </Label>
+                    </div>
+                  </RadioGroup>
+
+                  {/* 自訂間隔設定 */}
+                  {examFrequency === "custom" && (
+                    <div className="flex gap-2 items-center pl-6">
+                      <Label className="text-sm">每</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={customInterval}
+                        onChange={(e) => setCustomInterval(parseInt(e.target.value) || 1)}
+                        className="w-20"
+                      />
+                      <Select value={customIntervalUnit} onValueChange={(v) => setCustomIntervalUnit(v as any)}>
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="days">天</SelectItem>
+                          <SelectItem value="weeks">週</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Label className="text-sm">開放一份</Label>
+                    </div>
+                  )}
+
+                  {/* 智能建議 */}
+                  {selectedExamIds.length > 1 && (
+                    <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
+                      <p className="text-xs text-blue-700 dark:text-blue-300">
+                        <AlertCircle className="w-3 h-3 inline mr-1" />
+                        <strong>智能建議：</strong>
+                        {selectedExamIds.length <= 5 && "建議使用「每日考」或「不定時考」"}
+                        {selectedExamIds.length > 5 && selectedExamIds.length <= 20 && "建議使用「每週考」或每 2-3 天一份"}
+                        {selectedExamIds.length > 20 && "建議使用「每週考」以避免考生負擔過重"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* 逐一設定時間 */}
+            {useIndividualTimes && selectedExamIds.length > 0 && (
+              <div className="space-y-3 pt-2 border-t">
+                <div>
+                  <Label>選擇考卷設定時間</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    從下拉選單中選擇考卷，為其設定開始時間和截止時間
                   </p>
                 </div>
-              )}
-            </div>
+                <Select
+                  value={selectedExamForTime?.toString() || ""}
+                  onValueChange={(v) => setSelectedExamForTime(Number(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="選擇考卷" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedExamIds.map(examId => {
+                      const exam = exams?.find(e => e.id === examId);
+                      if (!exam) return null;
+                      const hasTime = individualExamTimes[examId];
+                      return (
+                        <SelectItem key={examId} value={examId.toString()}>
+                          {exam.title} {hasTime && hasTime.startTime ? "✓" : ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+
+                {/* 為選中的考卷設定時間 */}
+                {selectedExamForTime && (
+                  <div className="space-y-3 p-3 border rounded-md bg-accent/20">
+                    <p className="text-sm font-medium">
+                      {exams?.find(e => e.id === selectedExamForTime)?.title}
+                    </p>
+                    <div>
+                      <Label htmlFor="individual-start">開始時間</Label>
+                      <Input
+                        id="individual-start"
+                        type="datetime-local"
+                        value={individualExamTimes[selectedExamForTime]?.startTime || ""}
+                        onChange={(e) => {
+                          setIndividualExamTimes(prev => ({
+                            ...prev,
+                            [selectedExamForTime]: {
+                              ...prev[selectedExamForTime],
+                              startTime: e.target.value,
+                              deadline: prev[selectedExamForTime]?.deadline || "",
+                            },
+                          }));
+                        }}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="individual-deadline">截止時間</Label>
+                      <Input
+                        id="individual-deadline"
+                        type="datetime-local"
+                        value={individualExamTimes[selectedExamForTime]?.deadline || ""}
+                        onChange={(e) => {
+                          setIndividualExamTimes(prev => ({
+                            ...prev,
+                            [selectedExamForTime]: {
+                              startTime: prev[selectedExamForTime]?.startTime || "",
+                              deadline: e.target.value,
+                            },
+                          }));
+                        }}
+                        className="mt-2"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 已設定時間的考卷清單 */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">已設定時間的考卷：</p>
+                  {selectedExamIds.filter(id => individualExamTimes[id]?.startTime).length === 0 ? (
+                    <p className="text-xs text-muted-foreground">尚未設定任何考卷的時間</p>
+                  ) : (
+                    <div className="space-y-1 text-xs">
+                      {selectedExamIds.map(examId => {
+                        const exam = exams?.find(e => e.id === examId);
+                        const times = individualExamTimes[examId];
+                        if (!times?.startTime) return null;
+                        return (
+                          <div key={examId} className="flex items-center justify-between p-2 bg-accent/30 rounded">
+                            <span className="truncate flex-1">{exam?.title}</span>
+                            <span className="text-muted-foreground ml-2">
+                              {times.startTime ? new Date(times.startTime).toLocaleString("zh-TW", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* 規劃摘要 */}
             <div className="bg-muted p-4 rounded-md space-y-2">
