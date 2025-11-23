@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +26,7 @@ export default function ExamTake() {
   // 狀態管理
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [multipleAnswers, setMultipleAnswers] = useState<Record<number, string[]>>({});  // 複選題答案
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,10 +77,19 @@ export default function ExamTake() {
   useEffect(() => {
     if (submissions && submissions.length > 0) {
       const savedAnswers: Record<number, string> = {};
+      const savedMultipleAnswers: Record<number, string[]> = {};
+      
       submissions.forEach((sub: any) => {
         savedAnswers[sub.questionId] = sub.answer;
+        
+        // 如果是複選題，解析逗號分隔的答案
+        if (sub.answer && sub.answer.includes(',')) {
+          savedMultipleAnswers[sub.questionId] = sub.answer.split(',').filter((a: string) => a.trim());
+        }
       });
+      
       setAnswers(savedAnswers);
+      setMultipleAnswers(savedMultipleAnswers);
       savedAnswersRef.current = savedAnswers;
     }
 
@@ -86,6 +97,16 @@ export default function ExamTake() {
     const offlineAnswers = loadOfflineAnswers();
     if (offlineAnswers && Object.keys(offlineAnswers).length > 0) {
       setAnswers(prev => ({ ...prev, ...offlineAnswers }));
+      
+      // 解析複選題答案
+      const offlineMultipleAnswers: Record<number, string[]> = {};
+      Object.entries(offlineAnswers).forEach(([qId, answer]) => {
+        if (answer && answer.includes(',')) {
+          offlineMultipleAnswers[parseInt(qId)] = answer.split(',').filter(a => a.trim());
+        }
+      });
+      setMultipleAnswers(prev => ({ ...prev, ...offlineMultipleAnswers }));
+      
       toast.info("已載入離線暫存的答案");
     }
   }, [submissions]);
@@ -270,6 +291,30 @@ export default function ExamTake() {
   // 處理答案改變
   const handleAnswerChange = (questionId: number, answer: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
+  };
+
+  // 處理複選題答案改變
+  const handleMultipleAnswerChange = (questionId: number, option: string, checked: boolean) => {
+    setMultipleAnswers(prev => {
+      const current = prev[questionId] || [];
+      let newAnswers: string[];
+      
+      if (checked) {
+        // 新增選項
+        newAnswers = [...current, option].sort();
+      } else {
+        // 移除選項
+        newAnswers = current.filter(a => a !== option);
+      }
+      
+      // 同時更新 answers（將陣列轉為逗號分隔的字串）
+      setAnswers(prevAnswers => ({
+        ...prevAnswers,
+        [questionId]: newAnswers.join(',')
+      }));
+      
+      return { ...prev, [questionId]: newAnswers };
+    });
   };
 
   // 切換標記待檢查
@@ -508,7 +553,8 @@ export default function ExamTake() {
               </div>
               <CardDescription>
                 {currentQuestion.question.type === 'true_false' && '是非題'}
-                {currentQuestion.question.type === 'multiple_choice' && '選擇題'}
+                {currentQuestion.question.type === 'multiple_choice' && '單選題'}
+                {currentQuestion.question.type === 'multiple_answer' && '複選題'}
                 {currentQuestion.question.type === 'short_answer' && '問答題'}
                 {' · '}
                 {currentQuestion.points} 分
@@ -534,7 +580,7 @@ export default function ExamTake() {
                 </RadioGroup>
               )}
 
-              {/* 選擇題 */}
+              {/* 單選題 */}
               {currentQuestion.question.type === 'multiple_choice' && currentQuestion.question.options && (() => {
                 try {
                   const parsedOptions = JSON.parse(currentQuestion.question.options);
@@ -554,6 +600,38 @@ export default function ExamTake() {
                         </div>
                       ))}
                     </RadioGroup>
+                  );
+                } catch (error) {
+                  console.error('解析選項時發生錯誤:', error);
+                  return <p className="text-red-500">選項格式錯誤，請聯繫管理員</p>;
+                }
+              })()}
+
+              {/* 複選題 */}
+              {currentQuestion.question.type === 'multiple_answer' && currentQuestion.question.options && (() => {
+                try {
+                  const parsedOptions = JSON.parse(currentQuestion.question.options);
+                  const optionsArray = Array.isArray(parsedOptions) ? parsedOptions : Object.values(parsedOptions);
+                  const currentAnswers = multipleAnswers[currentQuestion.questionId] || [];
+                  
+                  return (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">請選擇所有正確的選項（可複選）</p>
+                      {optionsArray.map((option: any) => (
+                        <div key={option.label} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`checkbox-${option.label}`}
+                            checked={currentAnswers.includes(option.label)}
+                            onCheckedChange={(checked) => 
+                              handleMultipleAnswerChange(currentQuestion.questionId, option.label, checked as boolean)
+                            }
+                          />
+                          <Label htmlFor={`checkbox-${option.label}`} className="cursor-pointer">
+                            {option.label}. {option.value}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   );
                 } catch (error) {
                   console.error('解析選項時發生錯誤:', error);

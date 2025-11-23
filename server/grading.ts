@@ -51,6 +51,9 @@ export async function gradeQuestion(
     case "multiple_choice":
       return gradeObjectiveQuestion(studentAnswer, correctAnswer, maxScore);
     
+    case "multiple_answer":
+      return gradeMultipleAnswerQuestion(studentAnswer, correctAnswer, maxScore);
+    
     case "short_answer":
       return await gradeEssayQuestion(
         question.question,
@@ -84,6 +87,29 @@ function normalizeTrueFalseAnswer(answer: string): string {
   
   // 如果不在以上列表中，返回原始值
   return normalized;
+}
+
+/**
+ * 評分複選題（必須完全正確才給分）
+ */
+function gradeMultipleAnswerQuestion(
+  studentAnswer: string,
+  correctAnswer: string,
+  maxScore: number
+): GradingResult {
+  // 解析學生答案和正確答案（逗號分隔）
+  const studentAnswers = studentAnswer.split(',').map(a => a.trim().toLowerCase()).filter(a => a).sort();
+  const correctAnswers = correctAnswer.split(',').map(a => a.trim().toLowerCase()).filter(a => a).sort();
+  
+  // 比對陣列是否完全相同
+  const isCorrect = 
+    studentAnswers.length === correctAnswers.length &&
+    studentAnswers.every((ans, idx) => ans === correctAnswers[idx]);
+  
+  return {
+    isCorrect,
+    score: isCorrect ? maxScore : 0,
+  };
 }
 
 /**

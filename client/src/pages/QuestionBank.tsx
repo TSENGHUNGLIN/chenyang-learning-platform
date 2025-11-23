@@ -35,7 +35,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useAuth } from "@/_core/hooks/useAuth";
 
-type QuestionType = "true_false" | "multiple_choice" | "short_answer";
+type QuestionType = "true_false" | "multiple_choice" | "multiple_answer" | "short_answer";
 type Difficulty = "easy" | "medium" | "hard";
 
 export default function QuestionBank() {
@@ -340,8 +340,8 @@ export default function QuestionBank() {
       return;
     }
 
-    // 驗證選項格式（僅選擇題）
-    if (formData.type === 'multiple_choice' && formData.options) {
+    // 驗證選項格式（僅選擇題和複選題）
+    if ((formData.type === 'multiple_choice' || formData.type === 'multiple_answer') && formData.options) {
       try {
         const parsedOptions = JSON.parse(formData.options);
         
@@ -400,8 +400,8 @@ export default function QuestionBank() {
   const handleEdit = async () => {
     if (!editingQuestion) return;
 
-    // 驗證選項格式（僅選擇題）
-    if (formData.type === 'multiple_choice' && formData.options) {
+    // 驗證選項格式（僅選擇題和複選題）
+    if ((formData.type === 'multiple_choice' || formData.type === 'multiple_answer') && formData.options) {
       try {
         const parsedOptions = JSON.parse(formData.options);
         
@@ -559,7 +559,9 @@ export default function QuestionBank() {
       case "true_false":
         return "是非題";
       case "multiple_choice":
-        return "選擇題";
+        return "單選題";
+      case "multiple_answer":
+        return "複選題";
       case "short_answer":
         return "問答題";
       default:
@@ -629,6 +631,7 @@ export default function QuestionBank() {
     // 按題型分類
     const questionsByType: Record<string, any[]> = {
       true_false: [],
+      multiple_answer: [],
       multiple_choice: [],
       short_answer: []
     };
@@ -762,7 +765,7 @@ export default function QuestionBank() {
             題庫管理
           </h1>
           <p className="text-muted-foreground mt-2">
-            管理考核題庫，支援是非題、選擇題、問答題
+            管理考核題庫，支援是非題、單選題、複選題、問答題
           </p>
         </div>        <div className="flex gap-2">
           <Button variant="outline" onClick={downloadTemplate}>
@@ -846,7 +849,8 @@ export default function QuestionBank() {
                 <SelectContent>
                   <SelectItem value="all">所有類型</SelectItem>
                   <SelectItem value="true_false">是非題</SelectItem>
-                  <SelectItem value="multiple_choice">選擇題</SelectItem>
+                  <SelectItem value="multiple_choice">單選題</SelectItem>
+                  <SelectItem value="multiple_answer">複選題</SelectItem>
                   <SelectItem value="short_answer">問答題</SelectItem>
                 </SelectContent>
               </Select>
@@ -1054,7 +1058,8 @@ export default function QuestionBank() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="true_false">是非題</SelectItem>
-                    <SelectItem value="multiple_choice">選擇題</SelectItem>
+                    <SelectItem value="multiple_choice">單選題</SelectItem>
+                    <SelectItem value="multiple_answer">複選題</SelectItem>
                     <SelectItem value="short_answer">問答題</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1093,7 +1098,7 @@ export default function QuestionBank() {
                 rows={4}
               />
             </div>
-            {formData.type === "multiple_choice" && (
+            {(formData.type === "multiple_choice" || formData.type === "multiple_answer") && (
               <div className="space-y-2">
                 <Label>選項（JSON格式）</Label>
                 <Textarea
@@ -1179,7 +1184,8 @@ export default function QuestionBank() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="true_false">是非題</SelectItem>
-                    <SelectItem value="multiple_choice">選擇題</SelectItem>
+                    <SelectItem value="multiple_choice">單選題</SelectItem>
+                    <SelectItem value="multiple_answer">複選題</SelectItem>
                     <SelectItem value="short_answer">問答題</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1218,7 +1224,7 @@ export default function QuestionBank() {
                 rows={4}
               />
             </div>
-            {formData.type === "multiple_choice" && (
+            {(formData.type === "multiple_choice" || formData.type === "multiple_answer") && (
               <div className="space-y-2">
                 <Label>選項（JSON格式）</Label>
                 <Textarea

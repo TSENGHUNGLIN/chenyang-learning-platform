@@ -1,0 +1,1 @@
+ALTER TABLE `questions` MODIFY COLUMN `type` enum('true_false','multiple_choice','multiple_answer','short_answer') NOT NULL;

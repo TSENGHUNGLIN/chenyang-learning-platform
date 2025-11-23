@@ -155,7 +155,7 @@ export type InsertQuestionTag = typeof questionTags.$inferInsert;
 export const questions = mysqlTable("questions", {
   id: int("id").autoincrement().primaryKey(),
   categoryId: int("categoryId"),
-  type: mysqlEnum("type", ["true_false", "multiple_choice", "short_answer"]).notNull(),
+  type: mysqlEnum("type", ["true_false", "multiple_choice", "multiple_answer", "short_answer"]).notNull(),
   difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).notNull(),
   question: text("question").notNull(),
   options: text("options"), // JSON格式儲存選項（僅選擇題使用）

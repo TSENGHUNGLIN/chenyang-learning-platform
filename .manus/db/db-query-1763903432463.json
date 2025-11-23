@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE questions MODIFY COLUMN type ENUM('true_false', 'multiple_choice', 'multiple_answer', 'short_answer') NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute ALTER TABLE questions MODIFY COLUMN type ENUM('true_false', 'multiple_choice', 'multiple_answer', 'short_answer') NOT NULL;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2010
+}

@@ -27,13 +27,13 @@ interface AnalysisResult {
   questionsOnly?: Array<{
     number: number;
     question: string;
-    type: "是非題" | "選擇題" | "問答題";
+    type: "是非題" | "單選題" | "複選題" | "問答題";
     options?: string[];
   }>;
   questionsWithAnswers?: Array<{
     number: number;
     question: string;
-    type: "是非題" | "選擇題" | "問答題";
+    type: "是非題" | "單選題" | "複選題" | "問答題";
     options?: string[];
     answer: string;
     explanation?: string;
@@ -240,7 +240,21 @@ export default function AnalysisResultView({ result }: AnalysisResultViewProps) 
                     <span className="font-bold text-lg text-primary">{q.number}.</span>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{q.type}</Badge>
+                        <Badge 
+                          variant="outline"
+                          className={
+                            q.type === "複選題" 
+                              ? "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900 dark:text-purple-200" 
+                              : ""
+                          }
+                        >
+                          {q.type}
+                        </Badge>
+                        {q.type === "複選題" && (
+                          <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                            • 可複選
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm mb-2">{q.question}</p>
                       {q.options && q.options.length > 0 && (
@@ -279,7 +293,21 @@ export default function AnalysisResultView({ result }: AnalysisResultViewProps) 
                     <span className="font-bold text-lg text-primary">{q.number}.</span>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline">{q.type}</Badge>
+                        <Badge 
+                          variant="outline"
+                          className={
+                            q.type === "複選題" 
+                              ? "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900 dark:text-purple-200" 
+                              : ""
+                          }
+                        >
+                          {q.type}
+                        </Badge>
+                        {q.type === "複選題" && (
+                          <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">
+                            • 可複選
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm mb-2 font-medium">{q.question}</p>
                       {q.options && q.options.length > 0 && (
