@@ -99,31 +99,17 @@ export default function Home() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* 頁面標題區塊 - 蘋果風格 + 晨陽 LOGO */}
-        <div className="flex items-center gap-6">
-          {/* 晨陽 LOGO */}
-          <div className="flex-shrink-0">
-            <img 
-              src="/chenyang-logo.jpeg" 
-              alt="晨陽 LOGO" 
-              className="h-24 w-24 object-contain rounded-lg shadow-md"
-            />
-          </div>
-          
-          {/* 歡迎訊息 */}
-          {pageConfig && (
-            <div className="flex-1">
-              <PageHeader
-                title={`歡迎回來，${user?.name || "使用者"}`}
-                description="晨陽學習成長評核分析"
-                icon={pageConfig.icon}
-                color={pageConfig.color}
-                bgGradient={pageConfig.bgGradient}
-                breadcrumbs={pageConfig.breadcrumbs}
-              />
-            </div>
-          )}
-        </div>
+        {/* 頁面標題區塊 - 蘋果風格 */}
+        {pageConfig && (
+          <PageHeader
+            title={`歡迎回來，${user?.name || "使用者"}`}
+            description="晨陽學習成長評核分析"
+            icon={pageConfig.icon}
+            color={pageConfig.color}
+            bgGradient={pageConfig.bgGradient}
+            breadcrumbs={pageConfig.breadcrumbs}
+          />
+        )}
 
         {/* 統計卡片 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
