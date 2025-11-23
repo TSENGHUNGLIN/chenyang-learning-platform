@@ -988,9 +988,11 @@ export default function ExamPlanning() {
             </div>
 
             {/* 時間設定模式切換 */}
-            {selectedExamIds.length > 0 && (
-              <div className="space-y-2">
-                <Label>時間設定模式</Label>
+            <div className="space-y-2">
+              <Label>時間設定模式</Label>
+              {selectedExamIds.length === 0 ? (
+                <p className="text-sm text-muted-foreground mt-2">請先選擇考卷</p>
+              ) : (
                 <RadioGroup
                   value={useIndividualTimes ? "individual" : "batch"}
                   onValueChange={(v) => setUseIndividualTimes(v === "individual")}
@@ -1008,8 +1010,8 @@ export default function ExamPlanning() {
                     </Label>
                   </div>
                 </RadioGroup>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* 批次說明 */}
             <div>
