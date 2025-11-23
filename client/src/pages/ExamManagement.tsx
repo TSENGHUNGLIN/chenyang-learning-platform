@@ -57,7 +57,7 @@ export default function ExamManagement() {
               <div>
                 <h2 className="text-2xl font-bold text-white mb-3">考試列表</h2>
                 <p className="text-blue-50 text-sm leading-relaxed">
-                  查看、編輯、管理所有考卷
+                  查看、編輯、管理所有考卷，指派考試
                 </p>
               </div>
 
@@ -80,6 +80,10 @@ export default function ExamManagement() {
                   <li className="flex items-start gap-2">
                     <span className="text-white mt-0.5">•</span>
                     <span>刪除考試、批次操作</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-white mt-0.5">•</span>
+                    <span>小規模指派考試</span>
                   </li>
                 </ul>
               </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ export default function ExamList() {
   const [selectedExam, setSelectedExam] = useState<any | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedDepartments, setExpandedDepartments] = useState<Set<number>>(new Set());
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewExamId, setPreviewExamId] = useState<number>(0);
   const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
@@ -66,6 +67,81 @@ export default function ExamList() {
   
   // 根據角色選擇使用者列表
   const users = user?.role === "editor" ? accessibleUsersData : allUsersData;
+  
+  // 查詢部門和員工資料（用於按部門分組）
+  const { data: departments } = trpc.departments.list.useQuery();
+  const { data: employees } = trpc.employees.list.useQuery();
+  
+  // 按部門分組員工
+  const employeesByDepartment = useMemo(() => {
+    if (!employees || !departments) return {};
+    
+    const grouped: Record<number, typeof employees> = {};
+    
+    // 初始化每個部門的空陣列
+    departments.forEach(dept => {
+      grouped[dept.id] = [];
+    });
+    // 未分配部門
+    grouped[0] = [];
+    
+    // 將員工分配到對應的部門
+    employees.forEach(emp => {
+      const deptId = emp.departmentId || 0;
+      if (grouped[deptId]) {
+        grouped[deptId].push(emp);
+      } else {
+        grouped[0].push(emp);
+      }
+    });
+    
+    return grouped;
+  }, [employees, departments]);
+  
+  // 篩選員工（根據搜尋）
+  const filteredEmployeesByDepartment = useMemo(() => {
+    if (!searchQuery) return employeesByDepartment;
+    
+    const filtered: Record<number, typeof employees> = {};
+    
+    Object.entries(employeesByDepartment).forEach(([deptId, emps]) => {
+      const filteredEmps = (emps || []).filter(emp =>
+        emp.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        emp.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      if (filteredEmps.length > 0) {
+        filtered[Number(deptId)] = filteredEmps;
+      }
+    });
+    
+    return filtered;
+  }, [employeesByDepartment, searchQuery]);
+  
+  // 切換部門展開/收合
+  const toggleDepartment = (deptId: number) => {
+    setExpandedDepartments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(deptId)) {
+        newSet.delete(deptId);
+      } else {
+        newSet.add(deptId);
+      }
+      return newSet;
+    });
+  };
+  
+  // 全選/取消全選部門員工
+  const toggleSelectAllInDepartment = (deptId: number) => {
+    const deptEmployees = filteredEmployeesByDepartment[deptId] || [];
+    const deptEmployeeIds = deptEmployees.map(e => e.id);
+    const allSelected = deptEmployeeIds.every(id => selectedUserIds.includes(id));
+    
+    if (allSelected) {
+      setSelectedUserIds(prev => prev.filter(id => !deptEmployeeIds.includes(id)));
+    } else {
+      setSelectedUserIds(prev => [...new Set([...prev, ...deptEmployeeIds])]);
+    }
+  };
   
   // 建立考試
   const createExamMutation = trpc.exams.create.useMutation({
@@ -185,6 +261,12 @@ export default function ExamList() {
   const handleAssign = (exam: any) => {
     setSelectedExam(exam);
     setShowAssignDialog(true);
+    // 預設展開所有部門
+    if (departments) {
+      const allDeptIds = departments.map(d => d.id);
+      allDeptIds.push(0); // 加入未分配部門
+      setExpandedDepartments(new Set(allDeptIds));
+    }
   };
   
   const handleBatchAssign = () => {
@@ -205,6 +287,14 @@ export default function ExamList() {
       prev.includes(userId) 
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
+    );
+  };
+  
+  const toggleEmployeeSelection = (employeeId: number) => {
+    setSelectedUserIds(prev => 
+      prev.includes(employeeId) 
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
     );
   };
   
@@ -579,7 +669,7 @@ export default function ExamList() {
             <div className="space-y-4 py-4">
               {/* 搜尋欄 */}
               <div className="space-y-2">
-                <Label htmlFor="search">搜尋使用者</Label>
+                <Label htmlFor="search">搜尋員工</Label>
                 <Input
                   id="search"
                   placeholder="輸入姓名或電子郵件..."
@@ -588,59 +678,92 @@ export default function ExamList() {
                 />
               </div>
               
-              {/* 全選/取消全選 */}
+              {/* 統計資訊 */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
-                  已選擇 {selectedUserIds.length} 位考生
+                  已選擇 {selectedUserIds.length} 位員工
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleSelectAll}
-                >
-                  {selectedUserIds.length === (users?.filter(u => 
-                    u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    u.email?.toLowerCase().includes(searchQuery.toLowerCase())
-                  ).length || 0) ? "取消全選" : "全選"}
-                </Button>
               </div>
               
-              {/* 使用者列表 */}
-              <div className="border rounded-lg divide-y max-h-96 overflow-y-auto">
-                {users?.filter(u => 
-                  u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  u.email?.toLowerCase().includes(searchQuery.toLowerCase())
-                ).map((user: any) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
-                    onClick={() => toggleUserSelection(user.id)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedUserIds.includes(user.id)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        toggleUserSelection(user.id);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-4 w-4 cursor-pointer"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium">{user.name || "未設定姓名"}</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+              {/* 按部門分組的員工列表 */}
+              <div className="border rounded-lg max-h-[500px] overflow-y-auto">
+                {departments && Object.entries(filteredEmployeesByDepartment).map(([deptId, emps]) => {
+                  const deptIdNum = Number(deptId);
+                  const dept = departments.find(d => d.id === deptIdNum);
+                  const deptName = deptIdNum === 0 ? "未分配部門" : (dept?.name || "未知部門");
+                  const isExpanded = expandedDepartments.has(deptIdNum);
+                  const deptEmployeeIds = (emps || []).map(e => e.id);
+                  const allSelected = deptEmployeeIds.length > 0 && deptEmployeeIds.every(id => selectedUserIds.includes(id));
+                  const someSelected = deptEmployeeIds.some(id => selectedUserIds.includes(id)) && !allSelected;
+                  
+                  return (
+                    <div key={deptId} className="border-b last:border-b-0">
+                      {/* 部門標題 */}
+                      <div 
+                        className="flex items-center gap-3 p-3 bg-muted/30 hover:bg-muted/50 cursor-pointer"
+                        onClick={() => toggleDepartment(deptIdNum)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = someSelected;
+                          }}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            toggleSelectAllInDepartment(deptIdNum);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-4 w-4 cursor-pointer"
+                        />
+                        <div className="flex-1 flex items-center gap-2">
+                          <span className="font-medium">{deptName}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {(emps || []).length} 人
+                          </Badge>
+                        </div>
+                        <span className="text-muted-foreground">
+                          {isExpanded ? "▼" : "▶"}
+                        </span>
+                      </div>
+                      
+                      {/* 部門員工列表 */}
+                      {isExpanded && (
+                        <div className="divide-y">
+                          {(emps || []).map((emp: any) => (
+                            <div
+                              key={emp.id}
+                              className="flex items-center gap-3 p-3 pl-10 hover:bg-muted/30 cursor-pointer"
+                              onClick={() => toggleEmployeeSelection(emp.id)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedUserIds.includes(emp.id)}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  toggleEmployeeSelection(emp.id);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-4 w-4 cursor-pointer"
+                              />
+                              <div className="flex-1">
+                                <p className="font-medium">{emp.name || "未設定姓名"}</p>
+                                {emp.email && (
+                                  <p className="text-sm text-muted-foreground">{emp.email}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <Badge variant="outline">{user.role}</Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
-              {users?.filter(u => 
-                u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                u.email?.toLowerCase().includes(searchQuery.toLowerCase())
-              ).length === 0 && (
+              {Object.keys(filteredEmployeesByDepartment).length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  沒有找到符合條件的使用者
+                  沒有找到符合條件的員工
                 </div>
               )}
             </div>
@@ -656,7 +779,7 @@ export default function ExamList() {
                 onClick={handleBatchAssign} 
                 disabled={batchAssignMutation.isPending || selectedUserIds.length === 0}
               >
-                {batchAssignMutation.isPending ? "指派中..." : `指派 ${selectedUserIds.length} 位考生`}
+                {batchAssignMutation.isPending ? "指派中..." : `指派 ${selectedUserIds.length} 位員工`}
               </Button>
             </DialogFooter>
           </DialogContent>

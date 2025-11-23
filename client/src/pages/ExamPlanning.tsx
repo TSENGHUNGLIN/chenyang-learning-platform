@@ -137,7 +137,8 @@ export default function ExamPlanning() {
   const filteredUsers = useMemo(() => {
     if (!users) return [];
 
-    let filtered = users.filter(u => u.role === "examinee");
+    // 顯示所有非管理員的使用者（包括 examinee, editor, viewer）
+    let filtered = users.filter(u => u.role !== "admin");
 
     if (userSearch) {
       filtered = filtered.filter(u =>
@@ -200,7 +201,8 @@ export default function ExamPlanning() {
       );
     }
 
-    return exams.filter(e => e.status === "published");
+    // 顯示所有已發布和草稿狀態的考卷（不顯示已封存的）
+    return exams.filter(e => e.status === "published" || e.status === "draft");
   }, [exams, examSearch]);
 
   // 處理部門選擇
