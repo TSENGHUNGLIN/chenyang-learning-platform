@@ -2027,6 +2027,24 @@ ${file.extractedText || "無法提取文字內容"}`
       const { getAllQuestionBanks } = await import("./questionBanks");
       return await getAllQuestionBanks();
     }),
+    getTitles: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getDb } = await import("./db");
+      const db = await getDb();
+      if (!db) return [];
+      const { questionBanks } = await import("../drizzle/schema");
+      const result = await db
+        .select({
+          id: questionBanks.id,
+          name: questionBanks.name,
+        })
+        .from(questionBanks)
+        .orderBy(questionBanks.createdAt);
+      return result;
+    }),
     getById: protectedProcedure
       .input(z.number())
       .query(async ({ input, ctx }) => {

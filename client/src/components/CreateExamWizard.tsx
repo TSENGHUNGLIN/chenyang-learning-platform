@@ -79,6 +79,9 @@ export default function CreateExamWizard({
   // 查詢所有題庫檔案
   const { data: questionBanks } = trpc.questionBanks.list.useQuery();
   
+  // 查詢所有題庫標題（用於下拉選單）
+  const { data: questionBankTitles } = trpc.questionBanks.getTitles.useQuery();
+  
   // 查詢題庫檔案中的題目
   const { data: bankQuestions } = trpc.questionBanks.getQuestions.useQuery(
     selectedQuestionBank || 0,
@@ -285,14 +288,25 @@ export default function CreateExamWizard({
           <div className="space-y-4">
             <div>
               <Label htmlFor="title">考試標題 *</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                placeholder="例如：新人培訓考試"
-              />
+              <div className="space-y-2">
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  placeholder="輸入考試標題或從下方選擇"
+                  list="question-bank-titles"
+                />
+                <datalist id="question-bank-titles">
+                  {questionBankTitles?.map((bank) => (
+                    <option key={bank.id} value={bank.name} />
+                  ))}
+                </datalist>
+                <p className="text-sm text-muted-foreground">
+                  提示：可直接輸入或點擊下拉箭頭選擇已有的試卷題庫標題
+                </p>
+              </div>
             </div>
             <div>
               <Label htmlFor="description">考試說明</Label>
@@ -531,6 +545,39 @@ export default function CreateExamWizard({
         {/* 步驟3：設定分數 */}
         {currentStep === 3 && (
           <div className="space-y-4">
+            {/* 快速設定分數 */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+              <Label className="text-sm font-medium text-blue-900 mb-2 block">
+                ⚡ 快速設定：一鍵設定所有題目分數
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  placeholder="輸入分數..."
+                  min={0}
+                  className="flex-1 bg-white"
+                  id="quick-points-input"
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const input = document.getElementById('quick-points-input') as HTMLInputElement;
+                    const points = parseInt(input.value);
+                    if (isNaN(points) || points < 0) {
+                      toast.error("請輸入有效的分數");
+                      return;
+                    }
+                    setSelectedQuestions(
+                      selectedQuestions.map((q) => ({ ...q, points }))
+                    );
+                    toast.success(`已將所有題目設定為 ${points} 分`);
+                    input.value = '';
+                  }}
+                >
+                  套用到所有題目
+                </Button>
+              </div>
+            </div>
             <div className="bg-blue-50 p-3 rounded-lg mb-4">
               <p className="text-sm text-blue-800">
                 總分：<span className="font-bold">{totalScore}</span> 分

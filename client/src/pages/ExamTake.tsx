@@ -569,11 +569,11 @@ export default function ExamTake() {
                   value={answers[currentQuestion.questionId] || ''}
                   onValueChange={(value) => handleAnswerChange(currentQuestion.questionId, value)}
                 >
-                  <div className="flex items-center space-x-2">
+                  <div key="true" className="flex items-center space-x-2">
                     <RadioGroupItem value="是" id="true" />
                     <Label htmlFor="true" className="cursor-pointer">是</Label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div key="false" className="flex items-center space-x-2">
                     <RadioGroupItem value="否" id="false" />
                     <Label htmlFor="false" className="cursor-pointer">否</Label>
                   </div>

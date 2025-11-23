@@ -29,6 +29,9 @@ interface AnalysisResult {
     question: string;
     type: "是非題" | "單選題" | "複選題" | "問答題";
     options?: string[];
+    source?: string;
+    suggestedCategory?: string;
+    suggestedTags?: string[];
   }>;
   questionsWithAnswers?: Array<{
     number: number;
@@ -37,6 +40,9 @@ interface AnalysisResult {
     options?: string[];
     answer: string;
     explanation?: string;
+    source?: string;
+    suggestedCategory?: string;
+    suggestedTags?: string[];
   }>;
 }
 
