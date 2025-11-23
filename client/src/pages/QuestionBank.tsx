@@ -759,10 +759,10 @@ export default function QuestionBank() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <BookOpen className="h-8 w-8 text-primary" />
-            題庫管理
+            單選題庫
           </h1>
           <p className="text-muted-foreground mt-2">
-            管理考核題庫，支援是非題、選擇題、問答題
+            管理考核單選題題庫，支援是非題、選擇題、問答題
           </p>
         </div>        <div className="flex gap-2">
           <Button variant="outline" onClick={downloadTemplate}>

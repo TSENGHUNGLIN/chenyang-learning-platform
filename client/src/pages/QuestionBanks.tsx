@@ -55,7 +55,7 @@ export default function QuestionBanks() {
 
   const handleCreateBank = async () => {
     if (!newBankName.trim()) {
-      toast.error("請輸入題庫檔案名稱");
+      toast.error("請輸入試卷題庫名稱");
       return;
     }
 
@@ -65,7 +65,7 @@ export default function QuestionBanks() {
         description: newBankDescription || undefined,
         tags: newBankTags.length > 0 ? JSON.stringify(newBankTags) : undefined,
       });
-      toast.success("題庫檔案建立成功");
+      toast.success("試卷題庫建立成功");
       setIsCreateDialogOpen(false);
       setNewBankName("");
       setNewBankDescription("");
@@ -78,13 +78,13 @@ export default function QuestionBanks() {
   };
 
   const handleDeleteBank = async (id: number, name: string) => {
-    if (!confirm(`確定要刪除題庫檔案「${name}」嗎？這將移除所有關聯，但不會刪除題目本身。`)) {
+    if (!confirm(`確定要刪除試卷題庫「${name}」嗎？這將移除所有關聯，但不會刪除題目本身。`)) {
       return;
     }
 
     try {
       await deleteBankMutation.mutateAsync(id);
-      toast.success("題庫檔案已刪除");
+      toast.success("試卷題庫已刪除");
       refetch();
     } catch (error: any) {
       toast.error(error.message || "刪除失敗");
@@ -117,11 +117,11 @@ export default function QuestionBanks() {
 
   const handleBatchDelete = async () => {
     if (selectedBankIds.length === 0) {
-      toast.error("請至少選擇一個題庫檔案");
+      toast.error("請至少選擇一個試卷題庫");
       return;
     }
 
-    if (!confirm(`確定要刪除 ${selectedBankIds.length} 個題庫檔案嗎？這將移除所有關聯，但不會刪除題目本身。`)) {
+    if (!confirm(`確定要刪除 ${selectedBankIds.length} 個試卷題庫嗎？這將移除所有關聯，但不會刪除題目本身。`)) {
       return;
     }
 
@@ -130,7 +130,7 @@ export default function QuestionBanks() {
       for (const id of selectedBankIds) {
         await deleteBankMutation.mutateAsync(id);
       }
-      toast.success(`已刪除 ${selectedBankIds.length} 個題庫檔案`);
+      toast.success(`已刪除 ${selectedBankIds.length} 個試卷題庫`);
       setSelectedBankIds([]);
       refetch();
     } catch (error: any) {
@@ -155,7 +155,7 @@ export default function QuestionBanks() {
       <div className="container mx-auto py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">題庫檔案管理</h1>
+            <h1 className="text-3xl font-bold tracking-tight">試卷題庫管理</h1>
             <p className="text-muted-foreground mt-2">
               組織和管理題目集合，快速派送到考試
             </p>
@@ -188,7 +188,7 @@ export default function QuestionBanks() {
             )}
             <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              建立題庫檔案
+              建立試卷題庫
             </Button>
           </div>
         </div>
@@ -244,13 +244,13 @@ export default function QuestionBanks() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium mb-2">尚無題庫檔案</p>
+              <p className="text-lg font-medium mb-2">尚無試卷題庫</p>
               <p className="text-sm text-muted-foreground mb-4">
-                建立題庫檔案來組織和管理題目集合
+                建立試卷題庫來組織和管理題目集合
               </p>
               <Button onClick={() => setIsCreateDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                建立第一個題庫檔案
+                建立第一個試卷題庫
               </Button>
             </CardContent>
           </Card>
@@ -362,9 +362,9 @@ export default function QuestionBanks() {
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>建立題庫檔案</DialogTitle>
+              <DialogTitle>建立試卷題庫</DialogTitle>
               <DialogDescription>
-                建立一個新的題庫檔案來組織題目集合
+                建立一個新的試卷題庫來組織題目集合
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -381,7 +381,7 @@ export default function QuestionBanks() {
                 <Label htmlFor="description">描述</Label>
                 <Textarea
                   id="description"
-                  placeholder="選填：描述這個題庫檔案的內容和用途"
+                  placeholder="選填：描述這個試卷題庫的內容和用途"
                   value={newBankDescription}
                   onChange={(e) => setNewBankDescription(e.target.value)}
                   rows={3}

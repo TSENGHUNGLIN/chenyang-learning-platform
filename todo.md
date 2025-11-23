@@ -437,3 +437,16 @@
 - [ ] 儲存檢查點
 
 
+
+
+
+## 側邊欄選單名稱調整（2025-01-23）
+
+- [x] 在 DashboardLayout.tsx 中將「題庫管理」改為「單選題庫」
+- [x] 在 DashboardLayout.tsx 中將「題庫檔案」改為「試卷題庫」
+- [x] 更新 QuestionBank.tsx 頁面標題和內容
+- [x] 更新 QuestionBanks.tsx 頁面標題和內容
+- [ ] 測試選單顯示和頁面導航
+- [ ] 儲存檢查點
+
+
