@@ -1136,9 +1136,9 @@ ${file.extractedText || "無法提取文字內容"}`
     batchRestore: protectedProcedure
       .input(z.array(z.number()))
       .mutation(async ({ input, ctx }) => {
-        const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        // 只有管理員可以批次還原
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "只有管理員可以批次還原題目" });
         }
         const { restoreQuestion } = await import("./db");
         for (const id of input) {
@@ -1149,9 +1149,9 @@ ${file.extractedText || "無法提取文字內容"}`
     batchPermanentDelete: protectedProcedure
       .input(z.array(z.number()))
       .mutation(async ({ input, ctx }) => {
-        const { hasPermission } = await import("@shared/permissions");
-        if (!hasPermission(ctx.user.role as any, "canEdit")) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        // 只有管理員可以批次永久刪除
+        if (ctx.user.role !== "admin") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "只有管理員可以批次永久刪除題目" });
         }
         const { permanentDeleteQuestion } = await import("./db");
         for (const id of input) {

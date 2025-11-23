@@ -477,9 +477,9 @@ export default function QuestionBank() {
       return;
     }
 
-    // 檢查權限
-    if (!user || (user.role !== 'admin' && user.role !== 'editor')) {
-      toast.error("您沒有權限刪除題目，只有管理員和編輯者可以刪除");
+    // 檢查權限：只有管理員可以批次刪除
+    if (!user || user.role !== 'admin') {
+      toast.error("您沒有權限批次刪除題目，只有管理員可以批次刪除");
       return;
     }
 
@@ -802,14 +802,16 @@ export default function QuestionBank() {
             <div className="flex gap-2">
               {selectedQuestions.length > 0 && (
                 <>
-                  <Button 
-                    onClick={openDeleteConfirmDialog} 
-                    variant="destructive"
-                    disabled={!user || (user.role !== 'admin' && user.role !== 'editor')}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    批次刪除 ({selectedQuestions.length})
-                  </Button>
+                  {/* 只有管理員可以批次刪除 */}
+                  {user?.role === 'admin' && (
+                    <Button 
+                      onClick={openDeleteConfirmDialog} 
+                      variant="destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      批次刪除 ({selectedQuestions.length})
+                    </Button>
+                  )}
                   <Button onClick={openExportConfirmDialog} variant="outline">
                     <Download className="h-4 w-4 mr-2" />
                     匯出考試卷 ({selectedQuestions.length})

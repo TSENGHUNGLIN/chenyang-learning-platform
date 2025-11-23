@@ -1,0 +1,15 @@
+{
+  "query": "SELECT name, role, email FROM users WHERE name = '曾富銓' LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute SELECT name, role, email FROM users WHERE name = '曾富銓' LIMIT 1;",
+  "rows": [
+    {
+      "name": "曾富銓 ",
+      "role": "admin",
+      "email": "tsenghunglin384438443844@gmail.com"
+    }
+  ],
+  "messages": [],
+  "stdout": "name\trole\temail\n曾富銓 \tadmin\ttsenghunglin384438443844@gmail.com\n",
+  "stderr": "",
+  "execution_time_ms": 2461
+}
