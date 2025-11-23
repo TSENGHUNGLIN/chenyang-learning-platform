@@ -55,6 +55,11 @@ export default function ExamPlanning() {
   const [customInterval, setCustomInterval] = useState<number>(1);
   const [customIntervalUnit, setCustomIntervalUnit] = useState<"days" | "weeks">("days");
 
+  // 暫存時間設定（用於確定按鈕）
+  const [tempBatchStartTime, setTempBatchStartTime] = useState<string>("");
+  const [tempBatchDeadline, setTempBatchDeadline] = useState<string>("");
+  const [tempIndividualExamTimes, setTempIndividualExamTimes] = useState<Record<number, { startTime: string; deadline: string }>>({});
+
   // 每張考卷獨立時間設定
   const [individualExamTimes, setIndividualExamTimes] = useState<Record<number, { startTime: string; deadline: string }>>({});
   const [selectedExamForTime, setSelectedExamForTime] = useState<number | null>(null);
@@ -1171,8 +1176,8 @@ export default function ExamPlanning() {
                   <Input
                     id="start-time"
                     type="datetime-local"
-                    value={batchStartTime}
-                    onChange={(e) => setBatchStartTime(e.target.value)}
+                    value={tempBatchStartTime}
+                    onChange={(e) => setTempBatchStartTime(e.target.value)}
                     className="mt-2"
                   />
                 </div>
@@ -1183,10 +1188,25 @@ export default function ExamPlanning() {
                   <Input
                     id="deadline"
                     type="datetime-local"
-                    value={batchDeadline}
-                    onChange={(e) => setBatchDeadline(e.target.value)}
+                    value={tempBatchDeadline}
+                    onChange={(e) => setTempBatchDeadline(e.target.value)}
                     className="mt-2"
                   />
+                </div>
+
+                {/* 確定時間設定按鈕 */}
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => {
+                      setBatchStartTime(tempBatchStartTime);
+                      setBatchDeadline(tempBatchDeadline);
+                      toast.success("批次時間設定已確認");
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Check className="w-4 h-4 mr-2" />
+                    確定時間設定
+                  </Button>
                 </div>
 
                 {/* 考試頻率設定 */}
@@ -1305,14 +1325,14 @@ export default function ExamPlanning() {
                       <Input
                         id="individual-start"
                         type="datetime-local"
-                        value={individualExamTimes[selectedExamForTime]?.startTime || ""}
+                        value={tempIndividualExamTimes[selectedExamForTime]?.startTime || individualExamTimes[selectedExamForTime]?.startTime || ""}
                         onChange={(e) => {
-                          setIndividualExamTimes(prev => ({
+                          setTempIndividualExamTimes(prev => ({
                             ...prev,
                             [selectedExamForTime]: {
                               ...prev[selectedExamForTime],
                               startTime: e.target.value,
-                              deadline: prev[selectedExamForTime]?.deadline || "",
+                              deadline: prev[selectedExamForTime]?.deadline || individualExamTimes[selectedExamForTime]?.deadline || "",
                             },
                           }));
                         }}
@@ -1324,12 +1344,12 @@ export default function ExamPlanning() {
                       <Input
                         id="individual-deadline"
                         type="datetime-local"
-                        value={individualExamTimes[selectedExamForTime]?.deadline || ""}
+                        value={tempIndividualExamTimes[selectedExamForTime]?.deadline || individualExamTimes[selectedExamForTime]?.deadline || ""}
                         onChange={(e) => {
-                          setIndividualExamTimes(prev => ({
+                          setTempIndividualExamTimes(prev => ({
                             ...prev,
                             [selectedExamForTime]: {
-                              startTime: prev[selectedExamForTime]?.startTime || "",
+                              startTime: prev[selectedExamForTime]?.startTime || individualExamTimes[selectedExamForTime]?.startTime || "",
                               deadline: e.target.value,
                             },
                           }));
@@ -1337,8 +1357,28 @@ export default function ExamPlanning() {
                         className="mt-2"
                       />
                     </div>
+                    
+                    {/* 確定時間設定按鈕 */}
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={() => {
+                          if (selectedExamForTime && tempIndividualExamTimes[selectedExamForTime]) {
+                            setIndividualExamTimes(prev => ({
+                              ...prev,
+                              [selectedExamForTime]: tempIndividualExamTimes[selectedExamForTime],
+                            }));
+                            toast.success("時間設定已確認");
+                          }
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700"
+                        disabled={!tempIndividualExamTimes[selectedExamForTime]?.startTime && !tempIndividualExamTimes[selectedExamForTime]?.deadline}
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        確定時間設定
+                      </Button>
+                    </div>
                     {/* 操作按鈕 */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pt-2 border-t">
                       {individualExamTimes[selectedExamForTime]?.startTime && (
                         <Button
                           variant="outline"
@@ -1355,6 +1395,11 @@ export default function ExamPlanning() {
                           size="sm"
                           onClick={() => {
                             setIndividualExamTimes(prev => {
+                              const newTimes = { ...prev };
+                              delete newTimes[selectedExamForTime];
+                              return newTimes;
+                            });
+                            setTempIndividualExamTimes(prev => {
                               const newTimes = { ...prev };
                               delete newTimes[selectedExamForTime];
                               return newTimes;
