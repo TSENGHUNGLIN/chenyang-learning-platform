@@ -14,10 +14,8 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     }
 
     const file = req.file;
-    // 修正中文檔案名稱編碼問題：multer預設使用latin1編碼，需要轉換為UTF-8
-    const originalFilename = Buffer.from(file.originalname, 'latin1').toString('utf8');
     const randomSuffix = randomBytes(8).toString("hex");
-    const fileKey = `uploads/${Date.now()}-${randomSuffix}-${originalFilename}`;
+    const fileKey = `uploads/${Date.now()}-${randomSuffix}-${file.originalname}`;
 
     const { url } = await storagePut(fileKey, file.buffer, file.mimetype);
 
@@ -27,7 +25,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     res.json({
       fileKey,
       fileUrl: url,
-      filename: originalFilename,
+      filename: file.originalname,
       mimeType: file.mimetype,
       fileSize: file.size,
       extractedText,

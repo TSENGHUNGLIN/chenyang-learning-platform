@@ -1,1 +1,0 @@
-ALTER TABLE `files` MODIFY COLUMN `employeeId` int;

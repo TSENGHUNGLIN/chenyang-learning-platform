@@ -1,9 +1,0 @@
-{
-  "query": "INSERT INTO examQuestions (examId, questionId, questionOrder, points) VALUES (1, 1, 1, 10)",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 5Y9QhNCw489etni.724e49c2bec9 --database hUkDfXDaHjqRDjC8Kfc8tq --execute INSERT INTO examQuestions (examId, questionId, questionOrder, points) VALUES (1, 1, 1, 10)",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 1543
-}
