@@ -1,1 +1,0 @@
-ALTER TABLE `questions` ADD `source` varchar(255);
