@@ -838,13 +838,22 @@ export default function AIAnalysis() {
               考題出處 <span className="text-red-500">*</span>
             </Label>
             {sourceMode === "manual" ? (
-              <Input
-                id="questionSource"
-                placeholder="請輸入考題出處（必填）"
-                value={manualSource}
-                onChange={(e) => setManualSource(e.target.value)}
-                className="w-full"
-              />
+              <>
+                <Input
+                  id="questionSource"
+                  placeholder="請輸入考題出處（必填）"
+                  value={manualSource}
+                  onChange={(e) => setManualSource(e.target.value)}
+                  className="w-full"
+                />
+                <p className="text-sm text-muted-foreground mt-2">
+                  <span className="font-medium">填寫範例：</span>
+                  <br />
+                  • 單一檔案：使用檔案全名，例如「邱紫郁轉正考核問答」
+                  <br />
+                  • 多個檔案：使用最關鍵的共同字詞，例如「轉正考核問答」
+                </p>
+              </>
             ) : (
               <Select value={aiSourceFile?.toString()} onValueChange={(val) => setAiSourceFile(parseInt(val))}>
                 <SelectTrigger>
