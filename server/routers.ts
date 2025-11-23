@@ -1426,6 +1426,41 @@ ${file.extractedText || "無法提取文字內容"}`
         const { getExamById } = await import("./db");
         return await getExamById(input);
       }),
+    // 獲取考卷預覽資訊（包含題目清單和統計）
+    getPreview: protectedProcedure
+      .input(z.number())
+      .query(async ({ input: examId, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        
+        const { getExamById } = await import("./db");
+        const { getExamQuestions } = await import("./db");
+        
+        const exam = await getExamById(examId);
+        if (!exam) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "找不到考卷" });
+        }
+        
+        const questions = await getExamQuestions(examId);
+        
+        // 統計題目資訊
+        const stats = {
+          totalQuestions: questions.length,
+          multipleChoice: questions.filter(q => q.type === "multiple_choice").length,
+          trueFalse: questions.filter(q => q.type === "true_false").length,
+          shortAnswer: questions.filter(q => q.type === "short_answer").length,
+          essay: questions.filter(q => q.type === "essay").length,
+          totalScore: exam.totalScore || 100,
+        };
+        
+        return {
+          exam,
+          questions,
+          stats,
+        };
+      }),
     create: protectedProcedure
       .input(z.object({
         title: z.string(),

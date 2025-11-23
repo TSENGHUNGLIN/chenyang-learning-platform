@@ -23,6 +23,12 @@ export default function ExamPlanning() {
   const { data: exams, isLoading: examsLoading } = trpc.exams.list.useQuery();
   const { data: departments, isLoading: depsLoading } = trpc.departments.list.useQuery();
   const { data: employees, isLoading: employeesLoading } = trpc.employees.list.useQuery();
+  
+  // 考卷預覽查詢
+  const { data: previewData, isLoading: previewLoading } = trpc.exams.getPreview.useQuery(
+    previewExamId!,
+    { enabled: !!previewExamId && showPreviewDialog }
+  );
 
   // 選擇模式：single（單選）、department（按部門）、multiple（複選）
   const [selectionMode, setSelectionMode] = useState<"single" | "department" | "multiple">("single");
@@ -56,6 +62,20 @@ export default function ExamPlanning() {
 
   // 考卷選擇對話框
   const [showExamSelectionDialog, setShowExamSelectionDialog] = useState(false);
+
+  // 複製時間對話框
+  const [showCopyTimeDialog, setShowCopyTimeDialog] = useState(false);
+  const [copyTimeTargetExamIds, setCopyTimeTargetExamIds] = useState<number[]>([]);
+  const [copyTimeOffset, setCopyTimeOffset] = useState<number>(0);
+  const [copyTimeOffsetUnit, setCopyTimeOffsetUnit] = useState<"days" | "weeks">("days");
+
+  // 時間衝突檢查
+  const [timeConflicts, setTimeConflicts] = useState<Array<{ examId: number; conflictWith: number[]; }>>([]);
+  const [showConflictWarning, setShowConflictWarning] = useState(false);
+
+  // 考卷預覽對話框
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewExamId, setPreviewExamId] = useState<number | null>(null);
 
   // 搜尋
   const [userSearch, setUserSearch] = useState("");
@@ -250,6 +270,16 @@ export default function ExamPlanning() {
       return;
     }
 
+    // 最終衝突檢查
+    if (useIndividualTimes && timeConflicts.length > 0 && showConflictWarning) {
+      toast.warning("檢測到時間衝突，請確認是否繼續提交", {
+        description: "如果您已確認衝突並選擇忽略，請再次點擊「確認規劃」按鈕。",
+        duration: 5000,
+      });
+      setShowConflictWarning(false); // 下次提交時不再警告
+      return;
+    }
+
     // 建立規劃項目（笛卡爾積：每位考生 × 每份考卷）
     const planningItems = [];
     for (const userId of selectedUserIds) {
@@ -341,6 +371,103 @@ export default function ExamPlanning() {
     link.click();
     document.body.removeChild(link);
     toast.success("CSV 範本已下載");
+  };
+
+  // 檢查時間衝突
+  const checkTimeConflicts = useCallback(() => {
+    if (!useIndividualTimes || selectedExamIds.length < 2) {
+      setTimeConflicts([]);
+      setShowConflictWarning(false);
+      return;
+    }
+
+    const conflicts: Array<{ examId: number; conflictWith: number[]; }> = [];
+
+    // 檢查每張考卷的時間是否與其他考卷重疊
+    selectedExamIds.forEach((examId, index) => {
+      const time1 = individualExamTimes[examId];
+      if (!time1?.startTime || !time1?.deadline) return;
+
+      const start1 = new Date(time1.startTime).getTime();
+      const end1 = new Date(time1.deadline).getTime();
+
+      const conflictWith: number[] = [];
+
+      selectedExamIds.forEach((otherExamId, otherIndex) => {
+        if (index >= otherIndex) return; // 避免重複檢查
+
+        const time2 = individualExamTimes[otherExamId];
+        if (!time2?.startTime || !time2?.deadline) return;
+
+        const start2 = new Date(time2.startTime).getTime();
+        const end2 = new Date(time2.deadline).getTime();
+
+        // 檢查時間區間是否重疊
+        if ((start1 <= end2 && end1 >= start2)) {
+          conflictWith.push(otherExamId);
+        }
+      });
+
+      if (conflictWith.length > 0) {
+        conflicts.push({ examId, conflictWith });
+      }
+    });
+
+    setTimeConflicts(conflicts);
+    setShowConflictWarning(conflicts.length > 0);
+  }, [useIndividualTimes, selectedExamIds, individualExamTimes]);
+
+  // 當時間設定變更時，自動檢查衝突
+  useEffect(() => {
+    checkTimeConflicts();
+  }, [checkTimeConflicts]);
+
+  // 處理預覽考卷
+  const handlePreviewExam = (examId: number) => {
+    setPreviewExamId(examId);
+    setShowPreviewDialog(true);
+  };
+
+  // 複製時間到其他考卷
+  const handleCopyTime = () => {
+    if (!selectedExamForTime || !individualExamTimes[selectedExamForTime]) {
+      toast.error("無法複製：未找到原始時間設定");
+      return;
+    }
+
+    if (copyTimeTargetExamIds.length === 0) {
+      toast.error("請選擇至少一張目標考卷");
+      return;
+    }
+
+    const sourceTime = individualExamTimes[selectedExamForTime];
+    const offsetMs = copyTimeOffsetUnit === "weeks" 
+      ? copyTimeOffset * 7 * 24 * 60 * 60 * 1000 
+      : copyTimeOffset * 24 * 60 * 60 * 1000;
+
+    // 複製時間到目標考卷
+    const newTimes = { ...individualExamTimes };
+    copyTimeTargetExamIds.forEach(examId => {
+      const newStartTime = sourceTime.startTime 
+        ? new Date(new Date(sourceTime.startTime).getTime() + offsetMs).toISOString().slice(0, 16)
+        : "";
+      const newDeadline = sourceTime.deadline
+        ? new Date(new Date(sourceTime.deadline).getTime() + offsetMs).toISOString().slice(0, 16)
+        : "";
+
+      newTimes[examId] = {
+        startTime: newStartTime,
+        deadline: newDeadline,
+      };
+    });
+
+    setIndividualExamTimes(newTimes);
+    toast.success(`已將時間設定複製到 ${copyTimeTargetExamIds.length} 張考卷`);
+    
+    // 關閉對話框並重置狀態
+    setShowCopyTimeDialog(false);
+    setCopyTimeTargetExamIds([]);
+    setCopyTimeOffset(0);
   };
 
   if (examsLoading || employeesLoading || depsLoading) {
@@ -780,6 +907,17 @@ export default function ExamPlanning() {
                               及格分數 {exam.passingScore}
                             </p>
                           </label>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePreviewExam(exam.id);
+                            }}
+                            className="h-8 px-3 flex-shrink-0"
+                          >
+                            預覽
+                          </Button>
                         </div>
                       ))
                     )}
@@ -1061,6 +1199,17 @@ export default function ExamPlanning() {
                         className="mt-2"
                       />
                     </div>
+                    {/* 複製到其他考卷按鈕 */}
+                    {individualExamTimes[selectedExamForTime]?.startTime && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowCopyTimeDialog(true)}
+                        className="w-full"
+                      >
+                        複製到其他考卷
+                      </Button>
+                    )}
                   </div>
                 )}
 
@@ -1087,6 +1236,44 @@ export default function ExamPlanning() {
                     </div>
                   )}
                 </div>
+
+                {/* 時間衝突警告 */}
+                {showConflictWarning && timeConflicts.length > 0 && (
+                  <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 p-3 rounded-md space-y-2">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                          檢測到時間衝突
+                        </p>
+                        <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                          以下考卷的時間區間有重疊，可能導致考生負擔過重：
+                        </p>
+                        <div className="mt-2 space-y-1">
+                          {timeConflicts.map(conflict => {
+                            const exam = exams?.find(e => e.id === conflict.examId);
+                            const conflictExams = conflict.conflictWith.map(id => exams?.find(e => e.id === id)?.title).filter(Boolean);
+                            return (
+                              <div key={conflict.examId} className="text-xs text-yellow-700 dark:text-yellow-300">
+                                • <strong>{exam?.title}</strong> 與 {conflictExams.join("、")} 時間重疊
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-3 flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowConflictWarning(false)}
+                            className="text-xs h-7"
+                          >
+                            忽略警告
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1121,6 +1308,264 @@ export default function ExamPlanning() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 複製時間對話框 */}
+      <Dialog open={showCopyTimeDialog} onOpenChange={setShowCopyTimeDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>複製時間到其他考卷</DialogTitle>
+            <DialogDescription>
+              將「{exams?.find(e => e.id === selectedExamForTime)?.title}」的時間設定複製到其他考卷
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* 原始時間顯示 */}
+            {selectedExamForTime && individualExamTimes[selectedExamForTime] && (
+              <div className="bg-accent/20 p-3 rounded-md space-y-2">
+                <p className="text-sm font-medium">原始時間設定：</p>
+                <div className="text-sm space-y-1">
+                  <p>開始時間：{individualExamTimes[selectedExamForTime].startTime ? new Date(individualExamTimes[selectedExamForTime].startTime).toLocaleString("zh-TW") : "未設定"}</p>
+                  <p>截止時間：{individualExamTimes[selectedExamForTime].deadline ? new Date(individualExamTimes[selectedExamForTime].deadline).toLocaleString("zh-TW") : "未設定"}</p>
+                </div>
+              </div>
+            )}
+
+            {/* 微調選項 */}
+            <div className="space-y-2">
+              <Label>時間微調（可選）</Label>
+              <div className="flex gap-2 items-center">
+                <Label className="text-sm">自動延後</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={copyTimeOffset}
+                  onChange={(e) => setCopyTimeOffset(parseInt(e.target.value) || 0)}
+                  className="w-20"
+                />
+                <Select value={copyTimeOffsetUnit} onValueChange={(v) => setCopyTimeOffsetUnit(v as any)}>
+                  <SelectTrigger className="w-24">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="days">天</SelectItem>
+                    <SelectItem value="weeks">週</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                設定後，目標考卷的時間將自動往後延遲指定的天數或週數
+              </p>
+            </div>
+
+            {/* 目標考卷選擇 */}
+            <div className="space-y-2">
+              <Label>選擇目標考卷（可複選）</Label>
+              <div className="max-h-64 overflow-y-auto space-y-2 border rounded-md p-3">
+                {selectedExamIds
+                  .filter(id => id !== selectedExamForTime)
+                  .map(examId => {
+                    const exam = exams?.find(e => e.id === examId);
+                    if (!exam) return null;
+                    const isSelected = copyTimeTargetExamIds.includes(examId);
+                    return (
+                      <div key={examId} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`copy-target-${examId}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setCopyTimeTargetExamIds(prev => [...prev, examId]);
+                            } else {
+                              setCopyTimeTargetExamIds(prev => prev.filter(id => id !== examId));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`copy-target-${examId}`} className="font-normal cursor-pointer flex-1">
+                          {exam.title}
+                          {individualExamTimes[examId]?.startTime && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              (已設定時間，將被覆蓋)
+                            </span>
+                          )}
+                        </Label>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* 按鈕區 */}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCopyTimeDialog(false);
+                  setCopyTimeTargetExamIds([]);
+                  setCopyTimeOffset(0);
+                }}
+              >
+                取消
+              </Button>
+              <Button
+                onClick={handleCopyTime}
+                disabled={copyTimeTargetExamIds.length === 0}
+              >
+                確認複製
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 考卷預覽對話框 */}
+      <Dialog open={showPreviewDialog} onOpenChange={(open) => {
+        setShowPreviewDialog(open);
+        if (!open) setPreviewExamId(null);
+      }}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>考卷預覽</DialogTitle>
+            <DialogDescription>
+              查看考卷詳細資訊和題目清單
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : previewData ? (
+            <div className="space-y-6">
+              {/* 考卷基本資訊 */}
+              <div className="bg-accent/20 p-4 rounded-md space-y-3">
+                <h3 className="text-lg font-semibold">{previewData.exam.title}</h3>
+                {previewData.exam.description && (
+                  <p className="text-sm text-muted-foreground">{previewData.exam.description}</p>
+                )}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">狀態</p>
+                    <p className="font-medium">
+                      {previewData.exam.status === "published" ? "已發布" : 
+                       previewData.exam.status === "draft" ? "草稿" : "已封存"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">時間限制</p>
+                    <p className="font-medium">
+                      {previewData.exam.timeLimit ? `${previewData.exam.timeLimit} 分鐘` : "不限時"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">及格分數</p>
+                    <p className="font-medium">{previewData.exam.passingScore} 分</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">總分</p>
+                    <p className="font-medium">{previewData.exam.totalScore || 100} 分</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 題目統計 */}
+              <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-md">
+                <h4 className="font-medium text-sm mb-3">題目統計</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">總題數</p>
+                    <p className="font-medium text-lg">{previewData.stats.totalQuestions} 題</p>
+                  </div>
+                  {previewData.stats.multipleChoice > 0 && (
+                    <div>
+                      <p className="text-muted-foreground">選擇題</p>
+                      <p className="font-medium">{previewData.stats.multipleChoice} 題</p>
+                    </div>
+                  )}
+                  {previewData.stats.trueFalse > 0 && (
+                    <div>
+                      <p className="text-muted-foreground">是非題</p>
+                      <p className="font-medium">{previewData.stats.trueFalse} 題</p>
+                    </div>
+                  )}
+                  {previewData.stats.shortAnswer > 0 && (
+                    <div>
+                      <p className="text-muted-foreground">簡答題</p>
+                      <p className="font-medium">{previewData.stats.shortAnswer} 題</p>
+                    </div>
+                  )}
+                  {previewData.stats.essay > 0 && (
+                    <div>
+                      <p className="text-muted-foreground">申論題</p>
+                      <p className="font-medium">{previewData.stats.essay} 題</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 題目清單 */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">題目清單</h4>
+                {previewData.questions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    此考卷尚未加入題目
+                  </p>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {previewData.questions.map((q, index) => (
+                      <div key={q.id} className="border rounded-md p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-medium">
+                            {index + 1}. {q.content}
+                          </p>
+                          <span className="text-xs bg-accent px-2 py-1 rounded flex-shrink-0">
+                            {q.type === "multiple_choice" ? "選擇" :
+                             q.type === "true_false" ? "是非" :
+                             q.type === "short_answer" ? "簡答" : "申論"}
+                          </span>
+                        </div>
+                        {q.type === "multiple_choice" && q.options && (
+                          <div className="pl-4 space-y-1 text-xs text-muted-foreground">
+                            {(() => {
+                              try {
+                                const options = typeof q.options === "string" ? JSON.parse(q.options) : q.options;
+                                const optionsArray = Array.isArray(options) ? options : [];
+                                return optionsArray.map((opt: any, idx: number) => (
+                                  <p key={idx}>
+                                    {String.fromCharCode(65 + idx)}. {typeof opt === "string" ? opt : opt.label || opt.value || ""}
+                                  </p>
+                                ));
+                              } catch (e) {
+                                return <p className="text-red-500">選項格式錯誤</p>;
+                              }
+                            })()}
+                          </div>
+                        )}
+                        {q.difficulty && (
+                          <p className="text-xs text-muted-foreground">
+                            難度：{q.difficulty === "easy" ? "簡單" : q.difficulty === "medium" ? "中等" : "困難"}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 按鈕區 */}
+              <div className="flex justify-end pt-4 border-t">
+                <Button onClick={() => setShowPreviewDialog(false)}>
+                  關閉
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              無法載入考卷資訊
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
