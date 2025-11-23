@@ -2197,3 +2197,933 @@ export async function batchCreateEmployees(employeesData: Array<{ name: string; 
   return { success: true, count: results.length };
 }
 
+
+
+// ==================== 逾期通知自動化相關函數 ====================
+
+/**
+ * 檢查逾期考試並建立通知記錄
+ * 分級通知：逾期1天、3天、7天
+ */
+export async function checkAndCreateOverdueNotifications() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { examAssignments, exams, users, overdueNotifications, notifications } = await import("../drizzle/schema");
+  const { and, lt } = await import("drizzle-orm");
+
+  const now = new Date();
+  
+  // 查詢所有逾期且未完成的考試指派
+  const overdueAssignments = await db
+    .select({
+      assignmentId: examAssignments.id,
+      examId: examAssignments.examId,
+      userId: examAssignments.userId,
+      deadline: examAssignments.deadline,
+      examTitle: exams.title,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(examAssignments)
+    .leftJoin(exams, eq(examAssignments.examId, exams.id))
+    .leftJoin(users, eq(examAssignments.userId, users.id))
+    .where(
+      and(
+        eq(examAssignments.status, "assigned"),
+        lt(examAssignments.deadline, now)
+      )
+    );
+
+  const notificationsToCreate = [];
+  
+  for (const assignment of overdueAssignments) {
+    if (!assignment.deadline) continue;
+    
+    const overdueDays = Math.floor((now.getTime() - assignment.deadline.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // 判斷通知級別
+    let notificationLevel: "day_1" | "day_3" | "day_7" | null = null;
+    if (overdueDays >= 7) {
+      notificationLevel = "day_7";
+    } else if (overdueDays >= 3) {
+      notificationLevel = "day_3";
+    } else if (overdueDays >= 1) {
+      notificationLevel = "day_1";
+    }
+    
+    if (!notificationLevel) continue;
+    
+    // 檢查是否已發送過此級別的通知
+    const existingNotification = await db
+      .select()
+      .from(overdueNotifications)
+      .where(
+        and(
+          eq(overdueNotifications.assignmentId, assignment.assignmentId),
+          eq(overdueNotifications.notificationLevel, notificationLevel),
+          eq(overdueNotifications.notificationSent, 1)
+        )
+      )
+      .limit(1);
+    
+    if (existingNotification.length > 0) {
+      continue; // 已發送過此級別的通知，跳過
+    }
+    
+    // 建立通知記錄
+    const notificationContent = `您的考試「${assignment.examTitle}」已逾期 ${overdueDays} 天，請盡快完成考試。`;
+    
+    notificationsToCreate.push({
+      assignmentId: assignment.assignmentId,
+      examId: assignment.examId,
+      userId: assignment.userId,
+      notificationLevel,
+      notificationSent: 0,
+      overdueBy: overdueDays,
+      deadline: assignment.deadline,
+      notificationContent,
+    });
+  }
+  
+  // 批次建立通知記錄
+  if (notificationsToCreate.length > 0) {
+    await db.insert(overdueNotifications).values(notificationsToCreate);
+  }
+  
+  return {
+    success: true,
+    notificationsCreated: notificationsToCreate.length,
+    overdueAssignments: overdueAssignments.length,
+  };
+}
+
+/**
+ * 發送逾期通知（整合現有通知系統）
+ */
+export async function sendOverdueNotifications() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { overdueNotifications, exams, users, notifications } = await import("../drizzle/schema");
+
+  // 查詢未發送的通知記錄
+  const pendingNotifications = await db
+    .select({
+      notificationId: overdueNotifications.id,
+      assignmentId: overdueNotifications.assignmentId,
+      examId: overdueNotifications.examId,
+      userId: overdueNotifications.userId,
+      notificationLevel: overdueNotifications.notificationLevel,
+      notificationContent: overdueNotifications.notificationContent,
+      overdueBy: overdueNotifications.overdueBy,
+      examTitle: exams.title,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(overdueNotifications)
+    .leftJoin(exams, eq(overdueNotifications.examId, exams.id))
+    .leftJoin(users, eq(overdueNotifications.userId, users.id))
+    .where(eq(overdueNotifications.notificationSent, 0))
+    .limit(100); // 每次最多發送100條通知
+
+  const notificationsSent = [];
+  
+  for (const notification of pendingNotifications) {
+    try {
+      // 建立系統通知記錄
+      await db.insert(notifications).values({
+        userId: notification.userId,
+        notificationType: "other",
+        title: `考試逾期提醒（逾期 ${notification.overdueBy} 天）`,
+        content: notification.notificationContent || "",
+        relatedExamId: notification.examId,
+        relatedAssignmentId: notification.assignmentId,
+        isRead: 0,
+      });
+      
+      // 標記為已發送
+      await db
+        .update(overdueNotifications)
+        .set({
+          notificationSent: 1,
+          sentAt: new Date(),
+        })
+        .where(eq(overdueNotifications.id, notification.notificationId));
+      
+      notificationsSent.push(notification.notificationId);
+    } catch (error) {
+      console.error(`Failed to send notification ${notification.notificationId}:`, error);
+    }
+  }
+  
+  return {
+    success: true,
+    notificationsSent: notificationsSent.length,
+    pendingNotifications: pendingNotifications.length,
+  };
+}
+
+/**
+ * 查詢逾期通知歷史記錄
+ */
+export async function getOverdueNotificationHistory(filters?: {
+  userId?: number;
+  examId?: number;
+  notificationLevel?: "day_1" | "day_3" | "day_7";
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { overdueNotifications, exams, users } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+
+  let query = db
+    .select({
+      id: overdueNotifications.id,
+      assignmentId: overdueNotifications.assignmentId,
+      examId: overdueNotifications.examId,
+      examTitle: exams.title,
+      userId: overdueNotifications.userId,
+      userName: users.name,
+      userEmail: users.email,
+      notificationLevel: overdueNotifications.notificationLevel,
+      notificationSent: overdueNotifications.notificationSent,
+      sentAt: overdueNotifications.sentAt,
+      overdueBy: overdueNotifications.overdueBy,
+      deadline: overdueNotifications.deadline,
+      notificationContent: overdueNotifications.notificationContent,
+      createdAt: overdueNotifications.createdAt,
+    })
+    .from(overdueNotifications)
+    .leftJoin(exams, eq(overdueNotifications.examId, exams.id))
+    .leftJoin(users, eq(overdueNotifications.userId, users.id))
+    .$dynamic();
+
+  const conditions = [];
+  
+  if (filters?.userId) {
+    conditions.push(eq(overdueNotifications.userId, filters.userId));
+  }
+  
+  if (filters?.examId) {
+    conditions.push(eq(overdueNotifications.examId, filters.examId));
+  }
+  
+  if (filters?.notificationLevel) {
+    conditions.push(eq(overdueNotifications.notificationLevel, filters.notificationLevel));
+  }
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions));
+  }
+  
+  const result = await query
+    .orderBy(desc(overdueNotifications.createdAt))
+    .limit(filters?.limit || 100);
+  
+  return result;
+}
+
+/**
+ * 取得逾期通知統計資料
+ */
+export async function getOverdueNotificationStats() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { overdueNotifications } = await import("../drizzle/schema");
+  const { sql } = await import("drizzle-orm");
+
+  // 統計各級別的通知數量
+  const stats = await db
+    .select({
+      notificationLevel: overdueNotifications.notificationLevel,
+      totalCount: sql<number>`COUNT(*)`,
+      sentCount: sql<number>`SUM(CASE WHEN ${overdueNotifications.notificationSent} = 1 THEN 1 ELSE 0 END)`,
+      pendingCount: sql<number>`SUM(CASE WHEN ${overdueNotifications.notificationSent} = 0 THEN 1 ELSE 0 END)`,
+    })
+    .from(overdueNotifications)
+    .groupBy(overdueNotifications.notificationLevel);
+  
+  return stats;
+}
+
+
+
+// ==================== 補考自動安排相關函數 ====================
+
+/**
+ * 自動為逾期考試建立補考記錄
+ * 整合現有的 makeupExams 表格
+ */
+export async function autoScheduleMakeupExams(options?: {
+  maxMakeupAttempts?: number;
+  makeupDaysAfterOverdue?: number;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { examAssignments, exams, users, makeupExams, overdueExamActions } = await import("../drizzle/schema");
+  const { and, lt, isNull } = await import("drizzle-orm");
+
+  const now = new Date();
+  const maxAttempts = options?.maxMakeupAttempts || 2; // 預設最多補考2次
+  const makeupDays = options?.makeupDaysAfterOverdue || 7; // 預設逾期後7天內完成補考
+  
+  // 查詢所有逾期且未完成的考試指派（尚未建立補考記錄）
+  const overdueAssignments = await db
+    .select({
+      assignmentId: examAssignments.id,
+      examId: examAssignments.examId,
+      userId: examAssignments.userId,
+      deadline: examAssignments.deadline,
+      examTitle: exams.title,
+      userName: users.name,
+    })
+    .from(examAssignments)
+    .leftJoin(exams, eq(examAssignments.examId, exams.id))
+    .leftJoin(users, eq(examAssignments.userId, users.id))
+    .where(
+      and(
+        eq(examAssignments.status, "assigned"),
+        lt(examAssignments.deadline, now)
+      )
+    );
+
+  const makeupRecordsToCreate = [];
+  const actionsToRecord = [];
+  
+  for (const assignment of overdueAssignments) {
+    // 檢查是否已建立補考記錄
+    const existingMakeup = await db
+      .select()
+      .from(makeupExams)
+      .where(
+        and(
+          eq(makeupExams.originalAssignmentId, assignment.assignmentId),
+          eq(makeupExams.userId, assignment.userId)
+        )
+      )
+      .limit(1);
+    
+    if (existingMakeup.length > 0) {
+      continue; // 已建立補考記錄，跳過
+    }
+    
+    // 計算補考截止日期
+    const makeupDeadline = new Date(now.getTime() + makeupDays * 24 * 60 * 60 * 1000);
+    
+    // 建立補考記錄
+    makeupRecordsToCreate.push({
+      originalAssignmentId: assignment.assignmentId,
+      userId: assignment.userId,
+      examId: assignment.examId,
+      makeupCount: 1,
+      maxMakeupAttempts: maxAttempts,
+      makeupDeadline,
+      status: "pending" as const,
+      reason: "考試逾期未完成，系統自動安排補考",
+      scheduledBy: null, // null 表示系統自動安排
+    });
+    
+    // 記錄處理動作
+    actionsToRecord.push({
+      assignmentId: assignment.assignmentId,
+      examId: assignment.examId,
+      userId: assignment.userId,
+      actionType: "makeup_scheduled" as const,
+      actionDetails: JSON.stringify({
+        makeupDeadline: makeupDeadline.toISOString(),
+        maxAttempts,
+        autoScheduled: true,
+      }),
+      overdueBy: assignment.deadline ? Math.floor((now.getTime() - assignment.deadline.getTime()) / (1000 * 60 * 60 * 24)) : 0,
+      originalDeadline: assignment.deadline,
+      performedBy: null, // null 表示系統自動
+    });
+  }
+  
+  // 批次建立補考記錄
+  if (makeupRecordsToCreate.length > 0) {
+    await db.insert(makeupExams).values(makeupRecordsToCreate);
+  }
+  
+  // 批次記錄處理動作
+  if (actionsToRecord.length > 0) {
+    await db.insert(overdueExamActions).values(actionsToRecord);
+  }
+  
+  return {
+    success: true,
+    makeupRecordsCreated: makeupRecordsToCreate.length,
+    overdueAssignments: overdueAssignments.length,
+  };
+}
+
+/**
+ * 查詢補考記錄（包含逾期考試的補考資訊）
+ */
+export async function getMakeupExamsWithOverdueInfo(filters?: {
+  userId?: number;
+  examId?: number;
+  status?: "pending" | "scheduled" | "completed" | "expired";
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { makeupExams, examAssignments, exams, users } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+
+  let query = db
+    .select({
+      id: makeupExams.id,
+      originalAssignmentId: makeupExams.originalAssignmentId,
+      makeupAssignmentId: makeupExams.makeupAssignmentId,
+      userId: makeupExams.userId,
+      userName: users.name,
+      userEmail: users.email,
+      examId: makeupExams.examId,
+      examTitle: exams.title,
+      makeupCount: makeupExams.makeupCount,
+      maxMakeupAttempts: makeupExams.maxMakeupAttempts,
+      makeupDeadline: makeupExams.makeupDeadline,
+      status: makeupExams.status,
+      originalScore: makeupExams.originalScore,
+      makeupScore: makeupExams.makeupScore,
+      reason: makeupExams.reason,
+      notes: makeupExams.notes,
+      scheduledBy: makeupExams.scheduledBy,
+      createdAt: makeupExams.createdAt,
+      updatedAt: makeupExams.updatedAt,
+      // 原始考試指派資訊
+      originalDeadline: examAssignments.deadline,
+      originalStatus: examAssignments.status,
+    })
+    .from(makeupExams)
+    .leftJoin(exams, eq(makeupExams.examId, exams.id))
+    .leftJoin(users, eq(makeupExams.userId, users.id))
+    .leftJoin(examAssignments, eq(makeupExams.originalAssignmentId, examAssignments.id))
+    .$dynamic();
+
+  const conditions = [];
+  
+  if (filters?.userId) {
+    conditions.push(eq(makeupExams.userId, filters.userId));
+  }
+  
+  if (filters?.examId) {
+    conditions.push(eq(makeupExams.examId, filters.examId));
+  }
+  
+  if (filters?.status) {
+    conditions.push(eq(makeupExams.status, filters.status));
+  }
+  
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions));
+  }
+  
+  const result = await query
+    .orderBy(desc(makeupExams.createdAt))
+    .limit(filters?.limit || 100);
+  
+  return result;
+}
+
+/**
+ * 更新補考狀態（當補考指派建立後）
+ */
+export async function updateMakeupExamStatus(
+  makeupExamId: number,
+  status: "pending" | "scheduled" | "completed" | "expired",
+  makeupAssignmentId?: number
+) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { makeupExams } = await import("../drizzle/schema");
+
+  const updateData: any = { status };
+  
+  if (makeupAssignmentId) {
+    updateData.makeupAssignmentId = makeupAssignmentId;
+  }
+  
+  await db
+    .update(makeupExams)
+    .set(updateData)
+    .where(eq(makeupExams.id, makeupExamId));
+  
+  return { success: true };
+}
+
+/**
+ * 檢查補考是否逾期，自動更新狀態
+ */
+export async function checkExpiredMakeupExams() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { makeupExams } = await import("../drizzle/schema");
+  const { and, lt, or } = await import("drizzle-orm");
+
+  const now = new Date();
+  
+  // 查詢所有逾期且狀態為 pending 或 scheduled 的補考記錄
+  const expiredMakeups = await db
+    .select()
+    .from(makeupExams)
+    .where(
+      and(
+        or(
+          eq(makeupExams.status, "pending"),
+          eq(makeupExams.status, "scheduled")
+        ),
+        lt(makeupExams.makeupDeadline, now)
+      )
+    );
+  
+  // 批次更新狀態為 expired
+  if (expiredMakeups.length > 0) {
+    for (const makeup of expiredMakeups) {
+      await db
+        .update(makeupExams)
+        .set({ status: "expired" })
+        .where(eq(makeupExams.id, makeup.id));
+    }
+  }
+  
+  return {
+    success: true,
+    expiredCount: expiredMakeups.length,
+  };
+}
+
+/**
+ * 取得補考統計資料
+ */
+export async function getMakeupExamStats() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { makeupExams } = await import("../drizzle/schema");
+  const { sql } = await import("drizzle-orm");
+
+  // 統計各狀態的補考數量
+  const stats = await db
+    .select({
+      status: makeupExams.status,
+      totalCount: sql<number>`COUNT(*)`,
+      avgMakeupCount: sql<number>`AVG(${makeupExams.makeupCount})`,
+    })
+    .from(makeupExams)
+    .groupBy(makeupExams.status);
+  
+  return stats;
+}
+
+
+
+// ==================== 考試規劃範本相關函數 ====================
+
+/**
+ * 建立考試規劃範本
+ */
+export async function createExamPlanningTemplate(data: {
+  name: string;
+  description?: string;
+  category?: string;
+  isPublic?: boolean;
+  createdBy: number;
+  items: Array<{
+    examId: number;
+    orderIndex: number;
+    daysFromStart: number;
+    durationDays: number;
+    notes?: string;
+  }>;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { examPlanningTemplates, examPlanningTemplateItems } = await import("../drizzle/schema");
+
+  // 建立範本
+  const [result] = await db.insert(examPlanningTemplates).values({
+    name: data.name,
+    description: data.description,
+    category: data.category,
+    isPublic: data.isPublic ? 1 : 0,
+    createdBy: data.createdBy,
+  });
+
+  const templateId = Number(result.insertId);
+
+  // 建立範本項目
+  if (data.items && data.items.length > 0) {
+    const itemsToInsert = data.items.map(item => ({
+      templateId,
+      examId: item.examId,
+      orderIndex: item.orderIndex,
+      daysFromStart: item.daysFromStart,
+      durationDays: item.durationDays,
+      notes: item.notes,
+    }));
+
+    await db.insert(examPlanningTemplateItems).values(itemsToInsert);
+  }
+
+  return { success: true, templateId };
+}
+
+/**
+ * 查詢所有考試規劃範本
+ */
+export async function getExamPlanningTemplates(filters?: {
+  category?: string;
+  createdBy?: number;
+  isPublic?: boolean;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { examPlanningTemplates, users } = await import("../drizzle/schema");
+  const { and } = await import("drizzle-orm");
+
+  let query = db
+    .select({
+      id: examPlanningTemplates.id,
+      name: examPlanningTemplates.name,
+      description: examPlanningTemplates.description,
+      category: examPlanningTemplates.category,
+      isPublic: examPlanningTemplates.isPublic,
+      createdBy: examPlanningTemplates.createdBy,
+      creatorName: users.name,
+      createdAt: examPlanningTemplates.createdAt,
+      updatedAt: examPlanningTemplates.updatedAt,
+    })
+    .from(examPlanningTemplates)
+    .leftJoin(users, eq(examPlanningTemplates.createdBy, users.id))
+    .$dynamic();
+
+  const conditions = [];
+
+  if (filters?.category) {
+    conditions.push(eq(examPlanningTemplates.category, filters.category));
+  }
+
+  if (filters?.createdBy) {
+    conditions.push(eq(examPlanningTemplates.createdBy, filters.createdBy));
+  }
+
+  if (filters?.isPublic !== undefined) {
+    conditions.push(eq(examPlanningTemplates.isPublic, filters.isPublic ? 1 : 0));
+  }
+
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions));
+  }
+
+  const result = await query.orderBy(desc(examPlanningTemplates.createdAt));
+
+  return result;
+}
+
+/**
+ * 查詢範本詳情（包含所有項目）
+ */
+export async function getExamPlanningTemplateDetail(templateId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { examPlanningTemplates, examPlanningTemplateItems, exams, users } = await import("../drizzle/schema");
+
+  // 查詢範本基本資訊
+  const [template] = await db
+    .select({
+      id: examPlanningTemplates.id,
+      name: examPlanningTemplates.name,
+      description: examPlanningTemplates.description,
+      category: examPlanningTemplates.category,
+      isPublic: examPlanningTemplates.isPublic,
+      createdBy: examPlanningTemplates.createdBy,
+      creatorName: users.name,
+      createdAt: examPlanningTemplates.createdAt,
+      updatedAt: examPlanningTemplates.updatedAt,
+    })
+    .from(examPlanningTemplates)
+    .leftJoin(users, eq(examPlanningTemplates.createdBy, users.id))
+    .where(eq(examPlanningTemplates.id, templateId))
+    .limit(1);
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  // 查詢範本項目
+  const items = await db
+    .select({
+      id: examPlanningTemplateItems.id,
+      examId: examPlanningTemplateItems.examId,
+      examTitle: exams.title,
+      examDescription: exams.description,
+      orderIndex: examPlanningTemplateItems.orderIndex,
+      daysFromStart: examPlanningTemplateItems.daysFromStart,
+      durationDays: examPlanningTemplateItems.durationDays,
+      notes: examPlanningTemplateItems.notes,
+      createdAt: examPlanningTemplateItems.createdAt,
+    })
+    .from(examPlanningTemplateItems)
+    .leftJoin(exams, eq(examPlanningTemplateItems.examId, exams.id))
+    .where(eq(examPlanningTemplateItems.templateId, templateId))
+    .orderBy(examPlanningTemplateItems.orderIndex);
+
+  return {
+    ...template,
+    items,
+  };
+}
+
+/**
+ * 更新考試規劃範本
+ */
+export async function updateExamPlanningTemplate(
+  templateId: number,
+  data: {
+    name?: string;
+    description?: string;
+    category?: string;
+    isPublic?: boolean;
+  }
+) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { examPlanningTemplates } = await import("../drizzle/schema");
+
+  const updateData: any = {};
+
+  if (data.name) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.category !== undefined) updateData.category = data.category;
+  if (data.isPublic !== undefined) updateData.isPublic = data.isPublic ? 1 : 0;
+
+  await db
+    .update(examPlanningTemplates)
+    .set(updateData)
+    .where(eq(examPlanningTemplates.id, templateId));
+
+  return { success: true };
+}
+
+/**
+ * 刪除考試規劃範本
+ */
+export async function deleteExamPlanningTemplate(templateId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { examPlanningTemplates, examPlanningTemplateItems } = await import("../drizzle/schema");
+
+  // 刪除範本項目
+  await db
+    .delete(examPlanningTemplateItems)
+    .where(eq(examPlanningTemplateItems.templateId, templateId));
+
+  // 刪除範本
+  await db
+    .delete(examPlanningTemplates)
+    .where(eq(examPlanningTemplates.id, templateId));
+
+  return { success: true };
+}
+
+/**
+ * 從範本建立考試規劃（批次指派考試）
+ */
+export async function createPlanningFromTemplate(data: {
+  templateId: number;
+  userIds: number[];
+  startDate: Date;
+  createdBy: number;
+  batchName?: string;
+}) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const { examPlanningTemplates, examPlanningTemplateItems, examAssignments, examPlanningBatches } = await import("../drizzle/schema");
+
+  // 查詢範本詳情
+  const [template] = await db
+    .select()
+    .from(examPlanningTemplates)
+    .where(eq(examPlanningTemplates.id, data.templateId))
+    .limit(1);
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  // 查詢範本項目
+  const items = await db
+    .select()
+    .from(examPlanningTemplateItems)
+    .where(eq(examPlanningTemplateItems.templateId, data.templateId))
+    .orderBy(examPlanningTemplateItems.orderIndex);
+
+  if (items.length === 0) {
+    throw new Error("Template has no items");
+  }
+
+  // 建立批次記錄
+  const [batchResult] = await db.insert(examPlanningBatches).values({
+    batchName: data.batchName || `${template.name} - ${new Date().toLocaleDateString()}`,
+    totalUsers: data.userIds.length,
+    totalExams: items.length,
+    totalAssignments: data.userIds.length * items.length,
+    successCount: 0,
+    failureCount: 0,
+    status: "processing",
+    createdBy: data.createdBy,
+  });
+
+  const batchId = Number(batchResult.insertId);
+
+  // 建立考試指派
+  const assignmentsToCreate = [];
+  let successCount = 0;
+  let failureCount = 0;
+
+  for (const userId of data.userIds) {
+    for (const item of items) {
+      try {
+        const startTime = new Date(data.startDate.getTime() + item.daysFromStart * 24 * 60 * 60 * 1000);
+        const deadline = new Date(startTime.getTime() + item.durationDays * 24 * 60 * 60 * 1000);
+
+        assignmentsToCreate.push({
+          examId: item.examId,
+          userId,
+          startTime,
+          deadline,
+          status: "assigned" as const,
+          assignedBy: data.createdBy,
+          batchId,
+        });
+
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to create assignment for user ${userId}, exam ${item.examId}:`, error);
+        failureCount++;
+      }
+    }
+  }
+
+  // 批次插入考試指派
+  if (assignmentsToCreate.length > 0) {
+    await db.insert(examAssignments).values(assignmentsToCreate);
+  }
+
+  // 更新批次記錄
+  await db
+    .update(examPlanningBatches)
+    .set({
+      successCount,
+      failureCount,
+      status: "completed",
+    })
+    .where(eq(examPlanningBatches.id, batchId));
+
+  return {
+    success: true,
+    batchId,
+    successCount,
+    failureCount,
+    totalAssignments: assignmentsToCreate.length,
+  };
+}
+
+/**
+ * 匯出範本為 JSON
+ */
+export async function exportTemplateAsJSON(templateId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const templateDetail = await getExamPlanningTemplateDetail(templateId);
+
+  return {
+    version: "1.0",
+    template: templateDetail,
+    exportedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * 從 JSON 匯入範本
+ */
+export async function importTemplateFromJSON(jsonData: any, createdBy: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  if (!jsonData.template || !jsonData.template.name) {
+    throw new Error("Invalid template JSON format");
+  }
+
+  const template = jsonData.template;
+
+  // 建立範本
+  const result = await createExamPlanningTemplate({
+    name: template.name,
+    description: template.description,
+    category: template.category,
+    isPublic: template.isPublic === 1,
+    createdBy,
+    items: template.items.map((item: any) => ({
+      examId: item.examId,
+      orderIndex: item.orderIndex,
+      daysFromStart: item.daysFromStart,
+      durationDays: item.durationDays,
+      notes: item.notes,
+    })),
+  });
+
+  return result;
+}
+

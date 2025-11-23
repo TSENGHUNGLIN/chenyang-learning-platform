@@ -2735,6 +2735,260 @@ ${file.extractedText || "無法提取文字內容"}`
       }),
   }),
 
+  // 考試規劃範本
+  examPlanningTemplates: router({
+    // 建立範本
+    create: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        category: z.string().optional(),
+        isPublic: z.boolean().optional(),
+        items: z.array(z.object({
+          examId: z.number(),
+          orderIndex: z.number(),
+          daysFromStart: z.number(),
+          durationDays: z.number(),
+          notes: z.string().optional(),
+        })),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createExamPlanningTemplate } = await import("./db");
+        return await createExamPlanningTemplate({ ...input, createdBy: ctx.user.id });
+      }),
+    
+    // 查詢範本列表
+    list: protectedProcedure
+      .input(z.object({
+        category: z.string().optional(),
+        createdBy: z.number().optional(),
+        isPublic: z.boolean().optional(),
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getExamPlanningTemplates } = await import("./db");
+        return await getExamPlanningTemplates(input);
+      }),
+    
+    // 查詢範本詳情
+    getDetail: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getExamPlanningTemplateDetail } = await import("./db");
+        return await getExamPlanningTemplateDetail(input);
+      }),
+    
+    // 更新範本
+    update: protectedProcedure
+      .input(z.object({
+        templateId: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        category: z.string().optional(),
+        isPublic: z.boolean().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateExamPlanningTemplate } = await import("./db");
+        const { templateId, ...updateData } = input;
+        return await updateExamPlanningTemplate(templateId, updateData);
+      }),
+    
+    // 刪除範本
+    delete: protectedProcedure
+      .input(z.number())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { deleteExamPlanningTemplate } = await import("./db");
+        return await deleteExamPlanningTemplate(input);
+      }),
+    
+    // 從範本建立規劃
+    createFromTemplate: protectedProcedure
+      .input(z.object({
+        templateId: z.number(),
+        userIds: z.array(z.number()),
+        startDate: z.string(),
+        batchName: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { createPlanningFromTemplate } = await import("./db");
+        return await createPlanningFromTemplate({
+          ...input,
+          startDate: new Date(input.startDate),
+          createdBy: ctx.user.id,
+        });
+      }),
+    
+    // 匯出範本
+    exportJSON: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { exportTemplateAsJSON } = await import("./db");
+        return await exportTemplateAsJSON(input);
+      }),
+    
+    // 匯入範本
+    importJSON: protectedProcedure
+      .input(z.object({
+        jsonData: z.any(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { importTemplateFromJSON } = await import("./db");
+        return await importTemplateFromJSON(input.jsonData, ctx.user.id);
+      }),
+  }),
+
+  // 補考自動安排
+  autoMakeupExams: router({
+    // 自動建立補考記錄
+    autoSchedule: protectedProcedure
+      .input(z.object({
+        maxMakeupAttempts: z.number().optional(),
+        makeupDaysAfterOverdue: z.number().optional(),
+      }).optional())
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { autoScheduleMakeupExams } = await import("./db");
+        return await autoScheduleMakeupExams(input);
+      }),
+    
+    // 查詢補考記錄（包含逾期資訊）
+    listWithOverdueInfo: protectedProcedure
+      .input(z.object({
+        userId: z.number().optional(),
+        examId: z.number().optional(),
+        status: z.enum(["pending", "scheduled", "completed", "expired"]).optional(),
+        limit: z.number().optional(),
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getMakeupExamsWithOverdueInfo } = await import("./db");
+        return await getMakeupExamsWithOverdueInfo(input);
+      }),
+    
+    // 更新補考狀態
+    updateStatus: protectedProcedure
+      .input(z.object({
+        makeupExamId: z.number(),
+        status: z.enum(["pending", "scheduled", "completed", "expired"]),
+        makeupAssignmentId: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { updateMakeupExamStatus } = await import("./db");
+        return await updateMakeupExamStatus(input.makeupExamId, input.status, input.makeupAssignmentId);
+      }),
+    
+    // 檢查逾期補考
+    checkExpired: protectedProcedure.mutation(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { checkExpiredMakeupExams } = await import("./db");
+      return await checkExpiredMakeupExams();
+    }),
+    
+    // 查詢補考統計
+    getStats: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getMakeupExamStats } = await import("./db");
+      return await getMakeupExamStats();
+    }),
+  }),
+
+  // 逾期通知自動化
+  overdueNotifications: router({
+    // 檢查並建立逾期通知記錄
+    checkAndCreate: protectedProcedure.mutation(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { checkAndCreateOverdueNotifications } = await import("./db");
+      return await checkAndCreateOverdueNotifications();
+    }),
+    
+    // 發送逾期通知
+    send: protectedProcedure.mutation(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canEdit")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { sendOverdueNotifications } = await import("./db");
+      return await sendOverdueNotifications();
+    }),
+    
+    // 查詢通知歷史
+    listHistory: protectedProcedure
+      .input(z.object({
+        userId: z.number().optional(),
+        examId: z.number().optional(),
+        notificationLevel: z.enum(["day_1", "day_3", "day_7"]).optional(),
+        limit: z.number().optional(),
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getOverdueNotificationHistory } = await import("./db");
+        return await getOverdueNotificationHistory(input);
+      }),
+    
+    // 查詢通知統計
+    getStats: protectedProcedure.query(async ({ ctx }) => {
+      const { hasPermission } = await import("@shared/permissions");
+      if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+      }
+      const { getOverdueNotificationStats } = await import("./db");
+      return await getOverdueNotificationStats();
+    }),
+  }),
+
   // 資料品質檢查
   dataQualityCheck: router({  checkQuestions: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");

@@ -390,44 +390,62 @@ export default function ExamPlanning() {
                 )}
 
                 {/* 考生列表 */}
-                <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2">
-                  {filteredUsers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      沒有找到考生
-                    </p>
-                  ) : (
-                    filteredUsers.map(user => (
-                      <div
-                        key={user.id}
-                        className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
-                        onClick={() => {
-                          if (selectionMode === "single") {
-                            setSelectedUserIds([user.id]);
-                          } else {
-                            handleUserToggle(user.id);
-                          }
-                        }}
-                      >
-                        {selectionMode === "multiple" && (
+                {selectionMode === "single" ? (
+                  <RadioGroup
+                    value={selectedUserIds[0]?.toString() || ""}
+                    onValueChange={(value) => setSelectedUserIds([parseInt(value)])}
+                  >
+                    <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2">
+                      {filteredUsers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          沒有找到考生
+                        </p>
+                      ) : (
+                        filteredUsers.map(user => (
+                          <div
+                            key={user.id}
+                            className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
+                            onClick={() => setSelectedUserIds([user.id])}
+                          >
+                            <RadioGroupItem
+                              value={user.id.toString()}
+                              id={`user-${user.id}`}
+                            />
+                            <Label htmlFor={`user-${user.id}`} className="flex-1 min-w-0 cursor-pointer">
+                              <p className="text-sm font-medium truncate">{user.name || "未命名"}</p>
+                              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                            </Label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </RadioGroup>
+                ) : (
+                  <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2">
+                    {filteredUsers.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        沒有找到考生
+                      </p>
+                    ) : (
+                      filteredUsers.map(user => (
+                        <div
+                          key={user.id}
+                          className="flex items-center gap-2 p-2 hover:bg-accent rounded-md cursor-pointer"
+                          onClick={() => handleUserToggle(user.id)}
+                        >
                           <Checkbox
                             checked={selectedUserIds.includes(user.id)}
                             onCheckedChange={() => handleUserToggle(user.id)}
                           />
-                        )}
-                        {selectionMode === "single" && (
-                          <RadioGroupItem
-                            value={user.id.toString()}
-                            checked={selectedUserIds.includes(user.id)}
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{user.name || "未命名"}</p>
-                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{user.name || "未命名"}</p>
+                            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </>
             )}
           </CardContent>
