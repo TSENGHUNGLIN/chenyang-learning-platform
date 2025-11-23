@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity, BookX, TrendingUp, RefreshCw, Lightbulb, ShieldCheck, CalendarClock, AlertTriangle, Trash2 } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity, BookX, TrendingUp, RefreshCw, Lightbulb, ShieldCheck } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -45,15 +45,13 @@ const staffMenuItems: Array<{
   { icon: FileText, label: "檔案管理", path: "/files", color: "pink" },
   { icon: Sparkles, label: "AI 分析出題", path: "/ai-analysis", color: "orange" },
   { icon: ShieldCheck, label: "考題品質檢查", path: "/data-quality", color: "violet", editorOnly: true },
+  { icon: BookOpen, label: "題庫管理", path: "/question-bank", color: "indigo", editorOnly: true },
+  { icon: Database, label: "題庫檔案", path: "/question-banks", color: "cyan", editorOnly: true },
   { icon: FileStack, label: "考卷範本", path: "/exam-templates", color: "purple", editorOnly: true },
-  { icon: BookOpen, label: "單選題庫", path: "/question-bank", color: "indigo", editorOnly: true },
-  { icon: Database, label: "試卷題庫", path: "/question-banks", color: "cyan", editorOnly: true },
-  { icon: Award, label: "考試管理", path: "/exams", color: "rose", editorOnly: true },
   { icon: ClipboardList, label: "考試園地", path: "/my-exams", color: "sky" },
-  { icon: AlertTriangle, label: "逾期管理", path: "/overdue-exams", color: "orange", editorOnly: true },
+  { icon: Award, label: "考試管理", path: "/exams", color: "rose", editorOnly: true },
   { icon: RefreshCw, label: "補考管理", path: "/makeup-exams", color: "teal", editorOnly: true },
   { icon: Activity, label: "考試監控", path: "/exam-monitoring", color: "red", editorOnly: true },
-  { icon: Trash2, label: "考試回收站", path: "/exam-recycle-bin", color: "gray", editorOnly: true },
   { icon: Settings, label: "部門人員", path: "/manage", color: "slate", adminOnly: true },
   { icon: Users, label: "使用者管理", path: "/users", color: "zinc", adminOnly: true },
 ];

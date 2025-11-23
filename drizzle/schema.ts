@@ -261,7 +261,6 @@ export const exams = mysqlTable("exams", {
   createdBy: int("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  deletedAt: timestamp("deletedAt"), // 軟刪除時間戳記，null表示未刪除
 });
 
 export type Exam = typeof exams.$inferSelect;
@@ -515,105 +514,4 @@ export const notifications = mysqlTable("notifications", {
 
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = typeof notifications.$inferInsert;
-
-/**
- * 考試規劃批次記錄表格
- * 記錄每次批次規劃的操作，方便追蹤和管理
- */
-export const examPlanningBatches = mysqlTable("examPlanningBatches", {
-  id: int("id").autoincrement().primaryKey(),
-  batchName: varchar("batchName", { length: 200 }), // 批次名稱（可選）
-  description: text("description"), // 批次說明
-  totalAssignments: int("totalAssignments").notNull().default(0), // 本批次建立的指派總數
-  examIds: text("examIds").notNull(), // 考試ID列表（JSON陣列）
-  userIds: text("userIds").notNull(), // 考生ID列表（JSON陣列）
-  importSource: mysqlEnum("importSource", ["manual", "csv", "excel"]).notNull().default("manual"), // 來源：手動、CSV、Excel
-  importFileName: varchar("importFileName", { length: 500 }), // 匯入檔案名稱（如果是批次匯入）
-  createdBy: int("createdBy").notNull(), // 建立者ID
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type ExamPlanningBatch = typeof examPlanningBatches.$inferSelect;
-export type InsertExamPlanningBatch = typeof examPlanningBatches.$inferInsert;
-
-/**
- * 逾期考試處理記錄表格
- * 記錄逾期考試的處理動作（提醒、標記、補考安排等）
- */
-export const overdueExamActions = mysqlTable("overdueExamActions", {
-  id: int("id").autoincrement().primaryKey(),
-  assignmentId: int("assignmentId").notNull(), // 關聯的考試指派ID
-  examId: int("examId").notNull(), // 考試ID
-  userId: int("userId").notNull(), // 考生ID
-  actionType: mysqlEnum("actionType", ["reminder_sent", "marked_overdue", "makeup_scheduled", "deadline_extended"]).notNull(), // 處理動作類型
-  actionDetails: text("actionDetails"), // 動作詳情（JSON格式）
-  overdueBy: int("overdueBy"), // 逾期天數
-  originalDeadline: timestamp("originalDeadline"), // 原始截止時間
-  newDeadline: timestamp("newDeadline"), // 新截止時間（如果延期）
-  performedBy: int("performedBy"), // 執行動作的管理員ID（null表示系統自動）
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type OverdueExamAction = typeof overdueExamActions.$inferSelect;
-export type InsertOverdueExamAction = typeof overdueExamActions.$inferInsert;
-
-
-/**
- * 逾期通知記錄表格
- * 記錄逾期考試的分級通知（1天/3天/7天），避免重複通知
- */
-export const overdueNotifications = mysqlTable("overdueNotifications", {
-  id: int("id").autoincrement().primaryKey(),
-  assignmentId: int("assignmentId").notNull(), // 關聯的考試指派ID
-  examId: int("examId").notNull(), // 考試ID
-  userId: int("userId").notNull(), // 考生ID
-  notificationLevel: mysqlEnum("notificationLevel", ["day_1", "day_3", "day_7"]).notNull(), // 通知級別（逾期1天/3天/7天）
-  notificationSent: int("notificationSent").notNull().default(0), // 是否已發送（1=已發送，0=未發送）
-  sentAt: timestamp("sentAt"), // 發送時間
-  overdueBy: int("overdueBy").notNull(), // 逾期天數
-  deadline: timestamp("deadline").notNull(), // 考試截止時間
-  notificationContent: text("notificationContent"), // 通知內容
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type OverdueNotification = typeof overdueNotifications.$inferSelect;
-export type InsertOverdueNotification = typeof overdueNotifications.$inferInsert;
-
-
-
-/**
- * 考試規劃範本表格
- * 儲存常用的考試規劃範本（例如「新人訓練50堂課」）
- */
-export const examPlanningTemplates = mysqlTable("examPlanningTemplates", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 200 }).notNull(), // 範本名稱
-  description: text("description"), // 範本描述
-  category: varchar("category", { length: 100 }), // 範本分類（例如：新人訓練、定期考核）
-  isPublic: int("isPublic").notNull().default(1), // 是否公開（1=公開，0=私人）
-  createdBy: int("createdBy").notNull(), // 建立者ID
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type ExamPlanningTemplate = typeof examPlanningTemplates.$inferSelect;
-export type InsertExamPlanningTemplate = typeof examPlanningTemplates.$inferInsert;
-
-/**
- * 考試規劃範本項目表格
- * 儲存範本中的考試項目（考卷、時間安排等）
- */
-export const examPlanningTemplateItems = mysqlTable("examPlanningTemplateItems", {
-  id: int("id").autoincrement().primaryKey(),
-  templateId: int("templateId").notNull(), // 關聯的範本ID
-  examId: int("examId").notNull(), // 考卷ID
-  orderIndex: int("orderIndex").notNull().default(0), // 排序順序
-  daysFromStart: int("daysFromStart").notNull().default(0), // 從開始日期起的天數（例如：0=第1天，7=第8天）
-  durationDays: int("durationDays").notNull().default(7), // 考試持續天數（例如：7天內完成）
-  notes: text("notes"), // 備註
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type ExamPlanningTemplateItem = typeof examPlanningTemplateItems.$inferSelect;
-export type InsertExamPlanningTemplateItem = typeof examPlanningTemplateItems.$inferInsert;
 

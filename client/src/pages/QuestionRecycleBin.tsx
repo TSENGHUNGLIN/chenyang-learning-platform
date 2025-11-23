@@ -98,12 +98,6 @@ export default function QuestionRecycleBin() {
       return;
     }
 
-    // 檢查權限：只有管理員可以批次還原
-    if (!user || user.role !== 'admin') {
-      toast.error("您沒有權限批次還原題目，只有管理員可以批次還原");
-      return;
-    }
-
     try {
       await batchRestoreMutation.mutateAsync(selectedQuestions);
       toast.success(`成功還原 ${selectedQuestions.length} 個題目`);
@@ -118,12 +112,6 @@ export default function QuestionRecycleBin() {
   const openPermanentDeleteDialog = () => {
     if (selectedQuestions.length === 0) {
       toast.error("請至少選擇一個題目");
-      return;
-    }
-
-    // 檢查權限：只有管理員可以批次永久刪除
-    if (!user || user.role !== 'admin') {
-      toast.error("您沒有權限批次永久刪除題目，只有管理員可以批次永久刪除");
       return;
     }
 
@@ -273,9 +261,8 @@ export default function QuestionRecycleBin() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              {selectedQuestions.length > 0 && user?.role === 'admin' && (
+              {selectedQuestions.length > 0 && (
                 <>
-                  {/* 只有管理員可以批次還原和永久刪除 */}
                   <Button onClick={handleBatchRestore} variant="default">
                     <RotateCcw className="h-4 w-4 mr-2" />
                     批次還原 ({selectedQuestions.length})
@@ -283,6 +270,7 @@ export default function QuestionRecycleBin() {
                   <Button 
                     onClick={openPermanentDeleteDialog} 
                     variant="destructive"
+                    disabled={!user || (user.role !== 'admin' && user.role !== 'editor')}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
                     永久刪除 ({selectedQuestions.length})

@@ -163,12 +163,6 @@ importers:
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      intro.js:
-        specifier: ^8.3.2
-        version: 8.3.2
-      intro.js-react:
-        specifier: ^1.0.0
-        version: 1.0.0(intro.js@8.3.2)(react@19.2.0)
       jose:
         specifier: 6.1.0
         version: 6.1.0
@@ -2959,15 +2953,6 @@ packages:
   internmap@2.0.3:
     resolution: {integrity: sha512-5Hh7Y1wQbvY5ooGgPbDaL5iYLAPzMTUrjMulskHLH6wnv/A+1q5rgEaiuqEjB+oxGXIVZs1FF+R/KPN3ZSQYYg==}
     engines: {node: '>=12'}
-
-  intro.js-react@1.0.0:
-    resolution: {integrity: sha512-zR8pbTyX20RnCZpJMc0nuHBpsjcr1wFkj3ZookV6Ly4eE/LGpFTQwPsaA61Cryzwiy/tTFsusf4hPU9NpI9UOg==}
-    peerDependencies:
-      intro.js: '>=2.5.0'
-      react: '>=0.14.0'
-
-  intro.js@8.3.2:
-    resolution: {integrity: sha512-+QsuU8P7Z/O7stAwZ8Uj6CPyKsY6xVx/7hKTVLjlIEPYHaT43XnEUUYHCln6Ehr7GlDuwczh6I8PD/HGf4EG0A==}
 
   ipaddr.js@1.9.1:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
@@ -6664,13 +6649,6 @@ snapshots:
       react-dom: 19.2.0(react@19.2.0)
 
   internmap@2.0.3: {}
-
-  intro.js-react@1.0.0(intro.js@8.3.2)(react@19.2.0):
-    dependencies:
-      intro.js: 8.3.2
-      react: 19.2.0
-
-  intro.js@8.3.2: {}
 
   ipaddr.js@1.9.1: {}
 

@@ -29,12 +29,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FolderTree, Plus, Pencil, Trash2, Home, Info, Sparkles, HelpCircle } from "lucide-react";
-import { StatisticsPanel } from "@/components/StatisticsPanel";
+import { FolderTree, Plus, Pencil, Trash2, Home } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useIntroTour } from "@/hooks/useIntroTour";
 
 export default function CategoryManagement() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -47,11 +43,9 @@ export default function CategoryManagement() {
   });
 
   const { data: categories, refetch: refetchCategories } = trpc.questionCategories.list.useQuery();
-  const { data: statistics, refetch: refetchStatistics } = trpc.questionCategories.statistics.useQuery();
   const createMutation = trpc.questionCategories.create.useMutation();
   const updateMutation = trpc.questionCategories.update.useMutation();
   const deleteMutation = trpc.questionCategories.delete.useMutation();
-  const createExamplesMutation = trpc.questionCategories.createExamples.useMutation();
 
   const resetForm = () => {
     setFormData({
@@ -131,42 +125,6 @@ export default function CategoryManagement() {
     return `${getCategoryPath(category.parentId)} > ${category.name}`;
   };
 
-  const [showGuide, setShowGuide] = useState(false);
-
-  // 互動式導覽配置
-  const { startTour } = useIntroTour({
-    storageKey: "category-management-tour",
-    autoStart: true,
-    steps: [
-      {
-        intro: "<h3>歡迎使用分類管理！</h3><p>這個導覽將帶您快速了解如何管理題目分類。</p>",
-      },
-      {
-        element: "[data-tour='statistics-panel']",
-        intro: "<h4>統計資訊面板</h4><p>這裡顯示分類的使用統計，包括總數、最常用、未使用和最近新增的分類。</p>",
-        position: "bottom",
-      },
-      {
-        element: "[data-tour='guide-button']",
-        intro: "<h4>操作指南</h4><p>點擊這個按鈕可以查看詳細的操作指南，包括功能說明、使用步驟和最佳實踐。</p>",
-        position: "bottom",
-      },
-      {
-        element: "[data-tour='create-button']",
-        intro: "<h4>新增分類</h4><p>點擊這個按鈕可以建立新的分類。您可以輸入分類名稱、描述，並選擇上層分類來建立子分類。</p>",
-        position: "left",
-      },
-      {
-        element: "[data-tour='category-table']",
-        intro: "<h4>分類清單</h4><p>這裡顯示所有分類的清單。您可以查看分類名稱、完整路徑和說明，並使用編輯和刪除按鈕進行管理。</p>",
-        position: "top",
-      },
-      {
-        intro: "<h3>導覽完成！</h3><p>現在您可以開始管理分類了。如果需要幫助，可以隨時點擊右上角的問號按鈕查看操作指南。</p>",
-      },
-    ],
-  });
-
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -178,124 +136,17 @@ export default function CategoryManagement() {
             </h1>
             <p className="text-muted-foreground mt-2">管理題目分類，支援多層級樹狀結構</p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowGuide(!showGuide)}
-              title="開啟操作指南"
-              data-tour="guide-button"
-            >
-              <HelpCircle className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              onClick={startTour}
-              title="重新開始導覽"
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" onClick={() => window.location.href = '/'}>
-              <Home className="h-4 w-4 mr-2" />
-              返回首頁
-            </Button>
-            <Button onClick={() => setShowCreateDialog(true)} data-tour="create-button">
-              <Plus className="h-4 w-4 mr-2" />
-              新增分類
-            </Button>
-          </div>
+          <Button variant="outline" onClick={() => window.location.href = '/'}>
+            <Home className="h-4 w-4 mr-2" />
+            返回首頁
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            新增分類
+          </Button>
         </div>
 
-        {/* 統計資訊面板 */}
-        <div data-tour="statistics-panel">
-          {statistics && (
-            <StatisticsPanel type="category" data={statistics} />
-          )}
-        </div>
-
-        {/* 操作指南 */}
-        <Collapsible open={showGuide} onOpenChange={setShowGuide}>
-          <Alert className="bg-blue-50 border-blue-200">
-            <Info className="h-4 w-4 text-blue-600" />
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <AlertTitle className="text-blue-900 font-semibold mb-2">分類管理操作指南</AlertTitle>
-                <CollapsibleTrigger asChild>
-                  <Button variant="link" className="p-0 h-auto text-blue-700 hover:text-blue-900">
-                    {showGuide ? "收起指南" : "展開指南"}
-                  </Button>
-                </CollapsibleTrigger>
-              </div>
-            </div>
-            <CollapsibleContent className="mt-3">
-              <AlertDescription className="text-blue-800 space-y-4">
-                <div>
-                  <h4 className="font-semibold mb-2">📚 功能說明</h4>
-                  <p className="text-sm leading-relaxed">
-                    分類管理用於組織題目，支援多層級樹狀結構（例如：「程式設計 &gt; Python &gt; 基礎語法」）。
-                    合理的分類結構可以幫助您快速找到題目，並在建立考卷時更有效率地篩選題目。
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold mb-2">✨ 使用步驟</h4>
-                  <ol className="text-sm space-y-2 list-decimal list-inside">
-                    <li><strong>新增分類：</strong>點擊右上角「新增分類」按鈕，輸入分類名稱和描述。可選擇「上層分類」建立子分類。</li>
-                    <li><strong>編輯分類：</strong>點擊表格中的編輯按鈕（鉛筆圖示），修改分類名稱、描述或上層分類。</li>
-                    <li><strong>刪除分類：</strong>點擊表格中的刪除按鈕（垃圾桶圖示）。注意：刪除分類前請確認該分類下沒有題目。</li>
-                    <li><strong>查看層級：</strong>表格中的「完整路徑」欄位顯示分類的完整層級結構。</li>
-                  </ol>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold mb-2">⚠️ 注意事項</h4>
-                  <ul className="text-sm space-y-1 list-disc list-inside">
-                    <li>建議先建立主要分類（例如：「程式設計」、「資料庫」），再建立子分類。</li>
-                    <li>分類名稱應簡潔明確，避免過長或含糊不清。</li>
-                    <li>刪除分類前，請先將該分類下的題目移至其他分類或刪除。</li>
-                    <li>若分類下有子分類，需先刪除所有子分類才能刪除父分類。</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold mb-2">💡 最佳實踐</h4>
-                  <ul className="text-sm space-y-1 list-disc list-inside">
-                    <li>建議分類層級不超過 3 層，避免結構過於複雜。</li>
-                    <li>使用描述欄位記錄分類的用途和範圍，方便團隊成員理解。</li>
-                    <li>定期檢視分類結構，合併或刪除不再使用的分類。</li>
-                  </ul>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-blue-200">
-                  <h4 className="font-semibold mb-3">🚀 快速開始</h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        const result = await createExamplesMutation.mutateAsync();
-                        toast.success(result.message || "範例分類已建立");
-                        refetchCategories();
-                        refetchStatistics();
-                      } catch (error: any) {
-                        toast.error(error.message || "建立範例失敗");
-                      }
-                    }}
-                    disabled={createExamplesMutation.isPending}
-                    className="bg-blue-100 hover:bg-blue-200 text-blue-900 border-blue-300"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    建立範例分類
-                  </Button>
-                  <p className="text-xs text-blue-700 mt-2">
-                    點擊按鈕可快速建立3個範例分類，幫助您了解系統結構
-                  </p>
-                </div>
-              </AlertDescription>
-            </CollapsibleContent>
-          </Alert>
-        </Collapsible>
-
-        <Card data-tour="category-table">
+        <Card>
           <CardHeader>
             <CardTitle>所有分類</CardTitle>
             <CardDescription>共 {categories?.length || 0} 個分類</CardDescription>

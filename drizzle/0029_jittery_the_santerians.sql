@@ -1,1 +1,0 @@
-ALTER TABLE `exams` ADD `deletedAt` timestamp;

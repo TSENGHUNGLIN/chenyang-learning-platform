@@ -477,9 +477,9 @@ export default function QuestionBank() {
       return;
     }
 
-    // 檢查權限：只有管理員可以批次刪除
-    if (!user || user.role !== 'admin') {
-      toast.error("您沒有權限批次刪除題目，只有管理員可以批次刪除");
+    // 檢查權限
+    if (!user || (user.role !== 'admin' && user.role !== 'editor')) {
+      toast.error("您沒有權限刪除題目，只有管理員和編輯者可以刪除");
       return;
     }
 
@@ -759,25 +759,25 @@ export default function QuestionBank() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <BookOpen className="h-8 w-8 text-primary" />
-            單選題庫
+            題庫管理
           </h1>
           <p className="text-muted-foreground mt-2">
-            管理考核單選題題庫，支援是非題、選擇題、問答題
+            管理考核題庫，支援是非題、選擇題、問答題
           </p>
         </div>        <div className="flex gap-2">
-          <Button variant="default" onClick={downloadTemplate} className="bg-green-600 hover:bg-green-700 text-white">
+          <Button variant="outline" onClick={downloadTemplate}>
             <Download className="h-4 w-4 mr-2" />
             下載範本
           </Button>
-          <Button variant="default" onClick={() => setShowImportDialog(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button variant="outline" onClick={() => setShowImportDialog(true)}>
             <Upload className="h-4 w-4 mr-2" />
             批次匯入
           </Button>
-          <Button variant="default" onClick={() => window.location.href = '/recycle-bin'} className="bg-orange-600 hover:bg-orange-700 text-white">
+          <Button variant="outline" onClick={() => window.location.href = '/recycle-bin'}>
             <Trash2 className="h-4 w-4 mr-2" />
             回收站
           </Button>
-          <Button variant="default" onClick={() => window.location.href = '/'} className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button variant="outline" onClick={() => window.location.href = '/'}>
             <Home className="h-4 w-4 mr-2" />
             返回首頁
           </Button>
@@ -802,16 +802,14 @@ export default function QuestionBank() {
             <div className="flex gap-2">
               {selectedQuestions.length > 0 && (
                 <>
-                  {/* 只有管理員可以批次刪除 */}
-                  {user?.role === 'admin' && (
-                    <Button 
-                      onClick={openDeleteConfirmDialog} 
-                      variant="destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      批次刪除 ({selectedQuestions.length})
-                    </Button>
-                  )}
+                  <Button 
+                    onClick={openDeleteConfirmDialog} 
+                    variant="destructive"
+                    disabled={!user || (user.role !== 'admin' && user.role !== 'editor')}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    批次刪除 ({selectedQuestions.length})
+                  </Button>
                   <Button onClick={openExportConfirmDialog} variant="outline">
                     <Download className="h-4 w-4 mr-2" />
                     匯出考試卷 ({selectedQuestions.length})

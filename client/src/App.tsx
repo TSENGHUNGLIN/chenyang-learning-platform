@@ -17,7 +17,6 @@ import CategoryManagement from "./pages/CategoryManagement";
 import TagManagement from "./pages/TagManagement";
 import AnalysisHistory from "./pages/AnalysisHistory";
 import ExamManagement from "./pages/ExamManagement";
-import ExamList from "./pages/ExamList";
 import ExamTake from "./pages/ExamTake";
 import MyExams from "./pages/MyExams";
 import ExamResult from "./pages/ExamResult";
@@ -34,9 +33,6 @@ import MakeupExamManagement from "./pages/MakeupExamManagement";
 import LearningRecommendations from "./pages/LearningRecommendations";
 import MakeupExamDashboard from "./pages/MakeupExamDashboard";
 import DataQualityCheck from "./pages/DataQualityCheck";
-import ExamPlanning from "./pages/ExamPlanning";
-import OverdueExams from "./pages/OverdueExams";
-import ExamRecycleBin from "./pages/ExamRecycleBin";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -55,9 +51,7 @@ function Router() {
       <Route path={"/categories"} component={CategoryManagement} />
       <Route path={"/tags"} component={TagManagement} />
       <Route path={"/analysis-history"} component={AnalysisHistory} />
-      <Route path={"/exam-management"} component={ExamManagement} />
       <Route path={"/exams"} component={ExamManagement} />
-      <Route path={"/exams/list"} component={ExamList} />
       <Route path={"/exams/:id"} component={ExamDetail} />
       <Route path={"/exam-templates"} component={ExamTemplates} />
       <Route path={"/my-exams"} component={MyExams} />
@@ -73,9 +67,6 @@ function Router() {
       <Route path={"/makeup-dashboard"} component={MakeupExamDashboard} />
       <Route path={"/learning-recommendations"} component={LearningRecommendations} />
       <Route path={"/data-quality"} component={DataQualityCheck} />
-      <Route path={"/exam-planning"} component={ExamPlanning} />
-      <Route path={"/overdue-exams"} component={OverdueExams} />
-      <Route path={"/exam-recycle-bin"} component={ExamRecycleBin} />
       <Route path={"/manage"} component={Manage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

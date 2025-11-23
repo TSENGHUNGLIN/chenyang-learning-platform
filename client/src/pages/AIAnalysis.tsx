@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import ImportQuestionsDialog from "@/components/ImportQuestionsDialog";
-import CSVTableView from "@/components/CSVTableView";
 
 export default function AIAnalysis() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
@@ -42,8 +41,6 @@ export default function AIAnalysis() {
   const [analysisProgress, setAnalysisProgress] = useState<number>(0);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
-  const [csvData, setCsvData] = useState<any>(null);
-  const [isLoadingCsv, setIsLoadingCsv] = useState(false);
   const [useCache, setUseCache] = useState(true); // 是否使用快取
   const [fromCache, setFromCache] = useState(false); // 當前結果是否來自快取
   const [currentAnalysisId, setCurrentAnalysisId] = useState<number | null>(null); // 當前分析的ID
@@ -82,8 +79,6 @@ export default function AIAnalysis() {
   const { data: departments } = trpc.departments.list.useQuery();
   const { data: employees } = trpc.employees.list.useQuery();
   const { data: filesData } = trpc.files.list.useQuery();
-  const { data: categories } = trpc.categories.list.useQuery();
-  const { data: tags } = trpc.tags.list.useQuery();
 
   const files = filesData?.files || [];
 
@@ -104,34 +99,6 @@ export default function AIAnalysis() {
   const filteredEmployees = selectedDepartment && selectedDepartment !== "all"
     ? employees?.filter((emp) => emp.departmentId === parseInt(selectedDepartment))
     : employees;
-
-  // CSV 預視查詢
-  const csvPreviewQuery = trpc.files.previewCSV.useQuery(
-    { 
-      fileUrl: previewFile?.fileUrl || '',
-      maxRows: 100,
-    },
-    { 
-      enabled: !!previewFile && !!previewFile.fileUrl && previewFile.filename.toLowerCase().endsWith('.csv'),
-      refetchOnWindowFocus: false,
-    }
-  );
-
-  // 當 CSV 預視資料載入完成時，更新 csvData
-  useEffect(() => {
-    if (previewFile?.filename.toLowerCase().endsWith('.csv')) {
-      setIsLoadingCsv(csvPreviewQuery.isLoading);
-      if (csvPreviewQuery.data) {
-        setCsvData(csvPreviewQuery.data);
-      } else if (csvPreviewQuery.error) {
-        setCsvData(null);
-        toast.error('載入 CSV 檔案失敗');
-      }
-    } else {
-      setCsvData(null);
-      setIsLoadingCsv(false);
-    }
-  }, [previewFile, csvPreviewQuery.data, csvPreviewQuery.isLoading, csvPreviewQuery.error]);
 
   const handleFileToggle = (fileId: number) => {
     setSelectedFiles(prev =>
@@ -400,30 +367,6 @@ export default function AIAnalysis() {
           questionSource = sourceFile?.filename || String(aiSourceFile);
         }
         
-        // 處理 AI 建議的分類
-        let suggestedCategoryId: number | undefined;
-        if (q.suggestedCategory && categories) {
-          const category = categories.find((c: any) => c.name === q.suggestedCategory);
-          if (category) {
-            suggestedCategoryId = category.id;
-          }
-        }
-        
-        // 處理 AI 建議的標籤
-        let suggestedTagIds: string | undefined;
-        if (q.suggestedTags && Array.isArray(q.suggestedTags) && tags) {
-          const tagIdArray: number[] = [];
-          q.suggestedTags.forEach((tagName: string) => {
-            const tag = tags.find((t: any) => t.name === tagName);
-            if (tag) {
-              tagIdArray.push(tag.id);
-            }
-          });
-          if (tagIdArray.length > 0) {
-            suggestedTagIds = JSON.stringify(tagIdArray);
-          }
-        }
-        
         return {
           type,
           difficulty,
@@ -432,9 +375,6 @@ export default function AIAnalysis() {
           correctAnswer: q.answer,
           explanation: q.explanation,
           source: questionSource || '未知',
-          isAiGenerated: 1, // 標記為 AI 生成
-          suggestedCategoryId, // AI 建議的分類 ID
-          suggestedTagIds, // AI 建議的標籤 ID（JSON 格式）
         };
       });
       
@@ -867,22 +807,13 @@ export default function AIAnalysis() {
               考題出處 <span className="text-red-500">*</span>
             </Label>
             {sourceMode === "manual" ? (
-              <>
-                <Input
-                  id="questionSource"
-                  placeholder="請輸入考題出處（必填）"
-                  value={manualSource}
-                  onChange={(e) => setManualSource(e.target.value)}
-                  className="w-full"
-                />
-                <p className="text-sm text-muted-foreground mt-2">
-                  <span className="font-medium">填寫範例：</span>
-                  <br />
-                  • 單一檔案：使用檔案全名，例如「邱紫郁轉正考核問答」
-                  <br />
-                  • 多個檔案：使用最關鍵的共同字詞，例如「轉正考核問答」
-                </p>
-              </>
+              <Input
+                id="questionSource"
+                placeholder="請輸入考題出處（必填）"
+                value={manualSource}
+                onChange={(e) => setManualSource(e.target.value)}
+                className="w-full"
+              />
             ) : (
               <Select value={aiSourceFile?.toString()} onValueChange={(val) => setAiSourceFile(parseInt(val))}>
                 <SelectTrigger>
@@ -1168,32 +1099,6 @@ export default function AIAnalysis() {
                   />
                 )}
                 
-                {/* CSV 檔案預視 */}
-                {previewFile.filename.toLowerCase().endsWith('.csv') && (
-                  <div className="p-4">
-                    {isLoadingCsv ? (
-                      <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        <span className="ml-2 text-muted-foreground">載入中...</span>
-                      </div>
-                    ) : csvData ? (
-                      <CSVTableView data={csvData} />
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>無法載入 CSV 檔案</p>
-                        <Button
-                          variant="outline"
-                          className="mt-4"
-                          onClick={() => window.open(previewFile.fileUrl, '_blank')}
-                        >
-                          下載檔案
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
                 {/* Word/文字檔案預視（顯示提取的文字） */}
                 {(previewFile.filename.toLowerCase().endsWith('.docx') ||
                   previewFile.filename.toLowerCase().endsWith('.doc') ||
@@ -1220,7 +1125,7 @@ export default function AIAnalysis() {
                 )}
                 
                 {/* 其他檔案類型 */}
-                {!previewFile.filename.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|docx|doc|txt|csv)$/) && (
+                {!previewFile.filename.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|docx|doc|txt)$/) && (
                   <div className="text-center py-12 text-muted-foreground">
                     <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">此檔案類型不支援預視</p>

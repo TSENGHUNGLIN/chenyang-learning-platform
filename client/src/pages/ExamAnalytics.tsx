@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Download, TrendingUp, TrendingDown, Users, Award, Clock, AlertCircle, Home, UserPlus, FileQuestion } from "lucide-react";
+import { ArrowLeft, Download, TrendingUp, TrendingDown, Users, Award, Clock, AlertCircle, Home } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
 
@@ -72,89 +72,7 @@ export default function ExamAnalytics() {
     );
   }
 
-  const { 
-    exam, 
-    statistics = { totalStudents: 0, averageScore: 0, passedCount: 0, passRate: 0 }, 
-    scoreDistribution = [], 
-    answerTimeStats = { averageDuration: 0, fastestDuration: 0, slowestDuration: 0 }, 
-    wrongAnswers = [], 
-    studentScores = [] 
-  } = analytics || {};
-
-  // 檢查是否有考生資料
-  const hasStudentData = statistics.totalStudents > 0;
-
-  // 如果沒有考生資料，顯示友善的空狀態提示
-  if (!hasStudentData) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="container max-w-7xl">
-          {/* 標題列 */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLocation('/exams')}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                返回
-              </Button>
-              <div>
-                <h1 className="text-3xl font-bold">{exam?.title || '考試分析'}</h1>
-                <p className="text-muted-foreground">成績分析報表</p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.location.href = '/'}
-            >
-              <Home className="h-4 w-4 mr-2" />
-              返回首頁
-            </Button>
-          </div>
-
-          {/* 空狀態提示 */}
-          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800">
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-6 mb-6">
-                <FileQuestion className="h-16 w-16 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                尚無考生作答資料
-              </h2>
-              <p className="text-muted-foreground text-center mb-6 max-w-md">
-                目前還沒有考生完成這個考試。請先指派考生，等待他們完成考試後，就可以查看詳細的成績分析。
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  onClick={() => setLocation('/exams')}
-                  size="lg"
-                >
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  前往考試管理
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation('/')}
-                  size="lg"
-                >
-                  <Home className="h-5 w-5 mr-2" />
-                  返回首頁
-                </Button>
-              </div>
-              <div className="mt-8 p-4 bg-blue-100 dark:bg-blue-900 rounded-lg max-w-md">
-                <p className="text-sm text-blue-800 dark:text-blue-200 text-center">
-                  <strong>提示：</strong>您可以在考試管理頁面中，點擊「指派考生」按鈕來分配考試給特定的考生。
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  const { exam, statistics, scoreDistribution, answerTimeStats, wrongAnswers, studentScores } = analytics;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -171,7 +89,7 @@ export default function ExamAnalytics() {
               返回
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">{exam?.title || '考試分析'}</h1>
+              <h1 className="text-3xl font-bold">{exam.title}</h1>
               <p className="text-muted-foreground">成績分析報表</p>
             </div>
           </div>
@@ -370,7 +288,7 @@ export default function ExamAnalytics() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(rankings || []).map((item: any, index: number) => (
+                    {rankings?.map((item: any, index: number) => (
                       <TableRow key={item.userId}>
                         <TableCell className="font-bold">
                           {index === 0 && <Award className="inline h-5 w-5 text-yellow-500 mr-1" />}
