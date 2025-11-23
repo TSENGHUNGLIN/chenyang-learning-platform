@@ -85,6 +85,10 @@ export default function ExamManagement() {
                     <span className="text-white mt-0.5">•</span>
                     <span>小規模指派考試</span>
                   </li>
+                  <li className="flex items-start gap-2 invisible">
+                    <span className="text-white mt-0.5">•</span>
+                    <span>空白項目</span>
+                  </li>
                 </ul>
               </div>
 
@@ -144,6 +148,14 @@ export default function ExamManagement() {
                   <li className="flex items-start gap-2">
                     <span className="text-white mt-0.5">•</span>
                     <span>CSV 批次匯入、規劃範本</span>
+                  </li>
+                  <li className="flex items-start gap-2 invisible">
+                    <span className="text-white mt-0.5">•</span>
+                    <span>空白項目</span>
+                  </li>
+                  <li className="flex items-start gap-2 invisible">
+                    <span className="text-white mt-0.5">•</span>
+                    <span>空白項目</span>
                   </li>
                 </ul>
               </div>

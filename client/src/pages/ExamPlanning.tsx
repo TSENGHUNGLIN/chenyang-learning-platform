@@ -373,9 +373,9 @@ export default function ExamPlanning() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => navigate("/exams")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            返回
+          <Button variant="outline" onClick={() => navigate("/exam-management")}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            返回考試管理
           </Button>
           <Dialog open={showCsvDialog} onOpenChange={setShowCsvDialog}>
           <DialogTrigger asChild>
@@ -477,53 +477,57 @@ export default function ExamPlanning() {
             {selectionMode === "department" && (
               <>
                 <div>
-                  <Label>選擇部門</Label>
+                  <Label>選擇考生（按部門分組）</Label>
                   <Select
-                    value={selectedDepartmentId?.toString()}
-                    onValueChange={(v) => handleDepartmentSelect(Number(v))}
+                    value={selectedUserIds[0]?.toString() || ""}
+                    onValueChange={(v) => {
+                      const userId = Number(v);
+                      setSelectedUserIds([userId]);
+                      // 找到該考生所屬的部門
+                      const user = filteredUsers.find(u => u.id === userId);
+                      if (user && user.email) {
+                        const emp = employees?.find(e => e.email?.toLowerCase() === user.email?.toLowerCase());
+                        if (emp) {
+                          setSelectedDepartmentId(emp.departmentId);
+                        }
+                      }
+                    }}
                   >
                     <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="選擇部門" />
+                      <SelectValue placeholder="選擇考生" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments?.map(dept => (
-                        <SelectItem key={dept.id} value={dept.id.toString()}>
-                          {dept.name} ({usersByDepartment[dept.id]?.length || 0} 人)
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="0">
-                        未分配部門 ({usersByDepartment[0]?.length || 0} 人)
-                      </SelectItem>
+                      {departments?.map(dept => {
+                        const deptUsers = usersByDepartment[dept.id] || [];
+                        if (deptUsers.length === 0) return null;
+                        return (
+                          <div key={dept.id}>
+                            <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                              {dept.name} ({deptUsers.length} 人)
+                            </div>
+                            {deptUsers.map(user => (
+                              <SelectItem key={user.id} value={user.id.toString()} className="pl-6">
+                                {user.name || "未命名"} ({user.email})
+                              </SelectItem>
+                            ))}
+                          </div>
+                        );
+                      })}
+                      {usersByDepartment[0]?.length > 0 && (
+                        <div>
+                          <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                            未分配部門 ({usersByDepartment[0].length} 人)
+                          </div>
+                          {usersByDepartment[0].map(user => (
+                            <SelectItem key={user.id} value={user.id.toString()} className="pl-6">
+                              {user.name || "未命名"} ({user.email})
+                            </SelectItem>
+                          ))}
+                        </div>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* 顯示該部門的考生名單 */}
-                {selectedDepartmentId !== null && (
-                  <div>
-                    <Label>該部門考生名單</Label>
-                    <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2 mt-2">
-                      {(usersByDepartment[selectedDepartmentId] || []).length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          該部門沒有考生
-                        </p>
-                      ) : (
-                        (usersByDepartment[selectedDepartmentId] || []).map(user => (
-                          <div
-                            key={user.id}
-                            className="flex items-center gap-2 p-2 bg-accent/50 rounded-md"
-                          >
-                            <CheckCircle2 className="w-4 h-4 text-primary" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{user.name || "未命名"}</p>
-                              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
               </>
             )}
 
