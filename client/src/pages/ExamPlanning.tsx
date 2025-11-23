@@ -19,6 +19,10 @@ import { useLocation } from "wouter";
 export default function ExamPlanning() {
   const [, navigate] = useLocation();
 
+  // 考卷預覽對話框狀態（必須在 useQuery 之前定義）
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [previewExamId, setPreviewExamId] = useState<number | null>(null);
+
   // 資料查詢
   const { data: exams, isLoading: examsLoading } = trpc.exams.list.useQuery();
   const { data: departments, isLoading: depsLoading } = trpc.departments.list.useQuery();
@@ -72,10 +76,6 @@ export default function ExamPlanning() {
   // 時間衝突檢查
   const [timeConflicts, setTimeConflicts] = useState<Array<{ examId: number; conflictWith: number[]; }>>([]);
   const [showConflictWarning, setShowConflictWarning] = useState(false);
-
-  // 考卷預覽對話框
-  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
-  const [previewExamId, setPreviewExamId] = useState<number | null>(null);
 
   // 搜尋
   const [userSearch, setUserSearch] = useState("");

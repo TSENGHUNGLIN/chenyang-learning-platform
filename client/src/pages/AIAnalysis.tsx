@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import AnalysisResultView from "@/components/AnalysisResultView";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import ImportQuestionsDialog from "@/components/ImportQuestionsDialog";
+import CSVTableView from "@/components/CSVTableView";
 
 export default function AIAnalysis() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
@@ -41,6 +42,8 @@ export default function AIAnalysis() {
   const [analysisProgress, setAnalysisProgress] = useState<number>(0);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewFile, setPreviewFile] = useState<any>(null);
+  const [csvData, setCsvData] = useState<any>(null);
+  const [isLoadingCsv, setIsLoadingCsv] = useState(false);
   const [useCache, setUseCache] = useState(true); // 是否使用快取
   const [fromCache, setFromCache] = useState(false); // 當前結果是否來自快取
   const [currentAnalysisId, setCurrentAnalysisId] = useState<number | null>(null); // 當前分析的ID
@@ -99,6 +102,34 @@ export default function AIAnalysis() {
   const filteredEmployees = selectedDepartment && selectedDepartment !== "all"
     ? employees?.filter((emp) => emp.departmentId === parseInt(selectedDepartment))
     : employees;
+
+  // CSV 預視查詢
+  const csvPreviewQuery = trpc.files.previewCSV.useQuery(
+    { 
+      fileUrl: previewFile?.fileUrl || '',
+      maxRows: 100,
+    },
+    { 
+      enabled: !!previewFile && !!previewFile.fileUrl && previewFile.filename.toLowerCase().endsWith('.csv'),
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  // 當 CSV 預視資料載入完成時，更新 csvData
+  useEffect(() => {
+    if (previewFile?.filename.toLowerCase().endsWith('.csv')) {
+      setIsLoadingCsv(csvPreviewQuery.isLoading);
+      if (csvPreviewQuery.data) {
+        setCsvData(csvPreviewQuery.data);
+      } else if (csvPreviewQuery.error) {
+        setCsvData(null);
+        toast.error('載入 CSV 檔案失敗');
+      }
+    } else {
+      setCsvData(null);
+      setIsLoadingCsv(false);
+    }
+  }, [previewFile, csvPreviewQuery.data, csvPreviewQuery.isLoading, csvPreviewQuery.error]);
 
   const handleFileToggle = (fileId: number) => {
     setSelectedFiles(prev =>
@@ -1099,6 +1130,32 @@ export default function AIAnalysis() {
                   />
                 )}
                 
+                {/* CSV 檔案預視 */}
+                {previewFile.filename.toLowerCase().endsWith('.csv') && (
+                  <div className="p-4">
+                    {isLoadingCsv ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        <span className="ml-2 text-muted-foreground">載入中...</span>
+                      </div>
+                    ) : csvData ? (
+                      <CSVTableView data={csvData} />
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>無法載入 CSV 檔案</p>
+                        <Button
+                          variant="outline"
+                          className="mt-4"
+                          onClick={() => window.open(previewFile.fileUrl, '_blank')}
+                        >
+                          下載檔案
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 {/* Word/文字檔案預視（顯示提取的文字） */}
                 {(previewFile.filename.toLowerCase().endsWith('.docx') ||
                   previewFile.filename.toLowerCase().endsWith('.doc') ||
@@ -1125,7 +1182,7 @@ export default function AIAnalysis() {
                 )}
                 
                 {/* 其他檔案類型 */}
-                {!previewFile.filename.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|docx|doc|txt)$/) && (
+                {!previewFile.filename.toLowerCase().match(/\.(pdf|jpg|jpeg|png|gif|docx|doc|txt|csv)$/) && (
                   <div className="text-center py-12 text-muted-foreground">
                     <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium mb-2">此檔案類型不支援預視</p>

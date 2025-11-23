@@ -741,3 +741,16 @@
 - [x] 儲存檢查點
 - [x] 回報使用者
 
+
+
+
+## 修復 AI 分析出題頁面的檔案預視功能（2025-01-23）
+
+- [x] 診断 AI 分析頁面預視按鈕無法運作的原因
+- [x] 檢查 AIAnalysis.tsx 中的預視功能實作
+- [x] 新增 CSV 檔案預視支援（整合 CSVTableView 元件）
+- [x] 修復 CSV 預視 API 參數錯誤（fileId 改為 fileUrl）
+- [x] 修復 ExamPlanning.tsx 中 previewExamId 初始化順序問題
+- [x] 測試 DOCX 和 CSV 檔案的預視功能
+- [x] 儲存檢查點並回報使用者
+
