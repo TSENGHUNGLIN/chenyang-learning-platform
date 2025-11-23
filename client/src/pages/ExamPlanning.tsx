@@ -71,6 +71,7 @@ export default function ExamPlanning() {
 
   // 考卷選擇對話框
   const [showExamSelectionDialog, setShowExamSelectionDialog] = useState(false);
+  const [tempSelectedExamIds, setTempSelectedExamIds] = useState<number[]>([]);
 
   // 複製時間對話框
   const [showCopyTimeDialog, setShowCopyTimeDialog] = useState(false);
@@ -862,6 +863,10 @@ export default function ExamPlanning() {
                 <Button
                   variant="outline"
                   className="w-full"
+                  onClick={() => {
+                    // 開啟對話框時，將當前選擇複製到暫存狀態
+                    setTempSelectedExamIds([...selectedExamIds]);
+                  }}
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   選擇考卷（已選 {selectedExamIds.length} 份）
@@ -871,7 +876,7 @@ export default function ExamPlanning() {
                 <DialogHeader>
                   <DialogTitle>選擇考卷</DialogTitle>
                   <DialogDescription>
-                    已選擇 {selectedExamIds.length} 份考卷
+                    已選擇 {tempSelectedExamIds.length} 份考卷
                   </DialogDescription>
                 </DialogHeader>
 
@@ -879,10 +884,16 @@ export default function ExamPlanning() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleSelectAllExams}
+                    onClick={() => {
+                      if (tempSelectedExamIds.length === filteredExams.length) {
+                        setTempSelectedExamIds([]);
+                      } else {
+                        setTempSelectedExamIds(filteredExams.map(e => e.id));
+                      }
+                    }}
                     className="w-full"
                   >
-                    {selectedExamIds.length === filteredExams.length ? "取消全選" : "全選"}
+                    {tempSelectedExamIds.length === filteredExams.length ? "取消全選" : "全選"}
                   </Button>
 
                   {/* 考卷列表 */}
@@ -898,13 +909,29 @@ export default function ExamPlanning() {
                           className="flex items-center gap-3 p-3 hover:bg-accent rounded-md border"
                         >
                           <Checkbox
-                            checked={selectedExamIds.includes(exam.id)}
-                            onCheckedChange={() => handleExamToggle(exam.id)}
+                            checked={tempSelectedExamIds.includes(exam.id)}
+                            onCheckedChange={() => {
+                              setTempSelectedExamIds(prev => {
+                                if (prev.includes(exam.id)) {
+                                  return prev.filter(id => id !== exam.id);
+                                } else {
+                                  return [...prev, exam.id];
+                                }
+                              });
+                            }}
                           />
                           <label
                             htmlFor={`exam-${exam.id}`}
                             className="flex-1 min-w-0 cursor-pointer"
-                            onClick={() => handleExamToggle(exam.id)}
+                            onClick={() => {
+                              setTempSelectedExamIds(prev => {
+                                if (prev.includes(exam.id)) {
+                                  return prev.filter(id => id !== exam.id);
+                                } else {
+                                  return [...prev, exam.id];
+                                }
+                              });
+                            }}
                           >
                             <p className="text-sm font-medium">{exam.title}</p>
                             <p className="text-xs text-muted-foreground mt-1">
@@ -929,11 +956,25 @@ export default function ExamPlanning() {
                   </div>
 
                   <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button variant="outline" onClick={() => setShowExamSelectionDialog(false)}>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        // 取消時不套用暫存選擇，直接關閉對話框
+                        setShowExamSelectionDialog(false);
+                        setTempSelectedExamIds([]);
+                      }}
+                    >
                       取消
                     </Button>
-                    <Button onClick={() => setShowExamSelectionDialog(false)}>
-                      確認選擇
+                    <Button 
+                      onClick={() => {
+                        // 確定時才套用暫存選擇到實際狀態
+                        setSelectedExamIds([...tempSelectedExamIds]);
+                        setShowExamSelectionDialog(false);
+                        toast.success(`已選擇 ${tempSelectedExamIds.length} 份考卷`);
+                      }}
+                    >
+                      確定
                     </Button>
                   </div>
                 </div>
