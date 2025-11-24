@@ -1,4 +1,4 @@
-import { db } from "./db.js";
+import { getDb } from "./db.js";
 import { exams, examAssignments, examSubmissions, questions, examQuestions } from "../drizzle/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 
@@ -7,6 +7,8 @@ import { eq, and, desc, sql } from "drizzle-orm";
  */
 export async function getExamChartData(examId: number) {
   // 取得考試基本資訊
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
   const exam = await db.query.exams.findFirst({
     where: eq(exams.id, examId),
   });
@@ -32,6 +34,8 @@ export async function getExamChartData(examId: number) {
  * 取得成績趨勢資料
  */
 async function getScoreTrendData(examId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
   // 取得該考試的所有提交記錄
   const submissions = await db
     .select({
@@ -59,6 +63,8 @@ async function getScoreTrendData(examId: number) {
  * 取得能力維度分析資料
  */
 async function getAbilityAnalysisData(examId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
   // 取得該考試的所有題目及其分類
   const examQuestionsData = await db
     .select({
