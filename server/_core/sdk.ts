@@ -155,7 +155,7 @@ class SDKServer {
   }
 
   private getSessionSecret() {
-    const secret = ENV.cookieSecret;
+    const secret = ENV.cookieSecret || "chenyang-jwt-secret-change-in-production-2024";
     return new TextEncoder().encode(secret);
   }
 
