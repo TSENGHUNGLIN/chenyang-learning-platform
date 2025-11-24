@@ -8,6 +8,7 @@ export const examStatusEnum = pgEnum("exam_status", ["draft", "published", "arch
 export const gradingMethodEnum = pgEnum("grading_method", ["auto", "manual", "mixed"]);
 export const assignmentStatusEnum = pgEnum("assignment_status", ["pending", "in_progress", "submitted", "graded"]);
 export const notificationTypeEnum = pgEnum("notification_type", ["exam_reminder", "makeup_exam", "learning_recommendation", "system"]);
+export const reminderTypeEnum = pgEnum("reminder_type", ["3days", "1day", "today"]);
 
 /**
  * Core user table backing auth flow.
@@ -442,7 +443,7 @@ export type InsertEditorUserAccess = typeof editorUserAccess.$inferInsert;
 export const examReminders = pgTable("examReminders", {
   id: serial("id").primaryKey(),
   assignmentId: integer("assignmentId").notNull(), // 關聯到examAssignments
-  reminderType: pgEnum("reminderType", ["3days", "1day", "today"]).notNull(), // 提醒類型
+  reminderType: reminderTypeEnum("reminderType").notNull(), // 提醒類型
   sentAt: timestamp("sentAt").defaultNow().notNull(), // 發送時間
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
