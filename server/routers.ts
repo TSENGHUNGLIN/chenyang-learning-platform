@@ -549,8 +549,12 @@ ${file.extractedText || "無法提取文字內容"}`
           const cachedResult = await findCachedAnalysis(resultHash, getAnalysisHistoryByHash);
           if (cachedResult) {
             console.log(`[快取] 返回快取結果，ID: ${cachedResult.id}`);
+            // 確保快取結果是可序列化的純物件
+            const parsedResult = typeof cachedResult.result === 'string' ? JSON.parse(cachedResult.result) : cachedResult.result;
+            const sanitizedResult = JSON.parse(JSON.stringify(parsedResult));
+            console.log("[快取] 返回sanitizedResult，類型:", typeof sanitizedResult);
             return {
-              result: typeof cachedResult.result === 'string' ? JSON.parse(cachedResult.result) : cachedResult.result,
+              result: sanitizedResult,
               fromCache: true,
               cacheId: cachedResult.id,
             };
@@ -791,7 +795,11 @@ ${file.extractedText || "無法提取文字內容"}`
             createdBy: ctx.user.id,
           });
           
-          return { result, fromCache: false };
+          // 確保返回的資料是可序列化的純物件
+          const sanitizedResult = JSON.parse(JSON.stringify(result));
+          console.log("[AI分析] 返回sanitizedResult，類型:", typeof sanitizedResult);
+          console.log("[AI分析] sanitizedResult.questionsWithAnswers長度:", sanitizedResult.questionsWithAnswers?.length);
+          return { result: sanitizedResult, fromCache: false };
         } else {
           // 其他類型返回純文字
           const response = await invokeLLMWithRetry(invokeLLM, {
@@ -837,7 +845,9 @@ ${file.extractedText || "無法提取文字內容"}`
             createdBy: ctx.user.id,
           });
           
-          return { result, fromCache: false };
+          // 確保返回的資料是可序列化的
+          const sanitizedResult = typeof result === 'string' ? result : JSON.parse(JSON.stringify(result));
+          return { result: sanitizedResult, fromCache: false };
         }
       }),
     // AI分析歷史記錄相關API
