@@ -1,11 +1,102 @@
-// Storage helpers - supports both Manus proxy and local filesystem
+// Storage helpers - supports Google Cloud Storage, Manus proxy, and local filesystem
+import { Storage } from '@google-cloud/storage';
 import { ENV } from './_core/env';
 import fs from 'fs/promises';
 import path from 'path';
 
 type StorageConfig = { baseUrl: string; apiKey: string };
 
-// Check if we're using Manus storage proxy
+// ============================================================================
+// Google Cloud Storage Configuration
+// ============================================================================
+
+let gcsStorage: Storage | null = null;
+let gcsBucket: ReturnType<Storage['bucket']> | null = null;
+
+function isGCSAvailable(): boolean {
+  return !!(ENV.gcsBucketName && ENV.gcsServiceAccountKeyJson);
+}
+
+function initializeGCS() {
+  if (gcsStorage) return; // Already initialized
+
+  try {
+    const credentials = JSON.parse(ENV.gcsServiceAccountKeyJson);
+    gcsStorage = new Storage({
+      credentials,
+      projectId: credentials.project_id,
+    });
+    gcsBucket = gcsStorage.bucket(ENV.gcsBucketName);
+    console.log('[Storage] Google Cloud Storage initialized successfully');
+  } catch (error) {
+    console.error('[Storage] Failed to initialize Google Cloud Storage:', error);
+    throw new Error('Failed to initialize Google Cloud Storage');
+  }
+}
+
+async function gcsStoragePut(
+  relKey: string,
+  data: Buffer | Uint8Array | string,
+  contentType = "application/octet-stream"
+): Promise<{ key: string; url: string }> {
+  if (!gcsBucket) {
+    initializeGCS();
+  }
+
+  const key = normalizeKey(relKey);
+  const file = gcsBucket!.file(key);
+
+  try {
+    // Upload file to GCS
+    await file.save(data, {
+      contentType,
+      metadata: {
+        cacheControl: 'public, max-age=31536000', // Cache for 1 year
+      },
+    });
+
+    // Generate a signed URL valid for 7 days
+    const [url] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'read',
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    console.log(`[Storage] File uploaded to GCS: ${key}`);
+    return { key, url };
+  } catch (error: any) {
+    console.error('[Storage] GCS upload failed:', error);
+    throw new Error(`GCS upload failed: ${error.message}`);
+  }
+}
+
+async function gcsStorageGet(relKey: string): Promise<{ key: string; url: string }> {
+  if (!gcsBucket) {
+    initializeGCS();
+  }
+
+  const key = normalizeKey(relKey);
+  const file = gcsBucket!.file(key);
+
+  try {
+    // Generate a signed URL valid for 7 days
+    const [url] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'read',
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return { key, url };
+  } catch (error: any) {
+    console.error('[Storage] GCS get URL failed:', error);
+    throw new Error(`GCS get URL failed: ${error.message}`);
+  }
+}
+
+// ============================================================================
+// Manus Storage Configuration
+// ============================================================================
+
 function isManusStorageAvailable(): boolean {
   return !!(ENV.forgeApiUrl && ENV.forgeApiKey);
 }
@@ -72,7 +163,10 @@ function buildAuthHeaders(apiKey: string): HeadersInit {
   return { Authorization: `Bearer ${apiKey}` };
 }
 
-// Local filesystem storage functions
+// ============================================================================
+// Local Filesystem Storage Configuration
+// ============================================================================
+
 const LOCAL_STORAGE_DIR = path.join(process.cwd(), 'uploads');
 
 async function ensureUploadDir() {
@@ -104,6 +198,7 @@ async function localStoragePut(
   // Return relative URL
   const url = `/uploads/${key}`;
   
+  console.log(`[Storage] File saved locally: ${key}`);
   return { key, url };
 }
 
@@ -114,50 +209,65 @@ async function localStorageGet(relKey: string): Promise<{ key: string; url: stri
   return { key, url };
 }
 
-// Exported functions that choose between Manus and local storage
+// ============================================================================
+// Exported Functions - Auto-select storage backend
+// ============================================================================
+
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
-  // Use local storage if Manus storage is not available
-  if (!isManusStorageAvailable()) {
-    console.log('[Storage] Using local filesystem storage');
-    return localStoragePut(relKey, data, contentType);
+  // Priority 1: Google Cloud Storage
+  if (isGCSAvailable()) {
+    console.log('[Storage] Using Google Cloud Storage');
+    return gcsStoragePut(relKey, data, contentType);
   }
   
-  // Use Manus storage proxy
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData,
-  });
+  // Priority 2: Manus Storage
+  if (isManusStorageAvailable()) {
+    console.log('[Storage] Using Manus storage proxy');
+    const { baseUrl, apiKey } = getStorageConfig();
+    const key = normalizeKey(relKey);
+    const uploadUrl = buildUploadUrl(baseUrl, key);
+    const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: buildAuthHeaders(apiKey),
+      body: formData,
+    });
 
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
+    if (!response.ok) {
+      const message = await response.text().catch(() => response.statusText);
+      throw new Error(
+        `Storage upload failed (${response.status} ${response.statusText}): ${message}`
+      );
+    }
+    const url = (await response.json()).url;
+    return { key, url };
   }
-  const url = (await response.json()).url;
-  return { key, url };
+  
+  // Priority 3: Local Filesystem (fallback)
+  console.log('[Storage] Using local filesystem storage (fallback)');
+  return localStoragePut(relKey, data, contentType);
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
-  // Use local storage if Manus storage is not available
-  if (!isManusStorageAvailable()) {
-    return localStorageGet(relKey);
+  // Priority 1: Google Cloud Storage
+  if (isGCSAvailable()) {
+    return gcsStorageGet(relKey);
   }
   
-  // Use Manus storage proxy
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  return {
-    key,
-    url: await buildDownloadUrl(baseUrl, key, apiKey),
-  };
+  // Priority 2: Manus Storage
+  if (isManusStorageAvailable()) {
+    const { baseUrl, apiKey } = getStorageConfig();
+    const key = normalizeKey(relKey);
+    return {
+      key,
+      url: await buildDownloadUrl(baseUrl, key, apiKey),
+    };
+  }
+  
+  // Priority 3: Local Filesystem (fallback)
+  return localStorageGet(relKey);
 }
