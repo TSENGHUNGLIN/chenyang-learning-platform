@@ -1,9 +1,27 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import PageHeader from "@/components/PageHeader";
 import { getPageConfig } from "@/config/pageConfig";
-import { Calendar, FileText, Users, TrendingUp, BookOpen, Settings, ClipboardList, Activity, Award, BarChart3, Upload, CheckCircle } from "lucide-react";
+import { 
+  Calendar, 
+  FileText, 
+  Users, 
+  TrendingUp, 
+  BookOpen, 
+  Settings, 
+  ClipboardList, 
+  Activity, 
+  Award, 
+  BarChart3, 
+  Upload, 
+  CheckCircle,
+  FolderTree,
+  Tags,
+  MapPin,
+  Activity as ActivityIcon,
+  BarChart2
+} from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { formatDistanceToNow, format } from "date-fns";
@@ -21,11 +39,18 @@ export default function Home() {
       color: "from-blue-500 to-cyan-500",
     },
     {
-      icon: TrendingUp,
-      title: "AI 分析出題",
-      description: "使用 AI 分析考核問答內容，提供深入見解",
-      link: "/ai-analysis",
-      color: "from-orange-500 to-red-500",
+      icon: FolderTree,
+      title: "分館管理",
+      description: "管理考核分類，支援建立、編輯與選擇題",
+      link: "/categories",
+      color: "from-green-500 to-teal-500",
+    },
+    {
+      icon: Tags,
+      title: "標籤管理",
+      description: "管理所有上傳的考核問答標籤，支援搜尋與篩選",
+      link: "/tags",
+      color: "from-pink-500 to-rose-500",
     },
     {
       icon: FileText,
@@ -34,35 +59,62 @@ export default function Home() {
       link: "/files",
       color: "from-purple-500 to-pink-500",
     },
-    ...(user?.role === "editor" || user?.role === "admin"
-      ? [
-          {
-            icon: BookOpen,
-            title: "題庫管理",
-            description: "管理考核題庫，支援是非題、選擇題、問答題",
-            link: "/question-bank",
-            color: "from-indigo-500 to-purple-500",
-          },
-          {
-            icon: ClipboardList,
-            title: "考試管理",
-            description: "建立、編輯和管理線上考試，支援批次指派考生",
-            link: "/exams",
-            color: "from-teal-500 to-cyan-500",
-          },
-        ]
-      : []),
-    ...(user?.role === "admin"
-      ? [
-          {
-            icon: Settings,
-            title: "部門人員",
-            description: "管理部門與人員資料",
-            link: "/manage",
-            color: "from-green-500 to-emerald-500",
-          },
-        ]
-      : []),
+    {
+      icon: TrendingUp,
+      title: "AI 分析出題",
+      description: "使用 AI 分析考核問答內容，提供深入見解",
+      link: "/ai-analysis",
+      color: "from-orange-500 to-red-500",
+    },
+    {
+      icon: BookOpen,
+      title: "題庫管理",
+      description: "管理考核題庫，支援是非題、選擇題、問答題",
+      link: "/question-banks",
+      color: "from-indigo-500 to-purple-500",
+    },
+    {
+      icon: ClipboardList,
+      title: "考試管理",
+      description: "建立、編輯和管理線上考試，支援批次指派考生",
+      link: "/exams",
+      color: "from-teal-500 to-cyan-500",
+    },
+    {
+      icon: MapPin,
+      title: "考試題地",
+      description: "進入、編輯和管理線上考試題地，支援批次指派考生",
+      link: "/exam-templates",
+      color: "from-cyan-500 to-blue-500",
+    },
+    {
+      icon: ActivityIcon,
+      title: "補考管理",
+      description: "管理補考申請與排程，追蹤補考狀態",
+      link: "/makeup-exams",
+      color: "from-yellow-500 to-orange-500",
+    },
+    {
+      icon: Activity,
+      title: "考試監控",
+      description: "即時監控考試進行狀態，查看考生答題情況",
+      link: "/exam-monitoring",
+      color: "from-red-500 to-pink-500",
+    },
+    {
+      icon: BarChart2,
+      title: "成績檢查板",
+      description: "查看和分析考試成績，生成統計報表",
+      link: "/scores-dashboard",
+      color: "from-violet-500 to-purple-500",
+    },
+    {
+      icon: Settings,
+      title: "部門人員",
+      description: "管理部門與人員資料",
+      link: "/manage",
+      color: "from-green-500 to-emerald-500",
+    },
   ];
 
   const { data: stats } = trpc.dashboard.stats.useQuery();
@@ -198,24 +250,18 @@ export default function Home() {
                         <div className="flex-1 space-y-1">
                           <p className="text-sm font-medium text-indigo-900 dark:text-indigo-100">{activity.title}</p>
                           <p className="text-sm text-indigo-700 dark:text-indigo-300">{activity.description}</p>
-                          <div className="flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-400">
-                            <span className="font-medium">
-                              {format(new Date(activity.timestamp), "yyyy-MM-dd HH:mm:ss", { locale: zhTW })}
-                            </span>
-                            <span className="text-indigo-500 dark:text-indigo-500">
-                              ({formatDistanceToNow(new Date(activity.timestamp), {
-                                addSuffix: true,
-                                locale: zhTW,
-                              })})
-                            </span>
-                          </div>
+                          <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                            {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true, locale: zhTW })}
+                            {' · '}
+                            {format(new Date(activity.timestamp), 'PPpp', { locale: zhTW })}
+                          </p>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-sm text-indigo-700 dark:text-indigo-300">尚無最近活動</p>
+                <p className="text-sm text-indigo-700 dark:text-indigo-300">目前沒有活動記錄</p>
               )}
             </CardContent>
           </Card>
@@ -224,4 +270,3 @@ export default function Home() {
     </DashboardLayout>
   );
 }
-
