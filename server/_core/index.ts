@@ -53,6 +53,9 @@ async function startServer() {
   registerOAuthRoutes(app);
   // Google OAuth
   initializeGoogleOAuth(app);
+  
+  // Serve uploaded files
+  app.use('/uploads', express.static('uploads'));
   // File upload route
   const uploadRouter = await import("../uploadRouter");
   app.use("/api", uploadRouter.default);
