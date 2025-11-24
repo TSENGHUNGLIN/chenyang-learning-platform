@@ -27,7 +27,7 @@ export const users = pgTable("users", {
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: roleEnum("role").default("examinee").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
@@ -42,7 +42,7 @@ export const departments = pgTable("departments", {
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Department = typeof departments.$inferSelect;
@@ -59,7 +59,7 @@ export const employees = pgTable("employees", {
   phone: varchar("phone", { length: 20 }),
   position: varchar("position", { length: 100 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Employee = typeof employees.$inferSelect;
@@ -80,7 +80,7 @@ export const files = pgTable("files", {
   extractedText: text("extractedText"),
   uploadedBy: integer("uploadedBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type File = typeof files.$inferSelect;
@@ -123,7 +123,7 @@ export const questionCategories = pgTable("questionCategories", {
   parentId: integer("parentId"), // 父分類 ID，null 表示根分類
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type QuestionCategory = typeof questionCategories.$inferSelect;
@@ -139,7 +139,7 @@ export const tags = pgTable("tags", {
   description: text("description"), // 標籤說明
   color: varchar("color", { length: 20 }), // 標籤顏色（例如：#3b82f6）
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Tag = typeof tags.$inferSelect;
@@ -177,7 +177,7 @@ export const questions = pgTable("questions", {
   suggestedTagIds: text("suggestedTagIds"), // AI建議的標籤ID（JSON陣列格式，供使用者參考）
   createdBy: integer("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   deletedAt: timestamp("deletedAt"), // 軟刪除時間（null 表示未刪除）
   deletedBy: integer("deletedBy"), // 刪除者 ID
 });
@@ -197,7 +197,7 @@ export const questionBanks = pgTable("questionBanks", {
   questionCount: integer("questionCount").default(0).notNull(), // 題目數量
   createdBy: integer("createdBy").notNull(), // 建立者用戶ID
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type QuestionBank = typeof questionBanks.$inferSelect;
@@ -269,7 +269,7 @@ export const exams = pgTable("exams", {
   status: examStatusEnum("status").notNull().default("draft"), // 考試狀態
   createdBy: integer("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type Exam = typeof exams.$inferSelect;
@@ -302,7 +302,7 @@ export const examTemplates = pgTable("examTemplates", {
   gradingMethod: gradingMethodEnum("gradingMethod").notNull().default("auto"),
   createdBy: integer("createdBy").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type ExamTemplate = typeof examTemplates.$inferSelect;
@@ -338,7 +338,7 @@ export const examAssignments = pgTable("examAssignments", {
   status: assignmentStatusEnum("status").notNull().default("pending"),
   isPractice: integer("isPractice").notNull().default(0), // 是否為模擬模式（1=模擬，0=正式）
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type ExamAssignment = typeof examAssignments.$inferSelect;
@@ -358,7 +358,7 @@ export const examSubmissions = pgTable("examSubmissions", {
   teacherComment: text("teacherComment"), // 教師評語（人工評分時使用）
   submittedAt: timestamp("submittedAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type ExamSubmission = typeof examSubmissions.$inferSelect;
@@ -376,7 +376,7 @@ export const wrongQuestions = pgTable("wrongQuestions", {
   isReviewed: integer("isReviewed").notNull().default(0), // 是否已複習（1=已複習，0=未複習）
   reviewedAt: timestamp("reviewedAt"), // 複習時間
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type WrongQuestion = typeof wrongQuestions.$inferSelect;
@@ -396,7 +396,7 @@ export const examScores = pgTable("examScores", {
   gradedAt: timestamp("gradedAt"), // 評分時間
   feedback: text("feedback"), // 評分人的整體評語
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type ExamScore = typeof examScores.$inferSelect;
@@ -470,7 +470,7 @@ export const makeupExams = pgTable("makeupExams", {
   notes: text("notes"), // 管理員備註
   scheduledBy: integer("scheduledBy"), // 安排補考的管理員ID
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type MakeupExam = typeof makeupExams.$inferSelect;
@@ -496,7 +496,7 @@ export const learningRecommendations = pgTable("learningRecommendations", {
   readAt: timestamp("readAt"), // 閱讀時間
   generatedBy: varchar("generatedBy", { length: 50 }).notNull().default("system"), // 生成來源（system=系統自動, ai=AI生成, manual=人工建立）
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
 
 export type LearningRecommendation = typeof learningRecommendations.$inferSelect;
