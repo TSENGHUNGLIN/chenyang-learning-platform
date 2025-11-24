@@ -94,6 +94,15 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
     temperature: 0.7,
   };
 
+  // Handle JSON output format if requested
+  const responseFormat = params.responseFormat || params.response_format;
+  if (responseFormat?.type === "json_schema" && responseFormat.json_schema) {
+    generationConfig.responseMimeType = "application/json";
+    generationConfig.responseSchema = responseFormat.json_schema.schema;
+  } else if (responseFormat?.type === "json_object") {
+    generationConfig.responseMimeType = "application/json";
+  }
+
   const safetySettings = [
     { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
     { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
