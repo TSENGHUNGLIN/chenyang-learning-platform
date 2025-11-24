@@ -2,11 +2,6 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
-import { getSessionCookieOptions } from "./cookies";
-import { sdk } from "./sdk";
-
-const COOKIE_NAME = "manus_session";
-const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 
 export function initializeGoogleOAuth(app: Express) {
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -22,6 +17,22 @@ export function initializeGoogleOAuth(app: Express) {
 
   // Initialize Passport
   app.use(passport.initialize());
+  app.use(passport.session());
+
+  // Serialize user to session
+  passport.serializeUser((user: any, done) => {
+    done(null, user.openId);
+  });
+
+  // Deserialize user from session
+  passport.deserializeUser(async (openId: string, done) => {
+    try {
+      const user = await db.getUserByOpenId(openId);
+      done(null, user);
+    } catch (error) {
+      done(error);
+    }
+  });
 
   // Configure Google Strategy
   passport.use(
@@ -41,6 +52,8 @@ export function initializeGoogleOAuth(app: Express) {
           // Use googleId as openId for compatibility with existing system
           const openId = `google_${googleId}`;
 
+          console.log("[Google OAuth] User authenticated:", { openId, name, email });
+
           // Upsert user in database
           await db.upsertUser({
             openId: openId,
@@ -50,7 +63,8 @@ export function initializeGoogleOAuth(app: Express) {
             lastSignedIn: new Date(),
           });
 
-          done(null, { openId, name, email });
+          const user = await db.getUserByOpenId(openId);
+          done(null, user);
         } catch (error) {
           console.error("[Google OAuth] Error in strategy callback:", error);
           done(error as Error);
@@ -64,35 +78,18 @@ export function initializeGoogleOAuth(app: Express) {
     "/api/auth/google",
     passport.authenticate("google", {
       scope: ["profile", "email"],
-      session: false,
     })
   );
 
   app.get(
     "/api/auth/google/callback",
     passport.authenticate("google", {
-      session: false,
       failureRedirect: "/?error=auth_failed",
     }),
     async (req: Request, res: Response) => {
       try {
-        const user = req.user as { openId: string; name: string | null; email: string | null };
-
-        if (!user || !user.openId) {
-          res.redirect("/?error=no_user_info");
-          return;
-        }
-
-        // Create session token
-        const sessionToken = await sdk.createSessionToken(user.openId, {
-          name: user.name || "",
-          expiresInMs: ONE_YEAR_MS,
-        });
-
-        // Set cookie
-        const cookieOptions = getSessionCookieOptions(req);
-        res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-
+        console.log("[Google OAuth] Callback successful, user:", req.user);
+        
         // Redirect to home page
         res.redirect("/");
       } catch (error) {
