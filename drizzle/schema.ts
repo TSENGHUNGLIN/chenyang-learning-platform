@@ -3,7 +3,7 @@ import { integer, pgEnum, pgTable, text, timestamp, varchar, serial } from "driz
 // Define enums
 export const roleEnum = pgEnum("role", ["admin", "editor", "viewer", "examinee"]);
 export const questionTypeEnum = pgEnum("question_type", ["true_false", "multiple_choice", "multiple_answer", "short_answer"]);
-export const difficultyEnum = difficultyEnum("difficulty");
+export const difficultyEnum = pgEnum("difficulty", ["easy", "medium", "hard"]);
 export const examStatusEnum = pgEnum("exam_status", ["draft", "published", "archived"]);
 export const gradingMethodEnum = pgEnum("grading_method", ["auto", "manual", "mixed"]);
 export const assignmentStatusEnum = pgEnum("assignment_status", ["pending", "in_progress", "submitted", "graded"]);
