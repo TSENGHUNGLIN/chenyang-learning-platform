@@ -1,5 +1,5 @@
 import { eq, desc } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { InsertUser, users, departments, InsertDepartment, employees, InsertEmployee, files, InsertFile, analysisResults, InsertAnalysisResult, fileReadLogs, InsertFileReadLog, analysisHistory, InsertAnalysisHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -10,19 +10,14 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const mysql = await import('mysql2/promise');
+      const { Pool } = await import('pg');
       
       // Create connection pool with optimized settings for 100+ concurrent users
-      const pool = mysql.createPool({
-        uri: process.env.DATABASE_URL,
-        connectionLimit: 150,        // Max connections (increased for 100+ users)
-        queueLimit: 50,              // Max queued connection requests
-        waitForConnections: true,    // Wait when no connections available
-        enableKeepAlive: true,       // Keep connections alive
-        keepAliveInitialDelay: 0,    // Send keep-alive immediately
-        maxIdle: 50,                 // Max idle connections
-        idleTimeout: 60000,          // Close idle connections after 60s
-        connectTimeout: 10000,       // Connection timeout: 10s
+      const pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        max: 150,                    // Max connections (increased for 100+ users)
+        idleTimeoutMillis: 60000,    // Close idle connections after 60s
+        connectionTimeoutMillis: 10000, // Connection timeout: 10s
       });
       
       _db = drizzle(pool);
@@ -96,7 +91,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
