@@ -22,6 +22,7 @@ import {
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { LayoutDashboard, LogOut, PanelLeft, Users, Calendar, FileText, Settings, Sparkles, BookOpen, FolderTree, Tag, ClipboardList, Award, Database, FileStack, Activity, BookX, TrendingUp, RefreshCw, Lightbulb, ShieldCheck } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Link } from "wouter";
@@ -261,12 +262,15 @@ function DashboardLayoutContent({
                       {APP_TITLE}
                     </span>
                   </Link>
-                  <button
-                    onClick={toggleSidebar}
-                    className="ml-auto h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-                  >
-                    <PanelLeft className="h-4 w-4 text-muted-foreground" />
-                  </button>
+                  <div className="ml-auto flex items-center gap-1 shrink-0">
+                    <ThemeToggle />
+                    <button
+                      onClick={toggleSidebar}
+                      className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </div>
                 </>
               )}
             </div>
@@ -392,6 +396,7 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
+            <ThemeToggle />
           </div>
         )}
         <main className="flex-1 p-4">{children}</main>

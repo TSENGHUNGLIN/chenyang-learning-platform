@@ -36,6 +36,7 @@ import DataQualityCheck from "./pages/DataQualityCheck";
 import MyScores from "./pages/MyScores";
 import ScoresDashboard from "./pages/ScoresDashboard";
 import ScoreTrends from "./pages/ScoreTrends";
+import ExamAnalyticsCharts from "./pages/ExamAnalyticsCharts";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -61,6 +62,7 @@ function Router() {
       <Route path={"/exam/:assignmentId/take"} component={ExamTake} />
       <Route path={"/exam/:assignmentId/result"} component={ExamResult} />
       <Route path={"/exam/:id/statistics"} component={ExamStatistics} />
+      <Route path={"/exam/:id/charts"} component={ExamAnalyticsCharts} />
       <Route path={"/exam/:examId/analytics"} component={ExamAnalytics} />
       <Route path={"/exam/:assignmentId/grade"} component={ManualGrading} />
       <Route path={"/exam-monitoring"} component={ExamMonitoring} />
@@ -91,7 +93,7 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider
         defaultTheme="light"
-        // switchable
+        switchable
       >
         <TooltipProvider>
           <Toaster />

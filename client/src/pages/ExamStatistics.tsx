@@ -138,6 +138,13 @@ export default function ExamStatistics() {
               返回考試管理
             </Button>
             <Button
+              variant="default"
+              onClick={() => navigate(`/exam/${examId}/charts`)}
+            >
+              <BarChart3 className="mr-2 h-4 w-4" />
+              圖表分析
+            </Button>
+            <Button
               variant="outline"
               onClick={handleExportScores}
               disabled={exportScoresMutation.isPending}

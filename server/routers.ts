@@ -1895,6 +1895,16 @@ ${file.extractedText || "無法提取文字內容"}`
         const { getStudentPerformance } = await import("./examStatistics");
         return await getStudentPerformance(input);
       }),
+    getChartData: protectedProcedure
+      .input(z.number())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canViewAll")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getExamChartData } = await import("./examChartData");
+        return await getExamChartData(input);
+      }),
     getAllStatistics: protectedProcedure.query(async ({ ctx }) => {
       const { hasPermission } = await import("@shared/permissions");
       if (!hasPermission(ctx.user.role as any, "canViewAll")) {
