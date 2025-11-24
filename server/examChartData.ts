@@ -1,5 +1,5 @@
-import { db } from "@db";
-import { exams, examAssignments, examSubmissions, questions, examQuestions } from "@db/schema";
+import { db } from "./db.js";
+import { exams, examAssignments, examSubmissions, questions, examQuestions } from "../drizzle/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 
 /**
