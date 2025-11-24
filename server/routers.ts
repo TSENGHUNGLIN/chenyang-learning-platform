@@ -751,6 +751,11 @@ ${file.extractedText || "無法提取文字內容"}`
           
           const result = parseLLMResponse(response);
           
+          // Log the parsed result structure
+          console.log("[AI分析] 解析後的result結構:", JSON.stringify(result, null, 2).substring(0, 1000));
+          console.log("[AI分析] questionsWithAnswers存在:", !!result.questionsWithAnswers);
+          console.log("[AI分析] questionsWithAnswers長度:", result.questionsWithAnswers?.length || 0);
+          
           // 儲存考核記錄（如果有employeeId）
           if (input.fileIds && input.fileIds.length > 0) {
             const { getEmployeeIdByFileId, createAssessmentRecord } = await import("./db");
