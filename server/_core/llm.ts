@@ -90,7 +90,7 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
   });
 
   const generationConfig: GenerationConfig = {
-    maxOutputTokens: params.maxTokens || params.max_tokens || 8192,
+    maxOutputTokens: params.maxTokens || params.max_tokens || 32768,  // Increased from 8192 to 32768
     temperature: 0.7,
   };
 
