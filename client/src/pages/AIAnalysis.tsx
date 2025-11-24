@@ -196,6 +196,14 @@ export default function AIAnalysis() {
       setAnalysisProgress(90);
       await new Promise(resolve => setTimeout(resolve, 300));
       
+      // Debug: Log the received result
+      console.log("[Frontend] Received response:", response);
+      console.log("[Frontend] response.result type:", typeof response.result);
+      console.log("[Frontend] response.result keys:", Object.keys(response.result || {}));
+      console.log("[Frontend] questionsWithAnswers exists:", !!response.result?.questionsWithAnswers);
+      console.log("[Frontend] questionsWithAnswers type:", typeof response.result?.questionsWithAnswers);
+      console.log("[Frontend] questionsWithAnswers is array:", Array.isArray(response.result?.questionsWithAnswers));
+      
       setAnalysisResult(response.result);
       setFromCache(response.fromCache || false);
       setCurrentAnalysisId(response.cacheId || null);
