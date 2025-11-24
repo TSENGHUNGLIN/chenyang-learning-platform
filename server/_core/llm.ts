@@ -98,9 +98,28 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
   const responseFormat = params.responseFormat || params.response_format;
   if (responseFormat?.type === "json_schema" && responseFormat.json_schema) {
     generationConfig.responseMimeType = "application/json";
-    generationConfig.responseSchema = responseFormat.json_schema.schema;
+    // Clean schema: remove fields not supported by Gemini
+    const cleanSchema = JSON.parse(JSON.stringify(responseFormat.json_schema.schema));
+    removeUnsupportedFields(cleanSchema);
+    generationConfig.responseSchema = cleanSchema;
   } else if (responseFormat?.type === "json_object") {
     generationConfig.responseMimeType = "application/json";
+  }
+
+  // Helper function to remove unsupported fields from schema
+  function removeUnsupportedFields(obj: any): void {
+    if (typeof obj !== 'object' || obj === null) return;
+    
+    // Remove unsupported fields
+    delete obj.additionalProperties;
+    delete obj.strict;
+    
+    // Recursively clean nested objects
+    for (const key in obj) {
+      if (typeof obj[key] === 'object') {
+        removeUnsupportedFields(obj[key]);
+      }
+    }
   }
 
   const safetySettings = [
