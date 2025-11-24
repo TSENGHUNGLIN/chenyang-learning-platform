@@ -86,7 +86,7 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
   if (!genAI) throw new Error("Gemini not initialized");
 
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash-latest",
+    model: "gemini-2.5-flash",
   });
 
   const generationConfig: GenerationConfig = {
@@ -121,7 +121,7 @@ async function invokeGemini(params: InvokeParams): Promise<InvokeResult> {
   return {
     id: `gemini-${Date.now()}`,
     created: Math.floor(Date.now() / 1000),
-    model: "gemini-1.5-flash-latest",
+    model: "gemini-2.5-flash",
     choices: [
       {
         index: 0,
