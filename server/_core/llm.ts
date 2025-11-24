@@ -30,6 +30,9 @@ export type ResponseFormat = { type: "text" } | { type: "json_object" } | { type
 let genAI: GoogleGenerativeAI | null = null;
 
 function isGeminiAvailable(): boolean {
+  console.log("[LLM] Checking Gemini availability...");
+  console.log("[LLM] GEMINI_API_KEY exists:", !!ENV.geminiApiKey);
+  console.log("[LLM] GEMINI_API_KEY length:", ENV.geminiApiKey.length);
   return !!ENV.geminiApiKey;
 }
 
@@ -164,10 +167,15 @@ const normalizeMessage = (message: Message) => {
 const resolveApiUrl = () => ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0 ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions` : "https://forge.manus.im/v1/chat/completions";
 
 const assertForgeApiKey = () => {
+  console.log("[LLM] Checking Forge API key...");
+  console.log("[LLM] FORGE_API_KEY exists:", !!ENV.forgeApiKey);
   if (!ENV.forgeApiKey) {
+    console.error("[LLM] No API key configured!");
+    console.error("[LLM] GEMINI_API_KEY:", ENV.geminiApiKey ? "(set but not used)" : "(not set)");
+    console.error("[LLM] FORGE_API_KEY:", ENV.forgeApiKey ? "(set)" : "(not set)");
     throw new Error("No API key configured. Please set GEMINI_API_KEY or a fallback API key.");
   }
-};
+}
 
 async function invokeForge(params: InvokeParams): Promise<InvokeResult> {
   assertForgeApiKey();
