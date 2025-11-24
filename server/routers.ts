@@ -2652,6 +2652,70 @@ ${file.extractedText || "無法提取文字內容"}`
       return await fixOptionsFormat();
     }),
   }),
+
+  // 成績管理與分析路由
+  scores: router({
+    // 取得我的所有考試成績
+    myScores: protectedProcedure.query(async ({ ctx }) => {
+      const { getMyExamScores } = await import("./db");
+      return await getMyExamScores(ctx.user.id);
+    }),
+
+    // 取得成績統計資料（管理員/編輯者可查看所有考生）
+    statistics: protectedProcedure
+      .input(z.object({ examId: z.number().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getScoreStatistics } = await import("./db");
+        return await getScoreStatistics(input?.examId);
+      }),
+
+    // 取得成績排名
+    rankings: protectedProcedure
+      .input(z.object({ 
+        examId: z.number().optional(), 
+        limit: z.number().default(10) 
+      }).optional())
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getScoreRankings } = await import("./db");
+        return await getScoreRankings(input?.examId, input?.limit || 10);
+      }),
+
+    // 取得我的成績趋勢
+    myTrends: protectedProcedure
+      .input(z.object({ limit: z.number().default(10) }).optional())
+      .query(async ({ ctx, input }) => {
+        const { getScoreTrends } = await import("./db");
+        return await getScoreTrends(ctx.user.id, input?.limit || 10);
+      }),
+
+    // 取得答題正確率分析
+    answerAccuracy: protectedProcedure
+      .input(z.object({ examId: z.number().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const { getAnswerAccuracy } = await import("./db");
+        return await getAnswerAccuracy(ctx.user.id, input?.examId);
+      }),
+
+    // 取得特定考試的成績分布（管理員/編輯者可查看）
+    distribution: protectedProcedure
+      .input(z.object({ examId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const { hasPermission } = await import("@shared/permissions");
+        if (!hasPermission(ctx.user.role as any, "canEdit")) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "沒有權限" });
+        }
+        const { getScoreDistribution } = await import("./db");
+        return await getScoreDistribution(input.examId);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

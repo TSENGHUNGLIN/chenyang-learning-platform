@@ -2197,3 +2197,223 @@ export async function batchCreateEmployees(employeesData: Array<{ name: string; 
   return { success: true, count: results.length };
 }
 
+
+
+// ==================== 成績管理與分析相關函數 ====================
+
+/**
+ * 取得使用者的所有考試成績
+ */
+export async function getMyExamScores(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examScores, examAssignments, exams } = await import("../drizzle/schema");
+  const { desc } = await import("drizzle-orm");
+  
+  const result = await db
+    .select({
+      id: examScores.id,
+      assignmentId: examScores.assignmentId,
+      totalScore: examScores.totalScore,
+      maxScore: examScores.maxScore,
+      percentage: examScores.percentage,
+      passed: examScores.passed,
+      gradedAt: examScores.gradedAt,
+      feedback: examScores.feedback,
+      examTitle: exams.title,
+      examId: exams.id,
+      startTime: examAssignments.startTime,
+      endTime: examAssignments.endTime,
+      status: examAssignments.status,
+    })
+    .from(examScores)
+    .innerJoin(examAssignments, eq(examScores.assignmentId, examAssignments.id))
+    .innerJoin(exams, eq(examAssignments.examId, exams.id))
+    .where(eq(examAssignments.userId, userId))
+    .orderBy(desc(examScores.gradedAt));
+  
+  return result;
+}
+
+/**
+ * 取得成績統計資料（所有考生）
+ */
+export async function getScoreStatistics(examId?: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { examScores, examAssignments, exams } = await import("../drizzle/schema");
+  const { sql, and } = await import("drizzle-orm");
+  
+  // 建立條件
+  const conditions = [];
+  if (examId) {
+    conditions.push(eq(examAssignments.examId, examId));
+  }
+  
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+  
+  // 查詢統計資料
+  const stats = await db
+    .select({
+      totalExams: sql<number>`COUNT(DISTINCT ${examScores.id})`,
+      avgScore: sql<number>`AVG(${examScores.percentage})`,
+      maxScore: sql<number>`MAX(${examScores.percentage})`,
+      minScore: sql<number>`MIN(${examScores.percentage})`,
+      passCount: sql<number>`SUM(CASE WHEN ${examScores.passed} = 1 THEN 1 ELSE 0 END)`,
+      failCount: sql<number>`SUM(CASE WHEN ${examScores.passed} = 0 THEN 1 ELSE 0 END)`,
+    })
+    .from(examScores)
+    .innerJoin(examAssignments, eq(examScores.assignmentId, examAssignments.id))
+    .innerJoin(exams, eq(examAssignments.examId, exams.id))
+    .where(whereClause);
+  
+  if (stats.length === 0) return null;
+  
+  const result = stats[0];
+  const passRate = result.totalExams > 0 
+    ? Math.round((Number(result.passCount) / Number(result.totalExams)) * 100) 
+    : 0;
+  
+  return {
+    totalExams: Number(result.totalExams),
+    avgScore: Math.round(Number(result.avgScore) || 0),
+    maxScore: Number(result.maxScore) || 0,
+    minScore: Number(result.minScore) || 0,
+    passCount: Number(result.passCount),
+    failCount: Number(result.failCount),
+    passRate,
+  };
+}
+
+/**
+ * 取得成績排名（依百分比排序）
+ */
+export async function getScoreRankings(examId?: number, limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examScores, examAssignments, exams, users } = await import("../drizzle/schema");
+  const { desc, and } = await import("drizzle-orm");
+  
+  // 建立條件
+  const conditions = [eq(examAssignments.status, "graded")];
+  if (examId) {
+    conditions.push(eq(examAssignments.examId, examId));
+  }
+  
+  const result = await db
+    .select({
+      userId: users.id,
+      userName: users.name,
+      examTitle: exams.title,
+      examId: exams.id,
+      totalScore: examScores.totalScore,
+      maxScore: examScores.maxScore,
+      percentage: examScores.percentage,
+      passed: examScores.passed,
+      gradedAt: examScores.gradedAt,
+    })
+    .from(examScores)
+    .innerJoin(examAssignments, eq(examScores.assignmentId, examAssignments.id))
+    .innerJoin(exams, eq(examAssignments.examId, exams.id))
+    .innerJoin(users, eq(examAssignments.userId, users.id))
+    .where(and(...conditions))
+    .orderBy(desc(examScores.percentage), desc(examScores.gradedAt))
+    .limit(limit);
+  
+  return result;
+}
+
+/**
+ * 取得使用者的成績趨勢（最近N次考試）
+ */
+export async function getScoreTrends(userId: number, limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examScores, examAssignments, exams } = await import("../drizzle/schema");
+  const { desc } = await import("drizzle-orm");
+  
+  const result = await db
+    .select({
+      examTitle: exams.title,
+      examId: exams.id,
+      percentage: examScores.percentage,
+      passed: examScores.passed,
+      gradedAt: examScores.gradedAt,
+    })
+    .from(examScores)
+    .innerJoin(examAssignments, eq(examScores.assignmentId, examAssignments.id))
+    .innerJoin(exams, eq(examAssignments.examId, exams.id))
+    .where(eq(examAssignments.userId, userId))
+    .orderBy(desc(examScores.gradedAt))
+    .limit(limit);
+  
+  return result.reverse(); // 反轉陣列，讓最舊的在前面（時間軸從左到右）
+}
+
+/**
+ * 取得答題正確率分析
+ */
+export async function getAnswerAccuracy(userId: number, examId?: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const { examSubmissions, examAssignments, questions } = await import("../drizzle/schema");
+  const { sql, and } = await import("drizzle-orm");
+  
+  // 建立條件
+  const conditions = [eq(examAssignments.userId, userId)];
+  if (examId) {
+    conditions.push(eq(examAssignments.examId, examId));
+  }
+  
+  // 查詢答題統計
+  const stats = await db
+    .select({
+      questionType: questions.type,
+      totalQuestions: sql<number>`COUNT(*)`,
+      correctCount: sql<number>`SUM(CASE WHEN ${examSubmissions.isCorrect} = 1 THEN 1 ELSE 0 END)`,
+      incorrectCount: sql<number>`SUM(CASE WHEN ${examSubmissions.isCorrect} = 0 THEN 1 ELSE 0 END)`,
+    })
+    .from(examSubmissions)
+    .innerJoin(examAssignments, eq(examSubmissions.assignmentId, examAssignments.id))
+    .innerJoin(questions, eq(examSubmissions.questionId, questions.id))
+    .where(and(...conditions))
+    .groupBy(questions.type);
+  
+  return stats.map(stat => ({
+    questionType: stat.questionType,
+    totalQuestions: Number(stat.totalQuestions),
+    correctCount: Number(stat.correctCount),
+    incorrectCount: Number(stat.incorrectCount),
+    accuracy: stat.totalQuestions > 0 
+      ? Math.round((Number(stat.correctCount) / Number(stat.totalQuestions)) * 100) 
+      : 0,
+  }));
+}
+
+/**
+ * 取得特定考試的成績分布
+ */
+export async function getScoreDistribution(examId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const { examScores, examAssignments } = await import("../drizzle/schema");
+  const { sql } = await import("drizzle-orm");
+  
+  // 將分數分成10個區間（0-10, 11-20, ..., 91-100）
+  const result = await db
+    .select({
+      scoreRange: sql<string>`CONCAT(FLOOR(${examScores.percentage} / 10) * 10, '-', FLOOR(${examScores.percentage} / 10) * 10 + 10)`,
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(examScores)
+    .innerJoin(examAssignments, eq(examScores.assignmentId, examAssignments.id))
+    .where(eq(examAssignments.examId, examId))
+    .groupBy(sql`FLOOR(${examScores.percentage} / 10)`)
+    .orderBy(sql`FLOOR(${examScores.percentage} / 10)`);
+  
+  return result.map(r => ({
+    scoreRange: r.scoreRange,
+    count: Number(r.count),
+  }));
+}
+

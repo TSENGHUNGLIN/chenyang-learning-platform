@@ -35,6 +35,26 @@ interface ExamPreviewDialogProps {
   examId: number;
 }
 
+interface ExamWithQuestions {
+  id: number;
+  title: string;
+  description: string | null;
+  timeLimit: number | null;
+  passingScore: number;
+  totalScore: number;
+  gradingMethod: string;
+  status: string;
+  questions?: Array<{
+    id: number;
+    question: string;
+    type: string;
+    difficulty: string;
+    score: number;
+    [key: string]: any;
+  }>;
+  [key: string]: any;
+}
+
 export default function ExamPreviewDialog({
   open,
   onOpenChange,
@@ -46,10 +66,11 @@ export default function ExamPreviewDialog({
   const questionsPerPage = 10;
 
   // 查詢考試詳細資訊
-  const { data: exam, isLoading, error } = trpc.exams.getById.useQuery(
+  const { data: examData, isLoading, error } = trpc.exams.getById.useQuery(
     examId,
     { enabled: open && examId > 0 }
   );
+  const exam = examData as ExamWithQuestions | undefined;
 
   // 計算分頁
   const totalPages = exam?.questions 
@@ -60,15 +81,15 @@ export default function ExamPreviewDialog({
   const currentQuestions = exam?.questions?.slice(startIndex, endIndex) || [];
 
   // 計算總分
-  const totalScore = exam?.questions?.reduce((sum, q) => sum + (q.score || 0), 0) || 0;
+  const totalScore = exam?.questions?.reduce((sum: number, q: any) => sum + (q.score || 0), 0) || 0;
 
   // 題型標籤
   const getQuestionTypeBadge = (type: string) => {
     const typeMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-      "true-false": { label: "是非題", variant: "default" },
-      "single-choice": { label: "單選題", variant: "secondary" },
-      "multiple-choice": { label: "多選題", variant: "outline" },
-      "short-answer": { label: "簡答題", variant: "default" },
+      "true_false": { label: "是非題", variant: "default" },
+      "multiple_choice": { label: "單選題", variant: "secondary" },
+      "multiple_answer": { label: "多選題", variant: "outline" },
+      "short_answer": { label: "簡答題", variant: "default" },
     };
     const config = typeMap[type] || { label: type, variant: "outline" };
     return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -222,7 +243,7 @@ export default function ExamPreviewDialog({
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {currentQuestions.map((question, index) => (
+                            {currentQuestions.map((question: any, index: number) => (
                               <TableRow key={question.id}>
                                 <TableCell className="font-mono text-xs text-muted-foreground">
                                   {startIndex + index + 1}

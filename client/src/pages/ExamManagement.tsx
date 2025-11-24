@@ -70,7 +70,7 @@ export default function ExamManagement() {
   const createExamMutation = trpc.exams.create.useMutation({
     onSuccess: () => {
       toast.success("考試已建立");
-      setShowCreateDialog(false);
+      setShowCreateWizard(false);
       resetForm();
       refetch();
     },

@@ -52,6 +52,7 @@ const staffMenuItems: Array<{
   { icon: ClipboardList, label: "考試園地", path: "/my-exams", color: "sky" },
   { icon: RefreshCw, label: "補考管理", path: "/makeup-exams", color: "teal", editorOnly: true },
   { icon: Activity, label: "考試監控", path: "/exam-monitoring", color: "red", editorOnly: true },
+  { icon: TrendingUp, label: "成績儀表板", path: "/scores-dashboard", color: "green", editorOnly: true },
   { icon: Settings, label: "部門人員", path: "/manage", color: "slate", adminOnly: true },
   { icon: Users, label: "使用者管理", path: "/users", color: "zinc", adminOnly: true },
 ];
@@ -65,7 +66,7 @@ const examineeMenuItems: Array<{
 }> = [
   { icon: ClipboardList, label: "考試園地", path: "/my-exams", color: "sky" },
   { icon: BookX, label: "錯題本", path: "/wrong-questions", color: "red" },
-  { icon: TrendingUp, label: "成績趨勢", path: "/performance-trend", color: "green" },
+  { icon: TrendingUp, label: "成績趋勢", path: "/score-trends", color: "green" },
   { icon: Lightbulb, label: "學習建議", path: "/learning-recommendations", color: "yellow" },
   { icon: Award, label: "我的成績", path: "/my-scores", color: "purple" },
 ];

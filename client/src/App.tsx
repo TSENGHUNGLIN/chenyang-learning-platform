@@ -33,6 +33,9 @@ import MakeupExamManagement from "./pages/MakeupExamManagement";
 import LearningRecommendations from "./pages/LearningRecommendations";
 import MakeupExamDashboard from "./pages/MakeupExamDashboard";
 import DataQualityCheck from "./pages/DataQualityCheck";
+import MyScores from "./pages/MyScores";
+import ScoresDashboard from "./pages/ScoresDashboard";
+import ScoreTrends from "./pages/ScoreTrends";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -67,6 +70,9 @@ function Router() {
       <Route path={"/makeup-dashboard"} component={MakeupExamDashboard} />
       <Route path={"/learning-recommendations"} component={LearningRecommendations} />
       <Route path={"/data-quality"} component={DataQualityCheck} />
+      <Route path={"/my-scores"} component={MyScores} />
+      <Route path={"/scores-dashboard"} component={ScoresDashboard} />
+      <Route path={"/score-trends"} component={ScoreTrends} />
       <Route path={"/manage"} component={Manage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

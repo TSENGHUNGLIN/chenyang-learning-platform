@@ -5,7 +5,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -17,7 +16,6 @@ import {
   Loader2, 
   FileQuestion,
   CheckCircle2,
-  XCircle,
   AlertCircle,
 } from "lucide-react";
 
@@ -41,10 +39,10 @@ export default function QuestionPreviewDialog({
   // 題型標籤
   const getQuestionTypeBadge = (type: string) => {
     const typeMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-      "true-false": { label: "是非題", variant: "default" },
-      "single-choice": { label: "單選題", variant: "secondary" },
-      "multiple-choice": { label: "多選題", variant: "outline" },
-      "short-answer": { label: "簡答題", variant: "default" },
+      "true_false": { label: "是非題", variant: "default" },
+      "multiple_choice": { label: "單選題", variant: "secondary" },
+      "multiple_answer": { label: "多選題", variant: "outline" },
+      "short_answer": { label: "簡答題", variant: "default" },
     };
     const config = typeMap[type] || { label: type, variant: "outline" };
     return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -62,10 +60,15 @@ export default function QuestionPreviewDialog({
   };
 
   // 解析選項
-  const parseOptions = (optionsStr: string | null): string[] => {
+  const parseOptions = (optionsStr: string | null): Array<{label: string, value: string}> | string[] => {
     if (!optionsStr) return [];
     try {
-      return JSON.parse(optionsStr);
+      const parsed = JSON.parse(optionsStr);
+      // 支援兩種格式：字串陣列或物件陣列
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      return [];
     } catch {
       return [];
     }
@@ -80,6 +83,12 @@ export default function QuestionPreviewDialog({
     } catch {
       return answerStr;
     }
+  };
+
+  // 取得選項文字
+  const getOptionText = (option: {label: string, value: string} | string): string => {
+    if (typeof option === 'string') return option;
+    return option.label || option.value || '';
   };
 
   return (
@@ -116,8 +125,7 @@ export default function QuestionPreviewDialog({
               <div className="flex items-center gap-2 flex-wrap">
                 {getQuestionTypeBadge(question.type)}
                 {getDifficultyBadge(question.difficulty)}
-                <Badge variant="outline">分數：{question.score} 分</Badge>
-                {question.isAiGenerated && (
+                {question.isAiGenerated === 1 && (
                   <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
                     AI 生成
                   </Badge>
@@ -134,14 +142,14 @@ export default function QuestionPreviewDialog({
                         題目
                       </h3>
                       <p className="text-base leading-relaxed whitespace-pre-wrap">
-                        {question.content}
+                        {question.question}
                       </p>
                     </div>
 
                     {/* 是非題 */}
-                    {question.type === "true-false" && (
+                    {question.type === "true_false" && (
                       <div className="space-y-3">
-                        <RadioGroup disabled value={String(parseAnswer(question.answer))}>
+                        <RadioGroup disabled value={question.correctAnswer}>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="true" id="true" />
                             <Label htmlFor="true" className="cursor-pointer">正確 (O)</Label>
@@ -155,14 +163,14 @@ export default function QuestionPreviewDialog({
                     )}
 
                     {/* 單選題 */}
-                    {question.type === "single-choice" && (
+                    {question.type === "multiple_choice" && (
                       <div className="space-y-3">
-                        <RadioGroup disabled value={String(parseAnswer(question.answer))}>
+                        <RadioGroup disabled value={question.correctAnswer}>
                           {parseOptions(question.options).map((option, index) => (
                             <div key={index} className="flex items-center space-x-2">
                               <RadioGroupItem value={String(index)} id={`option-${index}`} />
                               <Label htmlFor={`option-${index}`} className="cursor-pointer">
-                                {String.fromCharCode(65 + index)}. {option}
+                                {String.fromCharCode(65 + index)}. {getOptionText(option)}
                               </Label>
                             </div>
                           ))}
@@ -171,10 +179,10 @@ export default function QuestionPreviewDialog({
                     )}
 
                     {/* 多選題 */}
-                    {question.type === "multiple-choice" && (
+                    {question.type === "multiple_answer" && (
                       <div className="space-y-3">
                         {parseOptions(question.options).map((option, index) => {
-                          const answer = parseAnswer(question.answer);
+                          const answer = parseAnswer(question.correctAnswer);
                           const isChecked = Array.isArray(answer) && answer.includes(String(index));
                           return (
                             <div key={index} className="flex items-center space-x-2">
@@ -184,7 +192,7 @@ export default function QuestionPreviewDialog({
                                 id={`option-${index}`} 
                               />
                               <Label htmlFor={`option-${index}`} className="cursor-pointer">
-                                {String.fromCharCode(65 + index)}. {option}
+                                {String.fromCharCode(65 + index)}. {getOptionText(option)}
                               </Label>
                             </div>
                           );
@@ -193,7 +201,7 @@ export default function QuestionPreviewDialog({
                     )}
 
                     {/* 簡答題 */}
-                    {question.type === "short-answer" && (
+                    {question.type === "short_answer" && (
                       <div>
                         <Textarea
                           disabled
@@ -215,26 +223,26 @@ export default function QuestionPreviewDialog({
                       正確答案
                     </h3>
                     <div className="text-base">
-                      {question.type === "true-false" && (
-                        <p>{parseAnswer(question.answer) === "true" ? "正確 (O)" : "錯誤 (X)"}</p>
+                      {question.type === "true_false" && (
+                        <p>{question.correctAnswer === "true" ? "正確 (O)" : "錯誤 (X)"}</p>
                       )}
-                      {question.type === "single-choice" && (
+                      {question.type === "multiple_choice" && (
                         <p>
-                          {String.fromCharCode(65 + Number(parseAnswer(question.answer)))}. {" "}
-                          {parseOptions(question.options)[Number(parseAnswer(question.answer))]}
+                          {String.fromCharCode(65 + Number(question.correctAnswer))}. {" "}
+                          {getOptionText(parseOptions(question.options)[Number(question.correctAnswer)])}
                         </p>
                       )}
-                      {question.type === "multiple-choice" && (
+                      {question.type === "multiple_answer" && (
                         <div className="space-y-1">
-                          {(parseAnswer(question.answer) as string[]).map((ans, idx) => (
+                          {(parseAnswer(question.correctAnswer) as string[]).map((ans, idx) => (
                             <p key={idx}>
-                              {String.fromCharCode(65 + Number(ans))}. {parseOptions(question.options)[Number(ans)]}
+                              {String.fromCharCode(65 + Number(ans))}. {getOptionText(parseOptions(question.options)[Number(ans)])}
                             </p>
                           ))}
                         </div>
                       )}
-                      {question.type === "short-answer" && (
-                        <p className="whitespace-pre-wrap">{parseAnswer(question.answer)}</p>
+                      {question.type === "short_answer" && (
+                        <p className="whitespace-pre-wrap">{question.correctAnswer}</p>
                       )}
                     </div>
                   </div>

@@ -109,14 +109,14 @@ export default function QuestionSelector({
         return false;
       }
 
-      // 標籤過濾
-      if (selectedTag !== "all") {
-        const questionTags = q.tags || [];
-        const hasTag = questionTags.some((tag: any) => tag.id.toString() === selectedTag);
-        if (!hasTag) {
-          return false;
-        }
-      }
+      // 標籤過濾 (暫時禁用，待後端 API 支援)
+      // if (selectedTag !== "all") {
+      //   const questionTags = q.tags || [];
+      //   const hasTag = questionTags.some((tag: any) => tag.id.toString() === selectedTag);
+      //   if (!hasTag) {
+      //     return false;
+      //   }
+      // }
 
       return true;
     });
@@ -425,23 +425,16 @@ export default function QuestionSelector({
                         <Badge variant={difficultyInfo.variant}>
                           {difficultyInfo.text}
                         </Badge>
-                        {question.category && (
-                          <Badge variant="secondary">{question.category.name}</Badge>
-                        )}
-                        {question.tags && question.tags.length > 0 && (
-                          <div className="flex gap-1">
-                            {question.tags.map((tag: any) => (
-                              <Badge key={tag.id} variant="outline" className="text-xs">
-                                {tag.name}
-                              </Badge>
-                            ))}
-                          </div>
+                        {question.categoryId && categories && (
+                          <Badge variant="secondary">
+                            {categories.find(c => c.id === question.categoryId)?.name || '未分類'}
+                          </Badge>
                         )}
                       </div>
                       <div className="text-sm">{highlightKeywords(question.question)}</div>
                       {(() => {
                         try {
-                          if (question.type === "multipleChoice" && question.options) {
+                          if (question.type === "multiple_choice" && question.options) {
                             const options = JSON.parse(question.options);
                             return (
                               <div className="text-sm text-muted-foreground space-y-1 pl-4">

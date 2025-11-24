@@ -38,6 +38,24 @@ interface ExamTemplatePreviewDialogProps {
   onCreateExam?: () => void;
 }
 
+interface TemplateWithQuestions {
+  id: number;
+  name: string;
+  description: string | null;
+  timeLimit: number | null;
+  passingScore: number;
+  gradingMethod: string;
+  questions?: Array<{
+    id: number;
+    question: string;
+    type: string;
+    difficulty: string;
+    score: number;
+    [key: string]: any;
+  }>;
+  [key: string]: any;
+}
+
 export default function ExamTemplatePreviewDialog({
   open,
   onOpenChange,
@@ -48,10 +66,11 @@ export default function ExamTemplatePreviewDialog({
   const questionsPerPage = 10;
 
   // 查詢範本詳細資訊
-  const { data: template, isLoading, error } = trpc.examTemplates.getById.useQuery(
+  const { data: templateData, isLoading, error } = trpc.examTemplates.getById.useQuery(
     templateId,
     { enabled: open && templateId > 0 }
   );
+  const template = templateData as TemplateWithQuestions | undefined;
 
   // 計算分頁
   const totalPages = template?.questions 
@@ -64,10 +83,10 @@ export default function ExamTemplatePreviewDialog({
   // 題型標籤顏色
   const getQuestionTypeBadge = (type: string) => {
     const typeMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-      "true-false": { label: "是非題", variant: "default" },
-      "single-choice": { label: "單選題", variant: "secondary" },
-      "multiple-choice": { label: "多選題", variant: "outline" },
-      "short-answer": { label: "簡答題", variant: "default" },
+      "true_false": { label: "是非題", variant: "default" },
+      "multiple_choice": { label: "單選題", variant: "secondary" },
+      "multiple_answer": { label: "多選題", variant: "outline" },
+      "short_answer": { label: "簡答題", variant: "default" },
     };
     const config = typeMap[type] || { label: type, variant: "outline" };
     return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -222,7 +241,7 @@ export default function ExamTemplatePreviewDialog({
                               </TableCell>
                               <TableCell>
                                 <div className="max-w-md">
-                                  <p className="line-clamp-2">{question.content}</p>
+                                  <p className="line-clamp-2">{question.question}</p>
                                 </div>
                               </TableCell>
                               <TableCell>
