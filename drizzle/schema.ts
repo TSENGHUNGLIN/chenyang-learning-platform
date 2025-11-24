@@ -9,6 +9,10 @@ export const gradingMethodEnum = pgEnum("grading_method", ["auto", "manual", "mi
 export const assignmentStatusEnum = pgEnum("assignment_status", ["pending", "in_progress", "submitted", "graded"]);
 export const notificationTypeEnum = pgEnum("notification_type", ["exam_reminder", "makeup_exam", "learning_recommendation", "system"]);
 export const reminderTypeEnum = pgEnum("reminder_type", ["3days", "1day", "today"]);
+export const makeupStatusEnum = pgEnum("makeup_status", ["pending", "scheduled", "completed", "expired"]);
+export const recommendationTypeEnum = pgEnum("recommendation_type", ["weak_topics", "practice_questions", "study_materials", "ai_generated"]);
+export const priorityEnum = pgEnum("priority", ["high", "medium", "low"]);
+export const notificationTypeEnumExtended = pgEnum("notification_type_extended", ["exam_failed", "makeup_scheduled", "makeup_reminder", "makeup_deadline", "other"]);
 
 /**
  * Core user table backing auth flow.
@@ -464,7 +468,7 @@ export const makeupExams = pgTable("makeupExams", {
   makeupCount: integer("makeupCount").notNull().default(1), // 第幾次補考（1=第一次補考）
   maxMakeupAttempts: integer("maxMakeupAttempts").notNull().default(2), // 最多可補考次數
   makeupDeadline: timestamp("makeupDeadline"), // 補考截止日期
-  status: pgEnum("status", ["pending", "scheduled", "completed", "expired"]).notNull().default("pending"), // 補考狀態
+  status: makeupStatusEnum("status").notNull().default("pending"), // 補考狀態
   originalScore: integer("originalScore"), // 原始考試分數
   makeupScore: integer("makeupScore"), // 補考分數
   reason: text("reason"), // 補考原因（自動填入：不及格）
@@ -486,13 +490,13 @@ export const learningRecommendations = pgTable("learningRecommendations", {
   userId: integer("userId").notNull(), // 考生ID
   assignmentId: integer("assignmentId"), // 關聯的考試指派ID（可選）
   makeupExamId: integer("makeupExamId"), // 關聯的補考記錄ID（可選）
-  recommendationType: pgEnum("recommendationType", ["weak_topics", "practice_questions", "study_materials", "ai_generated"]).notNull(), // 建議類型
+  recommendationType: recommendationTypeEnum("recommendationType").notNull(), // 建議類型
   title: varchar("title", { length: 200 }).notNull(), // 建議標題
   content: text("content").notNull(), // 建議內容（JSON格式，包含詳細建議）
   relatedQuestionIds: text("relatedQuestionIds"), // 相關題目ID（JSON陣列）
   relatedCategoryIds: text("relatedCategoryIds"), // 相關分類ID（JSON陣列）
   relatedTagIds: text("relatedTagIds"), // 相關標籤ID（JSON陣列）
-  priority: pgEnum("priority", ["high", "medium", "low"]).notNull().default("medium"), // 優先級
+  priority: priorityEnum("priority").notNull().default("medium"), // 優先級
   isRead: integer("isRead").notNull().default(0), // 是否已讀（1=已讀，0=未讀）
   readAt: timestamp("readAt"), // 閱讀時間
   generatedBy: varchar("generatedBy", { length: 50 }).notNull().default("system"), // 生成來源（system=系統自動, ai=AI生成, manual=人工建立）
@@ -510,7 +514,7 @@ export type InsertLearningRecommendation = typeof learningRecommendations.$infer
 export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("userId").notNull(), // 接收通知的使用者ID（0表示通知管理員）
-  notificationType: pgEnum("notificationType", ["exam_failed", "makeup_scheduled", "makeup_reminder", "makeup_deadline", "other"]).notNull(), // 通知類型
+  notificationType: notificationTypeEnumExtended("notificationType").notNull(), // 通知類型
   title: varchar("title", { length: 200 }).notNull(), // 通知標題
   content: text("content").notNull(), // 通知內容
   relatedExamId: integer("relatedExamId"), // 相關考試ID
