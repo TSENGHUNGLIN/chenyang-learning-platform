@@ -2,6 +2,26 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
+import { SignJWT } from "jose";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+
+// Simple JWT secret - use environment variable or fallback
+const JWT_SECRET = process.env.JWT_SECRET || "chenyang-jwt-secret-change-in-production-2024";
+
+async function createSimpleJWT(openId: string, name: string): Promise<string> {
+  const secretKey = new TextEncoder().encode(JWT_SECRET);
+  const issuedAt = Date.now();
+  const expirationSeconds = Math.floor((issuedAt + ONE_YEAR_MS) / 1000);
+
+  return new SignJWT({
+    openId: openId,
+    appId: "chenyang-learning-platform",
+    name: name,
+  })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setExpirationTime(expirationSeconds)
+    .sign(secretKey);
+}
 
 export function initializeGoogleOAuth(app: Express) {
   const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -88,8 +108,30 @@ export function initializeGoogleOAuth(app: Express) {
     }),
     async (req: Request, res: Response) => {
       try {
-        console.log("[Google OAuth] Callback successful, user:", req.user);
+        const user = req.user as any;
         
+        if (!user || !user.openId) {
+          console.error("[Google OAuth] No user in callback");
+          res.redirect("/?error=no_user_info");
+          return;
+        }
+
+        console.log("[Google OAuth] Callback successful, user:", user);
+
+        // Create JWT token
+        const sessionToken = await createSimpleJWT(user.openId, user.name || "");
+
+        // Set cookie
+        res.cookie(COOKIE_NAME, sessionToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: ONE_YEAR_MS,
+          path: "/",
+        });
+
+        console.log("[Google OAuth] Session cookie set, redirecting to home");
+
         // Redirect to home page
         res.redirect("/");
       } catch (error) {
