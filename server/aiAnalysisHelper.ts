@@ -60,7 +60,9 @@ export function parseLLMResponse(response: any): any {
     console.log("[AI分析] 原始回應前100字:", resultText.substring(0, 100));
     console.log("[AI分析] 原始回應後100字:", resultText.substring(Math.max(0, resultText.length - 100)));
     
-    return JSON.parse(resultText || "{}");
+    const parsed = JSON.parse(resultText || "{}");
+    // 深度克隆以確保物件完全乾淨，沒有任何特殊屬性
+    return JSON.parse(JSON.stringify(parsed));
   } catch (error: any) {
     console.error("[AI分析] 解析LLM回應失敗:", error.message);
     

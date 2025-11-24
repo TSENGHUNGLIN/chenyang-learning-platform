@@ -551,13 +551,16 @@ ${file.extractedText || "無法提取文字內容"}`
             console.log(`[快取] 返回快取結果，ID: ${cachedResult.id}`);
             // 確保快取結果是可序列化的純物件
             const parsedResult = typeof cachedResult.result === 'string' ? JSON.parse(cachedResult.result) : cachedResult.result;
-            const sanitizedResult = JSON.parse(JSON.stringify(parsedResult));
-            console.log("[快取] 返回sanitizedResult，類型:", typeof sanitizedResult);
-            return {
-              result: sanitizedResult,
-              fromCache: true,
+            console.log("[快取] parsedResult 類型:", typeof parsedResult);
+            
+            // 使用明確的物件建構，確保沒有原型鏈問題
+            const cleanResult = {
+              result: parsedResult,
+              fromCache: true as const,
               cacheId: cachedResult.id,
             };
+            console.log("[快取] 返回cleanResult");
+            return cleanResult;
           }
         }
         
@@ -753,7 +756,11 @@ ${file.extractedText || "無法提取文字內容"}`
             },
           });
           
-          const result = parseLLMResponse(response);
+          const rawResult = parseLLMResponse(response);
+          
+          // 清理結果，確保所有陣列欄位都是真正的陣列
+          const { sanitizeAnalysisResult } = await import("./sanitizeResult");
+          const result = sanitizeAnalysisResult(rawResult);
           
           // Log the parsed result structure
           console.log("[AI分析] 解析後的result結構:", JSON.stringify(result, null, 2).substring(0, 1000));
@@ -795,11 +802,15 @@ ${file.extractedText || "無法提取文字內容"}`
             createdBy: ctx.user.id,
           });
           
-          // 確保返回的資料是可序列化的純物件
-          const sanitizedResult = JSON.parse(JSON.stringify(result));
-          console.log("[AI分析] 返回sanitizedResult，類型:", typeof sanitizedResult);
-          console.log("[AI分析] sanitizedResult.questionsWithAnswers長度:", sanitizedResult.questionsWithAnswers?.length);
-          return { result: sanitizedResult, fromCache: false };
+          // 使用明確的物件建構，確保沒有原型鏈問題
+          console.log("[AI分析] 返回result，類型:", typeof result);
+          console.log("[AI分析] result.questionsWithAnswers長度:", result.questionsWithAnswers?.length);
+          
+          const cleanResult = {
+            result: result,
+            fromCache: false as const,
+          };
+          return cleanResult;
         } else {
           // 其他類型返回純文字
           const response = await invokeLLMWithRetry(invokeLLM, {
@@ -845,9 +856,12 @@ ${file.extractedText || "無法提取文字內容"}`
             createdBy: ctx.user.id,
           });
           
-          // 確保返回的資料是可序列化的
-          const sanitizedResult = typeof result === 'string' ? result : JSON.parse(JSON.stringify(result));
-          return { result: sanitizedResult, fromCache: false };
+          // 使用明確的物件建構
+          const cleanResult = {
+            result: result,
+            fromCache: false as const,
+          };
+          return cleanResult;
         }
       }),
     // AI分析歷史記錄相關API
