@@ -54,9 +54,22 @@ export function parseLLMResponse(response: any): any {
   try {
     const content = response.choices[0].message.content;
     const resultText = typeof content === 'string' ? content : JSON.stringify(content);
+    
+    // Log the raw response for debugging
+    console.log("[AI分析] 原始回應長度:", resultText.length);
+    console.log("[AI分析] 原始回應前100字:", resultText.substring(0, 100));
+    console.log("[AI分析] 原始回應後100字:", resultText.substring(Math.max(0, resultText.length - 100)));
+    
     return JSON.parse(resultText || "{}");
   } catch (error: any) {
     console.error("[AI分析] 解析LLM回應失敗:", error.message);
+    
+    // Log more details about the failed JSON
+    const content = response.choices[0].message.content;
+    const resultText = typeof content === 'string' ? content : JSON.stringify(content);
+    console.error("[AI分析] 失敗的JSON長度:", resultText.length);
+    console.error("[AI分析] 失敗的JSON內容:", resultText.substring(0, 500));
+    
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "AI分析結果格式錯誤，請重試",
