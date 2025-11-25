@@ -38,19 +38,21 @@ export function sanitizeAnalysisResult(result: any): any {
 
   // 確保每個題目中的陣列欄位
   if (Array.isArray(sanitized.questionsOnly)) {
-    sanitized.questionsOnly = sanitized.questionsOnly.map((q: any) => ({
-      ...q,
-      options: Array.isArray(q.options) ? q.options : [],
-      suggestedTags: Array.isArray(q.suggestedTags) ? q.suggestedTags : [],
-    }));
+    sanitized.questionsOnly = sanitized.questionsOnly.map((q: any) => {
+      const cleaned = Object.assign({}, q);
+      cleaned.options = Array.isArray(q.options) ? q.options : [];
+      cleaned.suggestedTags = Array.isArray(q.suggestedTags) ? q.suggestedTags : [];
+      return cleaned;
+    });
   }
 
   if (Array.isArray(sanitized.questionsWithAnswers)) {
-    sanitized.questionsWithAnswers = sanitized.questionsWithAnswers.map((q: any) => ({
-      ...q,
-      options: Array.isArray(q.options) ? q.options : [],
-      suggestedTags: Array.isArray(q.suggestedTags) ? q.suggestedTags : [],
-    }));
+    sanitized.questionsWithAnswers = sanitized.questionsWithAnswers.map((q: any) => {
+      const cleaned = Object.assign({}, q);
+      cleaned.options = Array.isArray(q.options) ? q.options : [];
+      cleaned.suggestedTags = Array.isArray(q.suggestedTags) ? q.suggestedTags : [];
+      return cleaned;
+    });
   }
 
   console.log("[Sanitize] 已清理結果，questionsWithAnswers長度:", sanitized.questionsWithAnswers?.length);

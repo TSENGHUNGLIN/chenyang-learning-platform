@@ -556,7 +556,7 @@ ${file.extractedText || "無法提取文字內容"}`
             // 使用明確的物件建構，確保沒有原型鏈問題
             const cleanResult = {
               result: parsedResult,
-              fromCache: true as const,
+              fromCache: true,
               cacheId: cachedResult.id,
             };
             console.log("[快取] 返回cleanResult");
@@ -808,7 +808,7 @@ ${file.extractedText || "無法提取文字內容"}`
           
           const cleanResult = {
             result: result,
-            fromCache: false as const,
+            fromCache: false,
           };
           return cleanResult;
         } else {
@@ -859,7 +859,7 @@ ${file.extractedText || "無法提取文字內容"}`
           // 使用明確的物件建構
           const cleanResult = {
             result: result,
-            fromCache: false as const,
+            fromCache: false,
           };
           return cleanResult;
         }
