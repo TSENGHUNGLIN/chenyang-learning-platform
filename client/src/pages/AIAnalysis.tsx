@@ -198,15 +198,18 @@ export default function AIAnalysis() {
       
       // Debug: Log the received result
       console.log("[Frontend] Received response:", response);
-      console.log("[Frontend] response.result type:", typeof response.result);
-      console.log("[Frontend] response.result keys:", Object.keys(response.result || {}));
-      console.log("[Frontend] questionsWithAnswers exists:", !!response.result?.questionsWithAnswers);
-      console.log("[Frontend] questionsWithAnswers type:", typeof response.result?.questionsWithAnswers);
-      console.log("[Frontend] questionsWithAnswers is array:", Array.isArray(response.result?.questionsWithAnswers));
+      console.log("[Frontend] response type:", typeof response);
+      console.log("[Frontend] response keys:", Object.keys(response || {}));
+      console.log("[Frontend] questionsWithAnswers exists:", !!response.questionsWithAnswers);
+      console.log("[Frontend] questionsWithAnswers type:", typeof response.questionsWithAnswers);
+      console.log("[Frontend] questionsWithAnswers is array:", Array.isArray(response.questionsWithAnswers));
       
-      setAnalysisResult(response.result);
-      setFromCache(response.fromCache || false);
-      setCurrentAnalysisId(response.cacheId || null);
+      // 從 response 中提取 fromCache 和 cacheId
+      const { fromCache, cacheId, ...result } = response;
+      
+      setAnalysisResult(result);
+      setFromCache(fromCache || false);
+      setCurrentAnalysisId(cacheId || null);
       setHasRated(false); // 重置評分狀態
       
       // 自動填入檔案名稱作為題庫名稱（移除副檔名）
@@ -216,7 +219,7 @@ export default function AIAnalysis() {
           // 移除副檔名
           const nameWithoutExt = firstFile.filename.replace(/\.(pdf|docx|csv|txt|doc|xlsx|xls)$/i, '');
           setBankName(nameWithoutExt);
-          setBankDescription(`根據檔案「${firstFile.filename}」生成的題庫，包含 ${response.result.questionsWithAnswers?.length || 0} 道題目`);
+          setBankDescription(`根據檔案「${firstFile.filename}」生成的題庫，包含 ${response.questionsWithAnswers?.length || 0} 道題目`);
         }
       }
       

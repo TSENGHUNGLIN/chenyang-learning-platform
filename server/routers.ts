@@ -553,14 +553,13 @@ ${file.extractedText || "無法提取文字內容"}`
             const parsedResult = typeof cachedResult.result === 'string' ? JSON.parse(cachedResult.result) : cachedResult.result;
             console.log("[快取] parsedResult 類型:", typeof parsedResult);
             
-            // 使用明確的物件建構，確保沒有原型鏈問題
-            const cleanResult = {
-              result: parsedResult,
+            // 使用 Object.assign 避免展開運算符的問題
+            const returnValue = Object.assign({}, parsedResult, {
               fromCache: true,
               cacheId: cachedResult.id,
-            };
-            console.log("[快取] 返回cleanResult");
-            return cleanResult;
+            });
+            console.log("[快取] 返回returnValue");
+            return returnValue;
           }
         }
         
@@ -802,15 +801,12 @@ ${file.extractedText || "無法提取文字內容"}`
             createdBy: ctx.user.id,
           });
           
-          // 使用明確的物件建構，確保沒有原型鏈問題
+          // 使用 Object.assign 避免展開運算符的問題
           console.log("[AI分析] 返回result，類型:", typeof result);
           console.log("[AI分析] result.questionsWithAnswers長度:", result.questionsWithAnswers?.length);
           
-          const cleanResult = {
-            result: result,
-            fromCache: false,
-          };
-          return cleanResult;
+          const returnValue = Object.assign({}, result, { fromCache: false });
+          return returnValue;
         } else {
           // 其他類型返回純文字
           const response = await invokeLLMWithRetry(invokeLLM, {
@@ -856,12 +852,11 @@ ${file.extractedText || "無法提取文字內容"}`
             createdBy: ctx.user.id,
           });
           
-          // 使用明確的物件建構
-          const cleanResult = {
+          // 使用 Object.assign 避免展開運算符的問題
+          return {
             result: result,
             fromCache: false,
           };
-          return cleanResult;
         }
       }),
     // AI分析歷史記錄相關API
